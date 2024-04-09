@@ -1,10 +1,11 @@
 <script>
-  import { AvatarState } from '@circles-sdk/sdk/dist/sdk/src/avatar.js';
+  import { AvatarState } from '@circles-sdk/sdk/dist/avatar.js';
   import SignupOrganization from './SignupOrganization.svelte';
   import Collapsible from '../common/VerticalCollapsible.svelte';
   import ActionButton from '../common/ActionButton.svelte';
   import SignupGroup from './SignupGroup.svelte';
   import SignupHuman from './SignupHuman.svelte';
+  import Migrate from './Migrate.svelte';
 
   export let avatar;
 
@@ -45,5 +46,8 @@
   </Collapsible>
   <Collapsible label="Signup Group @ v2" isLocked={$avatarState !== AvatarState.Unregistered}>
     <SignupGroup {avatar} />
+  </Collapsible>
+  <Collapsible label="Migrate to v2" isLocked={$avatarState !== AvatarState.V1_Human}>
+    <Migrate {avatar} />
   </Collapsible>
 </div>

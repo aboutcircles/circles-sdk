@@ -4,11 +4,12 @@ import { solidityToTypeScriptTypes } from './utils.js';
 
 const generateEventTypesAndParsers = (eventFragments: EventFragment[]): {
   eventTypes: string,
-  parsers: string
+  parsers: string,
+  eventTypeNames: string[]
 } => {
   let eventTypes = '';
   let parsers = '';
-
+  const eventTypeNames: string[] = [];
   eventFragments.forEach(eventFragment => {
     const eventTypeFields = eventFragment.inputs.map((input: any) => {
       const tsType = solidityToTypeScriptTypes(input.type);
@@ -17,6 +18,7 @@ const generateEventTypesAndParsers = (eventFragments: EventFragment[]): {
 
     const eventName = eventFragment.name;
     const typeName = `${eventName}Event`;
+    eventTypeNames.push(typeName);
     eventTypes += `export type ${typeName} = Event & {\n  ${eventTypeFields}\n};\n\n`;
 
     // Utilize the existing type mapping functions for conversion logic
@@ -40,12 +42,12 @@ const generateEventTypesAndParsers = (eventFragments: EventFragment[]): {
     parsers += `const parse${typeName} = (log: ethers.LogDescription): ${typeName} => ({\n  ${params}\n});\n\n`;
   });
 
-  return { eventTypes, parsers };
+  return { eventTypes, parsers, eventTypeNames };
 };
 
 
-export const generateEventDecoders = (contractName: string, output: OutputBuffer, eventFragments: EventFragment[]): void => {
-  const { eventTypes, parsers } = generateEventTypesAndParsers(eventFragments);
+export const generateEventDecoders = (contractName: string, output: OutputBuffer, eventFragments: EventFragment[]): string[] => {
+  const { eventTypes, parsers, eventTypeNames } = generateEventTypesAndParsers(eventFragments);
   const decoderCases = eventFragments.map(eventAbi => {
     const eventName = eventAbi.name;
     const typeName = `${eventName}Event`;
@@ -92,4 +94,6 @@ export class ${contractName}Events implements EventDecoder {
     };
   }
 }`);
+
+  return eventTypeNames
 };

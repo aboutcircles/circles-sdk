@@ -1,6 +1,6 @@
 import { Avatar } from './avatar';
-import { V1Hub } from '@circles-sdk/abi-v1/dist/V1HubWrapper';
-import { V2Hub } from '@circles-sdk/abi-v2/dist/V2HubWrapper';
+import { V1Hub } from '@circles-sdk/abi-v1';
+import { V2Hub } from '@circles-sdk/abi-v2';
 import { ethers } from 'ethers';
 
 export class Sdk {
@@ -12,7 +12,11 @@ export class Sdk {
   public readonly hubV2Address: string;
   public readonly v2Hub: V2Hub;
 
-  constructor(hubV1Address: string, hubV2Address: string, provider: ethers.Provider) {
+  public readonly migrationAddress: string;
+
+  public readonly rpcUrl: string;
+
+  constructor(hubV1Address: string, hubV2Address: string, migrationAddress:string, provider: ethers.Provider, rpcUrl:string) {
     this.provider = provider;
 
     this.hubV1Address = hubV1Address;
@@ -20,14 +24,17 @@ export class Sdk {
 
     this.hubV2Address = hubV2Address;
     this.v2Hub = new V2Hub(provider, hubV2Address);
+
+    this.migrationAddress = migrationAddress;
+    this.rpcUrl = rpcUrl;
   }
 
-  getInvitationFee = async () =>
-    (await this.v2Hub.WELCOME_BONUS()) * BigInt(2);
+  // getInvitationFee = async () =>
+  //   (await this.v2Hub.WELCOME_BONUS()) * BigInt(2);
 
   isRegistrationPeriodOver: () => Promise<boolean> = async () =>
     (await this.v2Hub.invitationOnlyTime()) < BigInt(Date.now() / 1000);
 
   getAvatar = async (avatarAddress: string) =>
-    new Avatar(this.v1Hub, this.v2Hub, avatarAddress, this.provider);
+    new Avatar(this.v1Hub, this.v2Hub, avatarAddress, this.migrationAddress, this.provider, this.rpcUrl);
 }

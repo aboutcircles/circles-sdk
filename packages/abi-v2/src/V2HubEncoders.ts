@@ -5,51 +5,7 @@ import contractAbi from './V2HubAbi.json';
 export class V2HubCalls {
     private readonly contractInterface: ethers.Interface = new ethers.Interface(contractAbi);
 
-        CIRCLES_STOPPED_V1(): string {
-        return this.contractInterface.encodeFunctionData('CIRCLES_STOPPED_V1', []);
-    }
-
-    DEMURRAGE_WINDOW(): string {
-        return this.contractInterface.encodeFunctionData('DEMURRAGE_WINDOW', []);
-    }
-
-    INDEFINITE_FUTURE(): string {
-        return this.contractInterface.encodeFunctionData('INDEFINITE_FUTURE', []);
-    }
-
-    INVITATION_COST(): string {
-        return this.contractInterface.encodeFunctionData('INVITATION_COST', []);
-    }
-
-    ISSUANCE_PER_SECOND(): string {
-        return this.contractInterface.encodeFunctionData('ISSUANCE_PER_SECOND', []);
-    }
-
-    MAX_CLAIM_DURATION(): string {
-        return this.contractInterface.encodeFunctionData('MAX_CLAIM_DURATION', []);
-    }
-
-    MAX_VALUE(): string {
-        return this.contractInterface.encodeFunctionData('MAX_VALUE', []);
-    }
-
-    MINIMUM_DONATION(): string {
-        return this.contractInterface.encodeFunctionData('MINIMUM_DONATION', []);
-    }
-
-    SENTINEL(): string {
-        return this.contractInterface.encodeFunctionData('SENTINEL', []);
-    }
-
-    ToInflationAmount(params: inputTypes.ToInflationAmountInputs): string {
-        return this.contractInterface.encodeFunctionData('ToInflationAmount', [params._amount, params._timestamp]);
-    }
-
-    WELCOME_BONUS(): string {
-        return this.contractInterface.encodeFunctionData('WELCOME_BONUS', []);
-    }
-
-    avatars(params: inputTypes.AvatarsInputs): string {
+        avatars(params: inputTypes.AvatarsInputs): string {
         return this.contractInterface.encodeFunctionData('avatars', [params.arg0]);
     }
 
@@ -73,6 +29,10 @@ export class V2HubCalls {
         return this.contractInterface.encodeFunctionData('calculateIssuance', [params._human]);
     }
 
+    calculateIssuanceWithCheck(params: inputTypes.CalculateIssuanceWithCheckInputs): string {
+        return this.contractInterface.encodeFunctionData('calculateIssuanceWithCheck', [params._human]);
+    }
+
     convertBatchInflationaryToDemurrageValues(params: inputTypes.ConvertBatchInflationaryToDemurrageValuesInputs): string {
         return this.contractInterface.encodeFunctionData('convertBatchInflationaryToDemurrageValues', [params._inflationaryValues, params._day]);
     }
@@ -81,16 +41,12 @@ export class V2HubCalls {
         return this.contractInterface.encodeFunctionData('convertInflationaryToDemurrageValue', [params._inflationaryValue, params._day]);
     }
 
-    createERC20InflationWrapper(params: inputTypes.CreateERC20InflationWrapperInputs): string {
-        return this.contractInterface.encodeFunctionData('createERC20InflationWrapper', [params._tokenId, params._name, params._symbol]);
-    }
-
     day(params: inputTypes.DayInputs): string {
         return this.contractInterface.encodeFunctionData('day', [params._timestamp]);
     }
 
-    getDeterministicAddress(params: inputTypes.GetDeterministicAddressInputs): string {
-        return this.contractInterface.encodeFunctionData('getDeterministicAddress', [params._tokenId, params._bytecodeHash]);
+    discountedBalances(params: inputTypes.DiscountedBalancesInputs): string {
+        return this.contractInterface.encodeFunctionData('discountedBalances', [params.arg0, params.arg1]);
     }
 
     groupMint(params: inputTypes.GroupMintInputs): string {
@@ -101,16 +57,8 @@ export class V2HubCalls {
         return this.contractInterface.encodeFunctionData('hubV1', []);
     }
 
-    inflation_day_zero(): string {
-        return this.contractInterface.encodeFunctionData('inflation_day_zero', []);
-    }
-
-    inflationaryBalanceOf(params: inputTypes.InflationaryBalanceOfInputs): string {
-        return this.contractInterface.encodeFunctionData('inflationaryBalanceOf', [params._account, params._id]);
-    }
-
-    inflationaryBalanceOfBatch(params: inputTypes.InflationaryBalanceOfBatchInputs): string {
-        return this.contractInterface.encodeFunctionData('inflationaryBalanceOfBatch', [params._accounts, params._ids]);
+    inflationDayZero(): string {
+        return this.contractInterface.encodeFunctionData('inflationDayZero', []);
     }
 
     invitationOnlyTime(): string {
@@ -141,12 +89,8 @@ export class V2HubCalls {
         return this.contractInterface.encodeFunctionData('isTrusted', [params._truster, params._trustee]);
     }
 
-    isValidName(params: inputTypes.IsValidNameInputs): string {
-        return this.contractInterface.encodeFunctionData('isValidName', [params._name]);
-    }
-
-    isValidSymbol(params: inputTypes.IsValidSymbolInputs): string {
-        return this.contractInterface.encodeFunctionData('isValidSymbol', [params._symbol]);
+    liftERC20(): string {
+        return this.contractInterface.encodeFunctionData('liftERC20', []);
     }
 
     migrate(params: inputTypes.MigrateInputs): string {
@@ -165,16 +109,12 @@ export class V2HubCalls {
         return this.contractInterface.encodeFunctionData('mintTimes', [params.arg0]);
     }
 
-    names(params: inputTypes.NamesInputs): string {
-        return this.contractInterface.encodeFunctionData('names', [params.arg0]);
+    nameRegistry(): string {
+        return this.contractInterface.encodeFunctionData('nameRegistry', []);
     }
 
     operateFlowMatrix(params: inputTypes.OperateFlowMatrixInputs): string {
         return this.contractInterface.encodeFunctionData('operateFlowMatrix', [params._flowVertices, params._flow, params._streams, params._packedCoordinates]);
-    }
-
-    operatorPathTransfer(): string {
-        return this.contractInterface.encodeFunctionData('operatorPathTransfer', []);
     }
 
     personalMint(): string {
@@ -201,28 +141,12 @@ export class V2HubCalls {
         return this.contractInterface.encodeFunctionData('safeBatchTransferFrom', [params._from, params._to, params._ids, params._values, params._data]);
     }
 
-    safeInflationaryBatchTransferFrom(params: inputTypes.SafeInflationaryBatchTransferFromInputs): string {
-        return this.contractInterface.encodeFunctionData('safeInflationaryBatchTransferFrom', [params._from, params._to, params._ids, params._inflationaryValues, params._data]);
-    }
-
-    safeInflationaryTransferFrom(params: inputTypes.SafeInflationaryTransferFromInputs): string {
-        return this.contractInterface.encodeFunctionData('safeInflationaryTransferFrom', [params._from, params._to, params._id, params._inflationaryValue, params._data]);
-    }
-
     safeTransferFrom(params: inputTypes.SafeTransferFromInputs): string {
         return this.contractInterface.encodeFunctionData('safeTransferFrom', [params._from, params._to, params._id, params._value, params._data]);
     }
 
     setApprovalForAll(params: inputTypes.SetApprovalForAllInputs): string {
         return this.contractInterface.encodeFunctionData('setApprovalForAll', [params._operator, params._approved]);
-    }
-
-    setIpfsCidV0(params: inputTypes.SetIpfsCidV0Inputs): string {
-        return this.contractInterface.encodeFunctionData('setIpfsCidV0', [params._ipfsCid]);
-    }
-
-    singleSourcePathTransfer(): string {
-        return this.contractInterface.encodeFunctionData('singleSourcePathTransfer', []);
     }
 
     standardTreasury(): string {
@@ -241,24 +165,8 @@ export class V2HubCalls {
         return this.contractInterface.encodeFunctionData('supportsInterface', [params._interfaceId]);
     }
 
-    symbols(params: inputTypes.SymbolsInputs): string {
-        return this.contractInterface.encodeFunctionData('symbols', [params.arg0]);
-    }
-
-    toDemurrageAmount(params: inputTypes.ToDemurrageAmountInputs): string {
-        return this.contractInterface.encodeFunctionData('toDemurrageAmount', [params._amount, params._timestamp]);
-    }
-
     toTokenId(params: inputTypes.ToTokenIdInputs): string {
         return this.contractInterface.encodeFunctionData('toTokenId', [params._avatar]);
-    }
-
-    tokenIDToInfERC20(params: inputTypes.TokenIDToInfERC20Inputs): string {
-        return this.contractInterface.encodeFunctionData('tokenIDToInfERC20', [params.arg0]);
-    }
-
-    tokenIdToCidV0Digest(params: inputTypes.TokenIdToCidV0DigestInputs): string {
-        return this.contractInterface.encodeFunctionData('tokenIdToCidV0Digest', [params.arg0]);
     }
 
     treasuries(params: inputTypes.TreasuriesInputs): string {
@@ -273,20 +181,12 @@ export class V2HubCalls {
         return this.contractInterface.encodeFunctionData('trustMarkers', [params.arg0, params.arg1]);
     }
 
-    unwrapInflationaryERC20(params: inputTypes.UnwrapInflationaryERC20Inputs): string {
-        return this.contractInterface.encodeFunctionData('unwrapInflationaryERC20', [params._tokenId, params._amount]);
-    }
-
     uri(params: inputTypes.UriInputs): string {
         return this.contractInterface.encodeFunctionData('uri', [params._id]);
     }
 
-    wrapDemurrageERC20(): string {
-        return this.contractInterface.encodeFunctionData('wrapDemurrageERC20', []);
-    }
-
-    wrapInflationaryERC20(params: inputTypes.WrapInflationaryERC20Inputs): string {
-        return this.contractInterface.encodeFunctionData('wrapInflationaryERC20', [params._tokenId, params._amount]);
+    wrap(params: inputTypes.WrapInputs): string {
+        return this.contractInterface.encodeFunctionData('wrap', [params._avatar, params._amount, params._type]);
     }
 
 }

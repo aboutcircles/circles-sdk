@@ -2,7 +2,7 @@
 import TransferHistoryItemHeader from './TransferHistoryItemHeader.svelte';
 import VerticalLayout from '../common/VerticalLayout.svelte';
 import TransferHistoryItem from './TransferHistoryItem.svelte';
-import { Avatar } from '@circles-sdk/sdk/dist/sdk/src/avatar';
+import { Avatar } from '@circles-sdk/sdk/dist/avatar';
 
 export let avatar:Avatar;
 </script>

@@ -20,6 +20,11 @@ export const solidityToTypeScriptTypes = (solidityType: string): string => {
 };
 
 
+export const getInputName = (type: ParamType, index?: number): string => {
+  return type.name || `arg${index ?? 0}`;
+};
+
+
 export const generateDecoder = (type: string, valueExpression?: string): string => {
   switch (true) {
     case type.endsWith('[]'):
@@ -36,9 +41,4 @@ export const generateDecoder = (type: string, valueExpression?: string): string 
     default:
       return valueExpression;
   }
-};
-
-
-export const getInputName = (type: ParamType, index?: number): string => {
-  return type.name || `arg${index ?? 0}`;
 };

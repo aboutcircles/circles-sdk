@@ -11,10 +11,10 @@ import {
   RegisterOrganizationEvent,
   TransferBatchEvent,
   TransferSingleEvent,
-  TrustEvent_v2,
+  TrustEvent,
   URIEvent,
   V2HubEvents
-} from '@circles-sdk/abi-decoder/dist';
+} from '@circles-sdk/abi-v2';
 import { createLog, uintToAddress } from '../util';
 
 export const V2HubEventNames = {
@@ -43,6 +43,9 @@ describe('V2HubEvents', () => {
     const log = createLog(contractInterface, 'ApprovalForAll', [account, operator, approved]);
 
     const decoded = new V2HubEvents().decodeEventData(log);
+    if (!decoded) {
+      throw new Error('Decoding failed');
+    }
     const eventData = <ApprovalForAllEvent><unknown>decoded.data;
     expect(decoded.name).toEqual('ApprovalForAll');
     expect(eventData.account).toEqual(account);
@@ -57,7 +60,13 @@ describe('V2HubEvents', () => {
     const log = createLog(contractInterface, 'CidV0', [avatar, cidV0Digest]);
 
     const decoded = new V2HubEvents().decodeEventData(log);
+    if (!decoded) {
+      throw new Error('Decoding failed');
+    }
     const eventData = <CidV0Event><unknown>decoded.data;
+    if (!decoded) {
+      throw new Error('Decoding failed');
+    }
     expect(decoded.name).toEqual('CidV0');
     expect(eventData.avatar).toEqual(avatar);
     expect(eventData.cidV0Digest).toEqual(cidV0Digest);
@@ -74,7 +83,13 @@ describe('V2HubEvents', () => {
     const log = createLog(contractInterface, 'DemurragedTransferBatch', [operator, from, to, ids, values, inflationaryValues]);
 
     const decoded = new V2HubEvents().decodeEventData(log);
+    if (!decoded) {
+      throw new Error('Decoding failed');
+    }
     const eventData = <DemurragedTransferBatchEvent><unknown>decoded.data;
+    if (!decoded) {
+      throw new Error('Decoding failed');
+    }
     expect(decoded.name).toEqual('DemurragedTransferBatch');
     expect(eventData.operator).toEqual(operator);
     expect(eventData.from).toEqual(from);
@@ -94,7 +109,13 @@ describe('V2HubEvents', () => {
     const log = createLog(contractInterface, 'DemurragedTransferSingle', [operator, from, to, id, value, inflationaryValue]);
 
     const decoded = new V2HubEvents().decodeEventData(log);
+    if (!decoded) {
+      throw new Error('Decoding failed');
+    }
     const eventData = <DemurragedTransferSingleEvent><unknown>decoded.data;
+    if (!decoded) {
+      throw new Error('Decoding failed');
+    }
     expect(decoded.name).toEqual('DemurragedTransferSingle');
     expect(eventData.operator).toEqual(operator);
     expect(eventData.from).toEqual(from);
@@ -111,7 +132,13 @@ describe('V2HubEvents', () => {
     const log = createLog(contractInterface, 'InviteHuman', [inviter, invited]);
 
     const decoded = new V2HubEvents().decodeEventData(log);
+    if (!decoded) {
+      throw new Error('Decoding failed');
+    }
     const eventData = <InviteHumanEvent><unknown>decoded.data;
+    if (!decoded) {
+      throw new Error('Decoding failed');
+    }
     expect(decoded.name).toEqual('InviteHuman');
     expect(eventData.inviter).toEqual(inviter);
     expect(eventData.invited).toEqual(invited);
@@ -127,7 +154,13 @@ describe('V2HubEvents', () => {
     const log = createLog(contractInterface, 'TransferSingle', [operator, from, to, id, value]);
 
     const decoded = new V2HubEvents().decodeEventData(log);
+    if (!decoded) {
+      throw new Error('Decoding failed');
+    }
     const eventData = <TransferSingleEvent><unknown>decoded.data;
+    if (!decoded) {
+      throw new Error('Decoding failed');
+    }
     expect(decoded.name).toEqual('TransferSingle');
     expect(eventData.operator).toEqual(operator);
     expect(eventData.from).toEqual(from);
@@ -145,7 +178,13 @@ describe('V2HubEvents', () => {
     const log = createLog(contractInterface, 'RegisterGroup', [group, mint, treasury, name, symbol]);
 
     const decoded = new V2HubEvents().decodeEventData(log);
+    if (!decoded) {
+      throw new Error('Decoding failed');
+    }
     const eventData = <RegisterGroupEvent><unknown>decoded.data;
+    if (!decoded) {
+      throw new Error('Decoding failed');
+    }
     expect(decoded.name).toEqual('RegisterGroup');
     expect(eventData.group).toEqual(group);
     expect(eventData.mint).toEqual(mint);
@@ -159,7 +198,13 @@ describe('V2HubEvents', () => {
     const log = createLog(contractInterface, 'RegisterHuman', [avatar]);
 
     const decoded = new V2HubEvents().decodeEventData(log);
+    if (!decoded) {
+      throw new Error('Decoding failed');
+    }
     const eventData = <RegisterHumanEvent><unknown>decoded.data;
+    if (!decoded) {
+      throw new Error('Decoding failed');
+    }
     expect(decoded.name).toEqual('RegisterHuman');
     expect(eventData.avatar).toEqual(avatar);
   });
@@ -170,6 +215,9 @@ describe('V2HubEvents', () => {
     const log = createLog(contractInterface, 'RegisterOrganization', [organization, name]);
 
     const decoded = new V2HubEvents().decodeEventData(log);
+    if (!decoded) {
+      throw new Error('Decoding failed');
+    }
     const eventData = <RegisterOrganizationEvent><unknown>decoded.data;
     expect(decoded.name).toEqual('RegisterOrganization');
     expect(eventData.organization).toEqual(organization);
@@ -185,6 +233,9 @@ describe('V2HubEvents', () => {
     const log = createLog(contractInterface, 'TransferBatch', [operator, from, to, ids, values]);
 
     const decoded = new V2HubEvents().decodeEventData(log);
+    if (!decoded) {
+      throw new Error('Decoding failed');
+    }
     const eventData = <TransferBatchEvent><unknown>decoded.data;
     expect(decoded.name).toEqual('TransferBatch');
     expect(eventData.operator).toEqual(operator);
@@ -201,7 +252,10 @@ describe('V2HubEvents', () => {
     const log = createLog(contractInterface, 'Trust', [truster, trustee, expiryTime]);
 
     const decoded = new V2HubEvents().decodeEventData(log);
-    const eventData = <TrustEvent_v2><unknown>decoded.data;
+    if (!decoded) {
+      throw new Error('Decoding failed');
+    }
+    const eventData = <TrustEvent><unknown>decoded.data;
     expect(decoded.name).toEqual('Trust');
     expect(eventData.truster).toEqual(truster);
     expect(eventData.trustee).toEqual(trustee);
@@ -214,6 +268,9 @@ describe('V2HubEvents', () => {
     const log = createLog(contractInterface, 'URI', [value, id]);
 
     const decoded = new V2HubEvents().decodeEventData(log);
+    if (!decoded) {
+      throw new Error('Decoding failed');
+    }
     const eventData = <URIEvent><unknown>decoded.data;
     expect(decoded.name).toEqual('URI');
     expect(eventData.value).toEqual(value);

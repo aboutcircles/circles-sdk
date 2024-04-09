@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Avatar, Sdk } from '@circles-sdk/sdk/dist/sdk/src';
+  import { Avatar, Sdk } from '@circles-sdk/sdk/dist';
   import AvatarComponent from '../components/avatar/Avatar.svelte';
   import { ethers, HDNodeWallet } from 'ethers';
   import HorizontalLayout from '../components/common/HorizontalLayout.svelte';
@@ -8,7 +8,7 @@
   import EventList, { subscribeAvatar } from '../components/EventList.svelte';
   import { onMount } from 'svelte';
   import HorizontalCollapsible from '../components/common/HorizontalCollapsible.svelte';
-  import { AvatarState } from '@circles-sdk/sdk/dist/sdk/src/avatar';
+  import { AvatarState } from '@circles-sdk/sdk/dist/avatar';
   import {
     PUBLIC_ANVIL_RPC_URL
     , PUBLIC_ANVIL_HUB_V1
@@ -17,21 +17,31 @@
     , PUBLIC_GC_RPC_URL
     , PUBLIC_GC_HUB_V1
     , PUBLIC_GC_HUB_V2
-    , PUBLIC_GC_PRIVATE_KEY
+    , PUBLIC_GC_PRIVATE_KEY, PUBLIC_ANVIL_MIGRATION_CONTRACT, PUBLIC_GC_MIGRATION_CONTRACT
   } from '$env/static/public';
 
   let environment = 'gnosisChain';
-  const environments = {
+  const environments : {
+    [key: string]: {
+      rpcUrl: string,
+      hubv1Address: string,
+      hubv2Address: string,
+      migrationContract: string,
+      mainWallet: string
+    }
+  } = {
     gnosisChain: {
       rpcUrl: PUBLIC_GC_RPC_URL,
       hubv1Address: PUBLIC_GC_HUB_V1,
       hubv2Address: PUBLIC_GC_HUB_V2,
+      migrationContract: PUBLIC_GC_MIGRATION_CONTRACT,
       mainWallet: PUBLIC_GC_PRIVATE_KEY
     },
     anvil: {
       rpcUrl: PUBLIC_ANVIL_RPC_URL,
       hubv1Address: PUBLIC_ANVIL_HUB_V1,
       hubv2Address: PUBLIC_ANVIL_HUB_V2,
+      migrationContract: PUBLIC_ANVIL_MIGRATION_CONTRACT,
       mainWallet: PUBLIC_ANVIL_PRIVATE_KEY
     }
   };
@@ -84,7 +94,7 @@
       }
       const jsonRpcProvider = new ethers.JsonRpcProvider(environments[environment].rpcUrl);
       const ethersWallet = new ethers.Wallet(avatarRecord.privateKey, jsonRpcProvider);
-      const sdk = new Sdk(environments[environment].hubv1Address, environments[environment].hubv2Address, ethersWallet);
+      const sdk = new Sdk(environments[environment].hubv1Address, environments[environment].hubv2Address, environments[environment].migrationContract, ethersWallet);
       const avatar = await sdk.getAvatar(avatarId.replace(`${chainId}_`, ''));
       await avatar.initialize();
 
@@ -101,7 +111,7 @@
   const createAvatar = async () => {
     const jsonRpcProvider = new ethers.JsonRpcProvider(environments[environment].rpcUrl);
     const subWallet = await randomFundedWallet(jsonRpcProvider);
-    const sdk = new Sdk(environments[environment].hubv1Address, environments[environment].hubv2Address, subWallet);
+    const sdk = new Sdk(environments[environment].hubv1Address, environments[environment].hubv2Address, environments[environment].migrationContract, subWallet);
     const avatar = await sdk.getAvatar(await subWallet.getAddress());
     await avatar.initialize();
 

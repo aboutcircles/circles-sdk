@@ -6,8 +6,8 @@ import { Observable } from "./common";
 export class V1Token {
   readonly address: string;
   private readonly provider: ethers.Provider;
-  private readonly eventDecoder: V1TokenEvents = new V1TokenEvents();
   
+  private readonly eventDecoder: V1TokenEvents = new V1TokenEvents();
   public readonly events: Observable<ParsedV1TokenEvent<V1TokenEvent>>;
   private readonly emitEvent: (event: ParsedV1TokenEvent<V1TokenEvent>) => void;
 
@@ -17,9 +17,11 @@ export class V1Token {
       this.provider = provider;
       this.address = address;
       
+  
       const events = Observable.create<ParsedV1TokenEvent<V1TokenEvent>>();
       this.events = events.property;
       this.emitEvent = events.emit;
+  
   }
   
   private sendTransaction(request: TransactionRequest) : Promise<TransactionResponse> {

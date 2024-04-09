@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {Avatar} from "@circles-sdk/sdk/dist/sdk/src/avatar";
+    import {Avatar} from "@circles-sdk/sdk/dist/avatar";
     import ActionButton from "../common/ActionButton.svelte";
     import TransferHistory from './TransferHistory.svelte';
     import Collapsible from '../common/VerticalCollapsible.svelte';
@@ -10,7 +10,7 @@
     let amount: string;
 
     const transfer = async () => {
-        await avatar.transfer(to, amount);
+        await avatar.transfer(to, BigInt(amount));
     }
 </script>
 <div class="form-group">

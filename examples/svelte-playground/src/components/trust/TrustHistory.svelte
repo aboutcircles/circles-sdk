@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Avatar } from '@circles-sdk/sdk/dist/sdk/src/avatar';
+  import { Avatar } from '@circles-sdk/sdk/dist/avatar';
   import VerticalLayout from '../common/VerticalLayout.svelte';
   import TrustHistoryItemHeader from './TrustHistoryItemHeader.svelte';
   import TrustHistoryItem from './TrustHistoryItem.svelte';

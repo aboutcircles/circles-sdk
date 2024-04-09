@@ -6,9 +6,8 @@ import { cidV0Digest } from './utils';
 import { ObservableProperty } from './observableProperty';
 import { ParsedV1HubEvent, V1HubEvent } from '@circles-sdk/abi-v1/dist/V1HubEvents';
 import { ParsedV1TokenEvent, V1TokenEvent } from '@circles-sdk/abi-v1/dist/V1TokenEvents';
-import { ParsedV2HubEvent, V2HubEvent } from '@circles-sdk/abi-v2/dist/V2HubEvents';
-import { V1Hub } from '@circles-sdk/abi-v1/dist/V1HubWrapper';
-import { V2Hub } from '@circles-sdk/abi-v2/dist/V2HubWrapper';
+import { Migration, ParsedEvent as ParsedV2HubEvent, V2Hub, V2HubEvent } from '@circles-sdk/abi-v2';
+import { V1Hub, V1Token } from '@circles-sdk/abi-v1';
 
 export enum AvatarState {
   NotInitialized,
@@ -31,7 +30,7 @@ export type AvatarEvent =
 export class Avatar {
   private readonly provider: ethers.Provider;
   readonly v1Hub: V1Hub;
-  readonly v1Data: V1Data = new V1Data('https://circles-rpc.circlesubi.id');
+  readonly v1Data: V1Data;
   readonly v2Hub: V2Hub;
 
   public readonly address: string;
@@ -39,13 +38,15 @@ export class Avatar {
   private readonly v1Avatar: V1Avatar;
   private readonly v2Avatar: V2Avatar;
 
+  private readonly migrationContract: string;
+
   public readonly state: ObservableProperty<AvatarState>;
   private readonly setState: (state: AvatarState) => void;
 
   public readonly lastEvent: ObservableProperty<AvatarEvent>;
   private readonly setLastEvent: (event: AvatarEvent) => void;
 
-  constructor(v1Hub: V1Hub, v2Hub: V2Hub, avatarAddress: string, provider: ethers.Provider) {
+  constructor(v1Hub: V1Hub, v2Hub: V2Hub, avatarAddress: string, migrationContract: string, provider: ethers.Provider, rpcEndpoint:string) {
     this.provider = provider;
     this.address = avatarAddress;
 
@@ -65,6 +66,10 @@ export class Avatar {
     this.v2Hub = v2Hub;
     this.v2Hub.events.subscribe(this.setLastEvent);
     this.v2Avatar = new V2Avatar(this.v2Hub, avatarAddress, provider);
+
+    this.v1Data = new V1Data(rpcEndpoint, v1Hub.address);
+
+    this.migrationContract = migrationContract;
   }
 
   initialize = async () => {
@@ -72,7 +77,6 @@ export class Avatar {
       this.v1Avatar.initialize(),
       this.v2Avatar.initialize()
     ]);
-    console.log(`Avatar 1 state: ${this.v1Avatar.state.value}, Avatar 2 state: ${this.v2Avatar.state.value}.`);
 
     if (this.v1Avatar.v1Token) {
       this.v1Avatar.v1Token.events.subscribe(this.setLastEvent);
@@ -164,14 +168,50 @@ export class Avatar {
   };
 
   migrateAvatar = async (cidV0: string): Promise<void> => {
-    await this.stopV1();
+    if (this.state.value !== AvatarState.V1_Human
+      && this.state.value !== AvatarState.V1_StoppedHuman) {
+      throw new Error('Avatar must be V1 human');
+    }
+    if (this.state.value !== AvatarState.V1_StoppedHuman) {
+      await this.stopV1();
+    }
     await this.registerHuman(cidV0);
-    // TODO: Foreach eligible token, migrate
-    // await this.migrateTokens();
+    await this.migrateAllV1Tokens();
   };
 
-  migrateTokens = async (v1Token: string): Promise<void> => {
-    // TODO: migrate tokens
+  migrateAllV1Tokens = async (): Promise<void> => {
+    const getTokensWithBalance = async (users: string[]) => {
+      const trustsTokens = await Promise.all(users.map(user => this.v1Hub.userToToken(user)));
+      return await Promise.all(trustsTokens.map(token => new V1Token(this.provider, token))
+        .map(async (t, i) => ({
+          balance: await t.balanceOf(this.address),
+          token: t,
+          tokenOwner: users[i]
+        })));
+    };
+
+    const trustsUsers = this.v1Data.queryTrustOnChainAsyncIterator(this.address, 12541946, 10);
+    let trustUsersArray: string[] = [];
+    for await (const user of trustsUsers) {
+      trustUsersArray = [...user];
+    }
+
+    const tokensToMigrate = (await getTokensWithBalance(trustUsersArray))
+      .filter(o => o.balance > BigInt(0));
+
+    // TODO: Send in one transaction if sent to Safe
+    await Promise.all(tokensToMigrate.map(async (t, i) => {
+      const allowance = await t.token.allowance(this.address, this.migrationContract);
+      if (allowance < t.balance) {
+        const increase = t.balance - allowance;
+        const txReceipt = await t.token.increaseAllowance(this.migrationContract, increase);
+      }
+    }));
+
+    const migrationContract = new Migration(this.provider, this.migrationContract);
+    const migrateTxReceipt = await migrationContract.migrate(
+      tokensToMigrate.map(o => o.tokenOwner)
+      , tokensToMigrate.map(o => o.balance));
   };
 
   registerHuman = async (cidV0: string): Promise<TransactionReceipt | null> => {
@@ -218,8 +258,9 @@ export class Avatar {
     return txReceipt;
   };
 
-  groupMint = async (group: string, collateral: string[], amounts: bigint[], data: Uint8Array) =>
+  groupMint = async (group: string, collateral: string[], amounts: bigint[], data: Uint8Array) => {
     await this.v2Hub.groupMint(group, collateral, amounts, data);
+  };
 
   stopV1 = async (): Promise<TransactionReceipt | null> => {
     if (this.state.value !== AvatarState.V1_Human || !this.v1Avatar.v1Token) {
@@ -229,9 +270,9 @@ export class Avatar {
     await this.initialize();
     return txReceipt;
   };
-
-  updateProfile = async (cidV0: string): Promise<TransactionReceipt | null> =>
-    await this.v2Hub.setIpfsCidV0(cidV0Digest(cidV0));
+  
+  // updateProfile = async (cidV0: string): Promise<TransactionReceipt | null> =>
+  //   await this.v2Hub.setIpfsCidV0(cidV0Digest(cidV0));
 
   transfer = async (to: string, amount: bigint): Promise<TransactionReceipt | null> => {
     if (!this.canTransfer()) {

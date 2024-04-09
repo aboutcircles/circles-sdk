@@ -4,6 +4,12 @@ import { getInputName, solidityToTypeScriptTypes } from './utils.js';
 
 const generateTypeDefinition = (functionAbi: any, typeName: string): string => {
   const inputs = functionAbi.inputs.map((input: any, index: number) => {
+    if (input.components) {
+      // TODO: Support structs
+      /*
+
+       */
+    }
     const tsType = solidityToTypeScriptTypes(input.type);
     const paramName = getInputName(input, index);
     return `${paramName}: ${tsType};`;

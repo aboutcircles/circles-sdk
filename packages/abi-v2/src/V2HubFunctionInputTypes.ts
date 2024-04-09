@@ -1,8 +1,3 @@
-export type ToInflationAmountInputs = {
-  _amount: bigint;
-  _timestamp: bigint;
-};
-
 export type AvatarsInputs = {
   arg0: string;
 };
@@ -33,6 +28,10 @@ export type CalculateIssuanceInputs = {
   _human: string;
 };
 
+export type CalculateIssuanceWithCheckInputs = {
+  _human: string;
+};
+
 export type ConvertBatchInflationaryToDemurrageValuesInputs = {
   _inflationaryValues: bigint[];
   _day: bigint;
@@ -43,19 +42,13 @@ export type ConvertInflationaryToDemurrageValueInputs = {
   _day: bigint;
 };
 
-export type CreateERC20InflationWrapperInputs = {
-  _tokenId: bigint;
-  _name: string;
-  _symbol: string;
-};
-
 export type DayInputs = {
   _timestamp: bigint;
 };
 
-export type GetDeterministicAddressInputs = {
-  _tokenId: bigint;
-  _bytecodeHash: Uint8Array;
+export type DiscountedBalancesInputs = {
+  arg0: bigint;
+  arg1: string;
 };
 
 export type GroupMintInputs = {
@@ -63,16 +56,6 @@ export type GroupMintInputs = {
   _collateralAvatars: string[];
   _amounts: bigint[];
   _data: Uint8Array;
-};
-
-export type InflationaryBalanceOfInputs = {
-  _account: string;
-  _id: bigint;
-};
-
-export type InflationaryBalanceOfBatchInputs = {
-  _accounts: string[];
-  _ids: bigint[];
 };
 
 export type InviteHumanInputs = {
@@ -101,14 +84,6 @@ export type IsTrustedInputs = {
   _trustee: string;
 };
 
-export type IsValidNameInputs = {
-  _name: string;
-};
-
-export type IsValidSymbolInputs = {
-  _symbol: string;
-};
-
 export type MigrateInputs = {
   _owner: string;
   _avatars: string[];
@@ -120,10 +95,6 @@ export type MintPoliciesInputs = {
 };
 
 export type MintTimesInputs = {
-  arg0: string;
-};
-
-export type NamesInputs = {
   arg0: string;
 };
 
@@ -166,22 +137,6 @@ export type SafeBatchTransferFromInputs = {
   _data: Uint8Array;
 };
 
-export type SafeInflationaryBatchTransferFromInputs = {
-  _from: string;
-  _to: string;
-  _ids: bigint[];
-  _inflationaryValues: bigint[];
-  _data: Uint8Array;
-};
-
-export type SafeInflationaryTransferFromInputs = {
-  _from: string;
-  _to: string;
-  _id: bigint;
-  _inflationaryValue: bigint;
-  _data: Uint8Array;
-};
-
 export type SafeTransferFromInputs = {
   _from: string;
   _to: string;
@@ -195,10 +150,6 @@ export type SetApprovalForAllInputs = {
   _approved: boolean;
 };
 
-export type SetIpfsCidV0Inputs = {
-  _ipfsCid: Uint8Array;
-};
-
 export type StoppedInputs = {
   _human: string;
 };
@@ -207,25 +158,8 @@ export type SupportsInterfaceInputs = {
   _interfaceId: Uint8Array;
 };
 
-export type SymbolsInputs = {
-  arg0: string;
-};
-
-export type ToDemurrageAmountInputs = {
-  _amount: bigint;
-  _timestamp: bigint;
-};
-
 export type ToTokenIdInputs = {
   _avatar: string;
-};
-
-export type TokenIDToInfERC20Inputs = {
-  arg0: bigint;
-};
-
-export type TokenIdToCidV0DigestInputs = {
-  arg0: bigint;
 };
 
 export type TreasuriesInputs = {
@@ -242,72 +176,54 @@ export type TrustMarkersInputs = {
   arg1: string;
 };
 
-export type UnwrapInflationaryERC20Inputs = {
-  _tokenId: bigint;
-  _amount: bigint;
-};
-
 export type UriInputs = {
   _id: bigint;
 };
 
-export type WrapInflationaryERC20Inputs = {
-  _tokenId: bigint;
+export type WrapInputs = {
+  _avatar: string;
   _amount: bigint;
+  _type: bigint;
 };
 
 export type NoInputs = [];
   
 export type V2HubFunctionInputs = 
-  | ToInflationAmountInputs
   | AvatarsInputs
   | BalanceOfInputs
   | BalanceOfBatchInputs
   | BalanceOfOnDayInputs
   | BurnInputs
   | CalculateIssuanceInputs
+  | CalculateIssuanceWithCheckInputs
   | ConvertBatchInflationaryToDemurrageValuesInputs
   | ConvertInflationaryToDemurrageValueInputs
-  | CreateERC20InflationWrapperInputs
   | DayInputs
-  | GetDeterministicAddressInputs
+  | DiscountedBalancesInputs
   | GroupMintInputs
-  | InflationaryBalanceOfInputs
-  | InflationaryBalanceOfBatchInputs
   | InviteHumanInputs
   | IsApprovedForAllInputs
   | IsGroupInputs
   | IsHumanInputs
   | IsOrganizationInputs
   | IsTrustedInputs
-  | IsValidNameInputs
-  | IsValidSymbolInputs
   | MigrateInputs
   | MintPoliciesInputs
   | MintTimesInputs
-  | NamesInputs
   | OperateFlowMatrixInputs
   | RegisterCustomGroupInputs
   | RegisterGroupInputs
   | RegisterHumanInputs
   | RegisterOrganizationInputs
   | SafeBatchTransferFromInputs
-  | SafeInflationaryBatchTransferFromInputs
-  | SafeInflationaryTransferFromInputs
   | SafeTransferFromInputs
   | SetApprovalForAllInputs
-  | SetIpfsCidV0Inputs
   | StoppedInputs
   | SupportsInterfaceInputs
-  | SymbolsInputs
-  | ToDemurrageAmountInputs
   | ToTokenIdInputs
-  | TokenIDToInfERC20Inputs
-  | TokenIdToCidV0DigestInputs
   | TreasuriesInputs
   | TrustInputs
   | TrustMarkersInputs
-  | UnwrapInflationaryERC20Inputs
   | UriInputs
-  | WrapInflationaryERC20Inputs
+  | WrapInputs
   | NoInputs;

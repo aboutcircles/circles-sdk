@@ -3,9 +3,9 @@ import { createLog } from '../util';
 import TokenV1 from '@circles/circles-contracts/out/Token.sol/Token.json';
 import {
   V1TokenEvents as V1TokenEventDecoder,
-  TokenTransferEvent,
-  TokenApprovalEvent
-} from '@circles-sdk/abi-v1/dist';
+  TransferEvent as TokenTransferEvent,
+  ApprovalEvent as TokenApprovalEvent
+} from '@circles-sdk/abi-v1';
 
 export const V1TokenEvents = {
   'Transfer': null,
@@ -22,6 +22,9 @@ describe('V1TokenEvents', () => {
     const log = createLog(contractInterface, 'Transfer', [from, to, amount]);
 
     const decoded = new V1TokenEventDecoder().decodeEventData(log);
+    if (decoded === null) {
+      throw new Error('Decoding failed');
+    }
     const eventData = <TokenTransferEvent><unknown>decoded.data;
     expect(decoded.name).toEqual('Transfer');
     expect(eventData.from).toEqual(from);
@@ -36,6 +39,9 @@ describe('V1TokenEvents', () => {
     const log = createLog(contractInterface, 'Approval', [owner, spender, amount]);
 
     const decoded = new V1TokenEventDecoder().decodeEventData(log);
+    if (decoded === null) {
+      throw new Error('Decoding failed');
+    }
     const eventData = <TokenApprovalEvent><unknown>decoded.data;
     expect(decoded.name).toEqual('Approval');
     expect(eventData.owner).toEqual(owner);

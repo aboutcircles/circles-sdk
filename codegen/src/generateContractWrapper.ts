@@ -1,8 +1,8 @@
 import { OutputBuffer } from './outputBuffer.js';
 import { generateDecoder, getInputName, solidityToTypeScriptTypes } from './utils.js';
-import { FunctionFragment, ParamType } from 'ethers';
+import { EventFragment, FunctionFragment, ParamType } from 'ethers';
 
-export const generateContractWrapper = (contractName: string, output: OutputBuffer, functionFragments: FunctionFragment[]): void => {
+export const generateContractWrapper = (contractName: string, output: OutputBuffer, functionFragments: FunctionFragment[], eventFragments: EventFragment[]): void => {
   const viewFunctionFragments = functionFragments.filter(f => f.stateMutability === 'view' || f.stateMutability === 'pure');
   const transactionFunctionFragments = functionFragments.filter(f => f.stateMutability !== 'view' && f.stateMutability !== 'pure');
 
@@ -60,18 +60,19 @@ return [${outputs.map((output, index) => `${generateDecoder(output.type, `decode
 `).join('\n');
 
   const generateClass = (viewFunctions: string, transactionFunctions: string) =>
-    `import { ${contractName}Calls } from './${contractName}Encoders';
-import { Parsed${contractName}Event, ${contractName}Event, ${contractName}Events } from './${contractName}Events';
+    `import { ${contractName}Calls } from './${contractName}Encoders';`
+  + (eventFragments.length > 0 ? `
+import { Parsed${contractName}Event, ${contractName}Event, ${contractName}Events } from './${contractName}Events';` : '') + `
 import { ethers, TransactionRequest, TransactionResponse } from 'ethers';
 import { Observable } from "./common";
 
 export class ${contractName || 'Wrapper'} {
   readonly address: string;
   private readonly provider: ethers.Provider;
+  ` + (eventFragments.length > 0 ? `
   private readonly eventDecoder: ${contractName}Events = new ${contractName}Events();
-  
   public readonly events: Observable<Parsed${contractName}Event<${contractName}Event>>;
-  private readonly emitEvent: (event: Parsed${contractName}Event<${contractName}Event>) => void;
+  private readonly emitEvent: (event: Parsed${contractName}Event<${contractName}Event>) => void;` : '') + `
 
   private callEncoder: ${contractName}Calls = new ${contractName}Calls(); 
 
@@ -79,9 +80,11 @@ export class ${contractName || 'Wrapper'} {
       this.provider = provider;
       this.address = address;
       
+  ` + (eventFragments.length > 0 ? `
       const events = Observable.create<Parsed${contractName}Event<${contractName}Event>>();
       this.events = events.property;
       this.emitEvent = events.emit;
+  ` : '') + `
   }
   
   private sendTransaction(request: TransactionRequest) : Promise<TransactionResponse> {

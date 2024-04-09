@@ -5,7 +5,7 @@ import { getInputName } from './utils.js';
 
 const generateGenericDecodeMethod = (contractName: string, output: OutputBuffer, functionFragments: FunctionFragment[], functionInputTypeMap: Map<string, string | undefined>) => {
   return ` 
-    decode(callData: string): inputTypes.${contractName}FunctionInputs {
+    decode(callData: string): { name: string, inputs: inputTypes.${contractName}FunctionInputs} {
       if (callData.length < 10) {
         throw new Error(\`Call data too short to encode a methodId: \${callData}\`);
       }
@@ -16,20 +16,27 @@ const generateGenericDecodeMethod = (contractName: string, output: OutputBuffer,
       }
 
       if (functionFragment.inputs.length === 0) {
-        return <inputTypes.NoInputs>[];
+        return {
+          name: functionFragment.name,
+          inputs: <inputTypes.NoInputs>[]
+        };
       }
 
+      let decoded: any;
       switch (<${contractName}FunctionName>functionFragment.name) {
       ${functionFragments.map((functionAbi) => {
     const typeName = functionInputTypeMap.get(functionAbi.name);
     if (!typeName) return '';
-    return `      case '${functionAbi.name}':
-        return this.decode${typeName}(callData);
+    return `    case '${functionAbi.name}': decoded = this.decode${typeName}(callData); break;
       `;
   }).join('')}
       default:
         throw new Error(\`Unknown function name '\${functionFragment.name}' the code is out of sync with the ABI\`);
     }
+    return {
+      name: functionFragment.name,
+      inputs: decoded
+    };
   }
   `;
 };

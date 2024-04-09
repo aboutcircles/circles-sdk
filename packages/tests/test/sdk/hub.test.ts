@@ -16,7 +16,6 @@ import CRC_V1 from '@circles/circles-contracts/out/Token.sol/Token.json';
 
 describe('Hub', () => {
 
-
   const REGISTRATION_PERIOD = 60 * 60 * 24 * 365;
 
   /**

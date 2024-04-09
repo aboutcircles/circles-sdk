@@ -1,6 +1,6 @@
 <script lang="ts">
-    import {Avatar} from '@circles-sdk/sdk/dist/sdk/src';
-    import {AvatarState} from "@circles-sdk/sdk/dist/sdk/src/avatar";
+    import {Avatar} from '@circles-sdk/sdk/dist';
+    import {AvatarState} from "@circles-sdk/sdk/dist/avatar";
 
     export let avatar: Avatar;
 

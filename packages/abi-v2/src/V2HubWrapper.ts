@@ -6,8 +6,8 @@ import { Observable } from "./common";
 export class V2Hub {
   readonly address: string;
   private readonly provider: ethers.Provider;
-  private readonly eventDecoder: V2HubEvents = new V2HubEvents();
   
+  private readonly eventDecoder: V2HubEvents = new V2HubEvents();
   public readonly events: Observable<ParsedV2HubEvent<V2HubEvent>>;
   private readonly emitEvent: (event: ParsedV2HubEvent<V2HubEvent>) => void;
 
@@ -17,9 +17,11 @@ export class V2Hub {
       this.provider = provider;
       this.address = address;
       
+  
       const events = Observable.create<ParsedV2HubEvent<V2HubEvent>>();
       this.events = events.property;
       this.emitEvent = events.emit;
+  
   }
   
   private sendTransaction(request: TransactionRequest) : Promise<TransactionResponse> {
@@ -29,67 +31,7 @@ export class V2Hub {
     return this.provider.sendTransaction(request);
   }
   
-  CIRCLES_STOPPED_V1 = async (): Promise<string> => {
-      return await (async () => { const val = await this.provider.call({
-      to: this.address,
-      data: this.callEncoder.CIRCLES_STOPPED_V1()
-    }); return val == "0x" ? ethers.ZeroAddress : ethers.getAddress(val.slice(-40)); })();
-    };
-DEMURRAGE_WINDOW = async (): Promise<bigint> => {
-      return BigInt(await this.provider.call({
-      to: this.address,
-      data: this.callEncoder.DEMURRAGE_WINDOW()
-    }));
-    };
-INDEFINITE_FUTURE = async (): Promise<bigint> => {
-      return BigInt(await this.provider.call({
-      to: this.address,
-      data: this.callEncoder.INDEFINITE_FUTURE()
-    }));
-    };
-INVITATION_COST = async (): Promise<bigint> => {
-      return BigInt(await this.provider.call({
-      to: this.address,
-      data: this.callEncoder.INVITATION_COST()
-    }));
-    };
-ISSUANCE_PER_SECOND = async (): Promise<bigint> => {
-      return BigInt(await this.provider.call({
-      to: this.address,
-      data: this.callEncoder.ISSUANCE_PER_SECOND()
-    }));
-    };
-MAX_CLAIM_DURATION = async (): Promise<bigint> => {
-      return BigInt(await this.provider.call({
-      to: this.address,
-      data: this.callEncoder.MAX_CLAIM_DURATION()
-    }));
-    };
-MAX_VALUE = async (): Promise<bigint> => {
-      return BigInt(await this.provider.call({
-      to: this.address,
-      data: this.callEncoder.MAX_VALUE()
-    }));
-    };
-MINIMUM_DONATION = async (): Promise<bigint> => {
-      return BigInt(await this.provider.call({
-      to: this.address,
-      data: this.callEncoder.MINIMUM_DONATION()
-    }));
-    };
-SENTINEL = async (): Promise<string> => {
-      return await (async () => { const val = await this.provider.call({
-      to: this.address,
-      data: this.callEncoder.SENTINEL()
-    }); return val == "0x" ? ethers.ZeroAddress : ethers.getAddress(val.slice(-40)); })();
-    };
-WELCOME_BONUS = async (): Promise<bigint> => {
-      return BigInt(await this.provider.call({
-      to: this.address,
-      data: this.callEncoder.WELCOME_BONUS()
-    }));
-    };
-avatars = async (arg0: string): Promise<string> => {
+  avatars = async (arg0: string): Promise<string> => {
       return await (async () => { const val = await this.provider.call({
       to: this.address,
       data: this.callEncoder.avatars({ arg0: arg0 })
@@ -113,11 +55,12 @@ balanceOfOnDay = async (_account: string, _id: bigint, _day: bigint): Promise<bi
       data: this.callEncoder.balanceOfOnDay({ _account: _account, _id: _id, _day: _day })
     }));
     };
-calculateIssuance = async (_human: string): Promise<bigint> => {
-      return BigInt(await this.provider.call({
+calculateIssuance = async (_human: string): Promise<[bigint, bigint, bigint]> => {
+      const decoded = ethers.AbiCoder.defaultAbiCoder().decode(["uint256", "uint256", "uint256"], await this.provider.call({
       to: this.address,
       data: this.callEncoder.calculateIssuance({ _human: _human })
     }));
+return [BigInt(decoded[0]), BigInt(decoded[1]), BigInt(decoded[2])];
     };
 convertBatchInflationaryToDemurrageValues = async (_inflationaryValues: bigint[], _day: bigint): Promise<bigint[]> => {
       return ethers.AbiCoder.defaultAbiCoder().decode(["uint256[]"], await this.provider.call({
@@ -137,11 +80,12 @@ day = async (_timestamp: bigint): Promise<bigint> => {
       data: this.callEncoder.day({ _timestamp: _timestamp })
     }));
     };
-getDeterministicAddress = async (_tokenId: bigint, _bytecodeHash: Uint8Array): Promise<string> => {
-      return await (async () => { const val = await this.provider.call({
+discountedBalances = async (arg0: bigint, arg1: string): Promise<[bigint, bigint]> => {
+      const decoded = ethers.AbiCoder.defaultAbiCoder().decode(["uint192", "uint64"], await this.provider.call({
       to: this.address,
-      data: this.callEncoder.getDeterministicAddress({ _tokenId: _tokenId, _bytecodeHash: _bytecodeHash })
-    }); return val == "0x" ? ethers.ZeroAddress : ethers.getAddress(val.slice(-40)); })();
+      data: this.callEncoder.discountedBalances({ arg0: arg0, arg1: arg1 })
+    }));
+return [BigInt(decoded[0]), BigInt(decoded[1])];
     };
 hubV1 = async (): Promise<string> => {
       return await (async () => { const val = await this.provider.call({
@@ -149,23 +93,11 @@ hubV1 = async (): Promise<string> => {
       data: this.callEncoder.hubV1()
     }); return val == "0x" ? ethers.ZeroAddress : ethers.getAddress(val.slice(-40)); })();
     };
-inflation_day_zero = async (): Promise<bigint> => {
+inflationDayZero = async (): Promise<bigint> => {
       return BigInt(await this.provider.call({
       to: this.address,
-      data: this.callEncoder.inflation_day_zero()
+      data: this.callEncoder.inflationDayZero()
     }));
-    };
-inflationaryBalanceOf = async (_account: string, _id: bigint): Promise<bigint> => {
-      return BigInt(await this.provider.call({
-      to: this.address,
-      data: this.callEncoder.inflationaryBalanceOf({ _account: _account, _id: _id })
-    }));
-    };
-inflationaryBalanceOfBatch = async (_accounts: string[], _ids: bigint[]): Promise<bigint[]> => {
-      return ethers.AbiCoder.defaultAbiCoder().decode(["uint256[]"], await this.provider.call({
-      to: this.address,
-      data: this.callEncoder.inflationaryBalanceOfBatch({ _accounts: _accounts, _ids: _ids })
-    }))[0].map((x:any) => BigInt(x));
     };
 invitationOnlyTime = async (): Promise<bigint> => {
       return BigInt(await this.provider.call({
@@ -203,17 +135,11 @@ isTrusted = async (_truster: string, _trustee: string): Promise<boolean> => {
       data: this.callEncoder.isTrusted({ _truster: _truster, _trustee: _trustee })
     }) === '0x0000000000000000000000000000000000000000000000000000000000000001';
     };
-isValidName = async (_name: string): Promise<boolean> => {
-      return await this.provider.call({
+liftERC20 = async (): Promise<string> => {
+      return await (async () => { const val = await this.provider.call({
       to: this.address,
-      data: this.callEncoder.isValidName({ _name: _name })
-    }) === '0x0000000000000000000000000000000000000000000000000000000000000001';
-    };
-isValidSymbol = async (_symbol: string): Promise<boolean> => {
-      return await this.provider.call({
-      to: this.address,
-      data: this.callEncoder.isValidSymbol({ _symbol: _symbol })
-    }) === '0x0000000000000000000000000000000000000000000000000000000000000001';
+      data: this.callEncoder.liftERC20()
+    }); return val == "0x" ? ethers.ZeroAddress : ethers.getAddress(val.slice(-40)); })();
     };
 migration = async (): Promise<string> => {
       return await (async () => { const val = await this.provider.call({
@@ -234,11 +160,11 @@ mintTimes = async (arg0: string): Promise<[string, bigint]> => {
     }));
 return [await (async () => { const val = decoded[0]; return val == "0x" ? ethers.ZeroAddress : ethers.getAddress(val.slice(-40)); })(), BigInt(decoded[1])];
     };
-names = async (arg0: string): Promise<string> => {
-      return await this.provider.call({
+nameRegistry = async (): Promise<string> => {
+      return await (async () => { const val = await this.provider.call({
       to: this.address,
-      data: this.callEncoder.names({ arg0: arg0 })
-    });
+      data: this.callEncoder.nameRegistry()
+    }); return val == "0x" ? ethers.ZeroAddress : ethers.getAddress(val.slice(-40)); })();
     };
 standardTreasury = async (): Promise<string> => {
       return await (async () => { const val = await this.provider.call({
@@ -258,28 +184,10 @@ supportsInterface = async (_interfaceId: Uint8Array): Promise<boolean> => {
       data: this.callEncoder.supportsInterface({ _interfaceId: _interfaceId })
     }) === '0x0000000000000000000000000000000000000000000000000000000000000001';
     };
-symbols = async (arg0: string): Promise<string> => {
-      return await this.provider.call({
-      to: this.address,
-      data: this.callEncoder.symbols({ arg0: arg0 })
-    });
-    };
 toTokenId = async (_avatar: string): Promise<bigint> => {
       return BigInt(await this.provider.call({
       to: this.address,
       data: this.callEncoder.toTokenId({ _avatar: _avatar })
-    }));
-    };
-tokenIDToInfERC20 = async (arg0: bigint): Promise<string> => {
-      return await (async () => { const val = await this.provider.call({
-      to: this.address,
-      data: this.callEncoder.tokenIDToInfERC20({ arg0: arg0 })
-    }); return val == "0x" ? ethers.ZeroAddress : ethers.getAddress(val.slice(-40)); })();
-    };
-tokenIdToCidV0Digest = async (arg0: bigint): Promise<Uint8Array> => {
-      return ethers.getBytes(await this.provider.call({
-      to: this.address,
-      data: this.callEncoder.tokenIdToCidV0Digest({ arg0: arg0 })
     }));
     };
 treasuries = async (arg0: string): Promise<string> => {
@@ -301,15 +209,7 @@ uri = async (_id: bigint): Promise<string> => {
       data: this.callEncoder.uri({ _id: _id })
     });
     };
-  ToInflationAmount = async (_amount: bigint, _timestamp: bigint): Promise<ethers.TransactionReceipt | null> => {
-       const tx = await this.sendTransaction({
-         to: this.address,
-         data: this.callEncoder.ToInflationAmount({ _amount: _amount, _timestamp: _timestamp })
-      });
-      return tx.wait();
-    }
-
-burn = async (_id: bigint, _amount: bigint, _data: Uint8Array): Promise<ethers.TransactionReceipt | null> => {
+  burn = async (_id: bigint, _amount: bigint, _data: Uint8Array): Promise<ethers.TransactionReceipt | null> => {
        const tx = await this.sendTransaction({
          to: this.address,
          data: this.callEncoder.burn({ _id: _id, _amount: _amount, _data: _data })
@@ -317,10 +217,10 @@ burn = async (_id: bigint, _amount: bigint, _data: Uint8Array): Promise<ethers.T
       return tx.wait();
     }
 
-createERC20InflationWrapper = async (_tokenId: bigint, _name: string, _symbol: string): Promise<ethers.TransactionReceipt | null> => {
+calculateIssuanceWithCheck = async (_human: string): Promise<ethers.TransactionReceipt | null> => {
        const tx = await this.sendTransaction({
          to: this.address,
-         data: this.callEncoder.createERC20InflationWrapper({ _tokenId: _tokenId, _name: _name, _symbol: _symbol })
+         data: this.callEncoder.calculateIssuanceWithCheck({ _human: _human })
       });
       return tx.wait();
     }
@@ -353,14 +253,6 @@ operateFlowMatrix = async (_flowVertices: string[], _flow: any[], _streams: any[
        const tx = await this.sendTransaction({
          to: this.address,
          data: this.callEncoder.operateFlowMatrix({ _flowVertices: _flowVertices, _flow: _flow, _streams: _streams, _packedCoordinates: _packedCoordinates })
-      });
-      return tx.wait();
-    }
-
-operatorPathTransfer = async (): Promise<ethers.TransactionReceipt | null> => {
-       const tx = await this.sendTransaction({
-         to: this.address,
-         data: this.callEncoder.operatorPathTransfer()
       });
       return tx.wait();
     }
@@ -413,22 +305,6 @@ safeBatchTransferFrom = async (_from: string, _to: string, _ids: bigint[], _valu
       return tx.wait();
     }
 
-safeInflationaryBatchTransferFrom = async (_from: string, _to: string, _ids: bigint[], _inflationaryValues: bigint[], _data: Uint8Array): Promise<ethers.TransactionReceipt | null> => {
-       const tx = await this.sendTransaction({
-         to: this.address,
-         data: this.callEncoder.safeInflationaryBatchTransferFrom({ _from: _from, _to: _to, _ids: _ids, _inflationaryValues: _inflationaryValues, _data: _data })
-      });
-      return tx.wait();
-    }
-
-safeInflationaryTransferFrom = async (_from: string, _to: string, _id: bigint, _inflationaryValue: bigint, _data: Uint8Array): Promise<ethers.TransactionReceipt | null> => {
-       const tx = await this.sendTransaction({
-         to: this.address,
-         data: this.callEncoder.safeInflationaryTransferFrom({ _from: _from, _to: _to, _id: _id, _inflationaryValue: _inflationaryValue, _data: _data })
-      });
-      return tx.wait();
-    }
-
 safeTransferFrom = async (_from: string, _to: string, _id: bigint, _value: bigint, _data: Uint8Array): Promise<ethers.TransactionReceipt | null> => {
        const tx = await this.sendTransaction({
          to: this.address,
@@ -445,34 +321,10 @@ setApprovalForAll = async (_operator: string, _approved: boolean): Promise<ether
       return tx.wait();
     }
 
-setIpfsCidV0 = async (_ipfsCid: Uint8Array): Promise<ethers.TransactionReceipt | null> => {
-       const tx = await this.sendTransaction({
-         to: this.address,
-         data: this.callEncoder.setIpfsCidV0({ _ipfsCid: _ipfsCid })
-      });
-      return tx.wait();
-    }
-
-singleSourcePathTransfer = async (): Promise<ethers.TransactionReceipt | null> => {
-       const tx = await this.sendTransaction({
-         to: this.address,
-         data: this.callEncoder.singleSourcePathTransfer()
-      });
-      return tx.wait();
-    }
-
 stop = async (): Promise<ethers.TransactionReceipt | null> => {
        const tx = await this.sendTransaction({
          to: this.address,
          data: this.callEncoder.stop()
-      });
-      return tx.wait();
-    }
-
-toDemurrageAmount = async (_amount: bigint, _timestamp: bigint): Promise<ethers.TransactionReceipt | null> => {
-       const tx = await this.sendTransaction({
-         to: this.address,
-         data: this.callEncoder.toDemurrageAmount({ _amount: _amount, _timestamp: _timestamp })
       });
       return tx.wait();
     }
@@ -485,26 +337,10 @@ trust = async (_trustReceiver: string, _expiry: bigint): Promise<ethers.Transact
       return tx.wait();
     }
 
-unwrapInflationaryERC20 = async (_tokenId: bigint, _amount: bigint): Promise<ethers.TransactionReceipt | null> => {
+wrap = async (_avatar: string, _amount: bigint, _type: bigint): Promise<ethers.TransactionReceipt | null> => {
        const tx = await this.sendTransaction({
          to: this.address,
-         data: this.callEncoder.unwrapInflationaryERC20({ _tokenId: _tokenId, _amount: _amount })
-      });
-      return tx.wait();
-    }
-
-wrapDemurrageERC20 = async (): Promise<ethers.TransactionReceipt | null> => {
-       const tx = await this.sendTransaction({
-         to: this.address,
-         data: this.callEncoder.wrapDemurrageERC20()
-      });
-      return tx.wait();
-    }
-
-wrapInflationaryERC20 = async (_tokenId: bigint, _amount: bigint): Promise<ethers.TransactionReceipt | null> => {
-       const tx = await this.sendTransaction({
-         to: this.address,
-         data: this.callEncoder.wrapInflationaryERC20({ _tokenId: _tokenId, _amount: _amount })
+         data: this.callEncoder.wrap({ _avatar: _avatar, _amount: _amount, _type: _type })
       });
       return tx.wait();
     }

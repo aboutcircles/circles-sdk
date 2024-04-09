@@ -100,7 +100,7 @@ export class V1HubDecoders {
       };
     };
  
-    decode(callData: string): inputTypes.V1HubFunctionInputs {
+    decode(callData: string): { name: string, inputs: inputTypes.V1HubFunctionInputs} {
       if (callData.length < 10) {
         throw new Error(`Call data too short to encode a methodId: ${callData}`);
       }
@@ -111,38 +111,34 @@ export class V1HubDecoders {
       }
 
       if (functionFragment.inputs.length === 0) {
-        return <inputTypes.NoInputs>[];
+        return {
+          name: functionFragment.name,
+          inputs: <inputTypes.NoInputs>[]
+        };
       }
 
+      let decoded: any;
       switch (<V1HubFunctionName>functionFragment.name) {
-            case 'checkSendLimit':
-        return this.decodeCheckSendLimitInputs(callData);
-            case 'inflate':
-        return this.decodeInflateInputs(callData);
-            case 'issuanceByStep':
-        return this.decodeIssuanceByStepInputs(callData);
-            case 'limits':
-        return this.decodeLimitsInputs(callData);
-            case 'organizations':
-        return this.decodeOrganizationsInputs(callData);
-            case 'pow':
-        return this.decodePowInputs(callData);
-            case 'seen':
-        return this.decodeSeenInputs(callData);
-            case 'tokenToUser':
-        return this.decodeTokenToUserInputs(callData);
-            case 'transferThrough':
-        return this.decodeTransferThroughInputs(callData);
-            case 'trust':
-        return this.decodeTrustInputs(callData);
-            case 'userToToken':
-        return this.decodeUserToTokenInputs(callData);
-            case 'validation':
-        return this.decodeValidationInputs(callData);
+          case 'checkSendLimit': decoded = this.decodeCheckSendLimitInputs(callData); break;
+          case 'inflate': decoded = this.decodeInflateInputs(callData); break;
+          case 'issuanceByStep': decoded = this.decodeIssuanceByStepInputs(callData); break;
+          case 'limits': decoded = this.decodeLimitsInputs(callData); break;
+          case 'organizations': decoded = this.decodeOrganizationsInputs(callData); break;
+          case 'pow': decoded = this.decodePowInputs(callData); break;
+          case 'seen': decoded = this.decodeSeenInputs(callData); break;
+          case 'tokenToUser': decoded = this.decodeTokenToUserInputs(callData); break;
+          case 'transferThrough': decoded = this.decodeTransferThroughInputs(callData); break;
+          case 'trust': decoded = this.decodeTrustInputs(callData); break;
+          case 'userToToken': decoded = this.decodeUserToTokenInputs(callData); break;
+          case 'validation': decoded = this.decodeValidationInputs(callData); break;
       
       default:
         throw new Error(`Unknown function name '${functionFragment.name}' the code is out of sync with the ABI`);
     }
+    return {
+      name: functionFragment.name,
+      inputs: decoded
+    };
   }
   
 }

@@ -1,19 +1,24 @@
 {
   "name": "@circles-sdk/sdk",
-  "version": "0.0.2",
+  "version": "0.0.16",
   "description": "",
-  "main": "index.js",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "package.json"
+  ],
   "scripts": {
-    "build": "rm -rf dist/* && tsc -p tsconfig.json"
+    "build": "rollup -c"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@circles-sdk/abi-v1": "^0.0.2",
-    "@circles-sdk/abi-v2": "^0.0.2",
-    "@circles-sdk/pathfinder": "^0.0.2",
-    "@circles-sdk/pathfinder-v2": "^0.0.2",
+    "@circles-sdk/abi-v1": "0.0.16",
+    "@circles-sdk/abi-v2": "0.0.16",
     "ethers": "^6.11.1",
     "multihashes": "^4.0.3"
   },

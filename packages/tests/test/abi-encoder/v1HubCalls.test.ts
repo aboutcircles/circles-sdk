@@ -1,14 +1,15 @@
 import { ethers } from 'ethers';
-import { V1HubCalls as V1HubCallsEncoder } from '@circles-sdk/abi-encoder/dist';
-import { V1HubCalls as V1HubCallsDecoder } from '@circles-sdk/abi-decoder/dist';
+import { V1HubCalls as V1HubCallsEncoder } from '@circles-sdk/abi-v1';
+import { V1HubDecoders as V1HubCallsDecoder } from '@circles-sdk/abi-v1';
 import HubV1 from '@circles/circles-contracts/out/Hub.sol/Hub.json';
 import { generateRandomAddress } from '../util';
+import * as inputTypes from '@circles-sdk/abi-v1/dist/V1HubFunctionInputTypes';
 
 describe('V1HubCalls', () => {
   const contractInterface = new ethers.Interface(HubV1.abi);
 
   test('deployedAt() encodes and decodes correctly', () => {
-    const encoded = V1HubCallsEncoder.deployedAt();
+    const encoded = new V1HubCallsEncoder().deployedAt();
     const decoded = contractInterface.parseTransaction({ data: encoded });
 
     expect(decoded?.name).toBe('deployedAt');
@@ -16,35 +17,40 @@ describe('V1HubCalls', () => {
   });
 
   test('divisor() encodes and decodes correctly', () => {
-    const encoded = V1HubCallsEncoder.divisor();
+    const encoded = new V1HubCallsEncoder().divisor();
     const decoded = contractInterface.parseTransaction({ data: encoded });
 
     expect(decoded?.name).toBe('divisor');
     expect(decoded?.args).toEqual([]);
   });
 
-  test("organizationSignup() encodes and decodes correctly", () => {
-    const encoded = V1HubCallsEncoder.organizationSignup();
-    const decoded = new V1HubCallsDecoder().decodeFunctionCallData(encoded);
+  test('organizationSignup() encodes and decodes correctly', () => {
+    const encoded = new V1HubCallsEncoder().organizationSignup();
+    const decoded: any = new V1HubCallsDecoder().decode(encoded);
 
     expect(decoded?.name).toBe('organizationSignup');
     expect(decoded?.inputs).toEqual([]);
   });
 
-  test("transferThrough() encodes and decodes correctly", () => {
+  test('transferThrough() encodes and decodes correctly', () => {
     const tokenOwners = [generateRandomAddress(), generateRandomAddress()];
     const srcs = [generateRandomAddress(), generateRandomAddress()];
     const dests = [generateRandomAddress(), generateRandomAddress()];
     const wads = [BigInt(100), BigInt(200)];
-    const encoded = V1HubCallsEncoder.transferThrough(tokenOwners, srcs, dests, wads );
-    const decoded = new V1HubCallsDecoder().decodeFunctionCallData(encoded);
+    const encoded = new V1HubCallsEncoder().transferThrough(<inputTypes.TransferThroughInputs>{
+      tokenOwners,
+      srcs,
+      dests,
+      wads
+    });
+    const decoded: any = new V1HubCallsDecoder().decode(encoded);
 
     expect(decoded?.name).toBe('transferThrough');
     expect(decoded?.inputs).toEqual({ tokenOwners, srcs, dests, wads });
   });
 
   test('inflation() encodes and decodes correctly', () => {
-    const encoded = V1HubCallsEncoder.inflation();
+    const encoded = new V1HubCallsEncoder().inflation();
     const decoded = contractInterface.parseTransaction({ data: encoded });
 
     expect(decoded?.name).toBe('inflation');
@@ -52,7 +58,7 @@ describe('V1HubCalls', () => {
   });
 
   test('initialIssuance() encodes and decodes correctly', () => {
-    const encoded = V1HubCallsEncoder.initialIssuance();
+    const encoded = new V1HubCallsEncoder().initialIssuance();
     const decoded = contractInterface.parseTransaction({ data: encoded });
 
     expect(decoded?.name).toBe('initialIssuance');
@@ -62,7 +68,10 @@ describe('V1HubCalls', () => {
   test('limits(owner, spender) encodes and decodes correctly', () => {
     const owner = generateRandomAddress();
     const spender = generateRandomAddress();
-    const encoded = V1HubCallsEncoder.limits(owner, spender);
+    const encoded = new V1HubCallsEncoder().limits(<inputTypes.LimitsInputs>{
+      arg0: owner,
+      arg1: spender
+    });
     const decoded = contractInterface.parseTransaction({ data: encoded });
 
     expect(decoded?.name).toBe('limits');
@@ -70,7 +79,7 @@ describe('V1HubCalls', () => {
   });
 
   test('name() encodes and decodes correctly', () => {
-    const encoded = V1HubCallsEncoder.hubName();
+    const encoded = new V1HubCallsEncoder().name();
     const decoded = contractInterface.parseTransaction({ data: encoded });
 
     expect(decoded?.name).toBe('name');
@@ -79,7 +88,7 @@ describe('V1HubCalls', () => {
 
   test('organizations(address) encodes and decodes correctly', () => {
     const address = generateRandomAddress();
-    const encoded = V1HubCallsEncoder.organizations(address);
+    const encoded = new V1HubCallsEncoder().organizations(<inputTypes.OrganizationsInputs>{ arg0: address });
     const decoded = contractInterface.parseTransaction({ data: encoded });
 
     expect(decoded?.name).toBe('organizations');
@@ -87,7 +96,7 @@ describe('V1HubCalls', () => {
   });
 
   test('period() encodes and decodes correctly', () => {
-    const encoded = V1HubCallsEncoder.period();
+    const encoded = new V1HubCallsEncoder().period();
     const decoded = contractInterface.parseTransaction({ data: encoded });
 
     expect(decoded?.name).toBe('period');
@@ -95,7 +104,7 @@ describe('V1HubCalls', () => {
   });
 
   test('symbol() encodes and decodes correctly', () => {
-    const encoded = V1HubCallsEncoder.symbol();
+    const encoded = new V1HubCallsEncoder().symbol();
     const decoded = contractInterface.parseTransaction({ data: encoded });
 
     expect(decoded?.name).toBe('symbol');
@@ -103,7 +112,7 @@ describe('V1HubCalls', () => {
   });
 
   test('timeout() encodes and decodes correctly', () => {
-    const encoded = V1HubCallsEncoder.timeout();
+    const encoded = new V1HubCallsEncoder().timeout();
     const decoded = contractInterface.parseTransaction({ data: encoded });
 
     expect(decoded?.name).toBe('timeout');
@@ -112,7 +121,7 @@ describe('V1HubCalls', () => {
 
   test('tokenToUser(address) encodes and decodes correctly', () => {
     const address = generateRandomAddress();
-    const encoded = V1HubCallsEncoder.tokenToUser(address);
+    const encoded = new V1HubCallsEncoder().tokenToUser(<inputTypes.TokenToUserInputs>{ arg0: address });
     const decoded = contractInterface.parseTransaction({ data: encoded });
 
     expect(decoded?.name).toBe('tokenToUser');
@@ -121,16 +130,16 @@ describe('V1HubCalls', () => {
 
   test('userToToken(address) encodes and decodes correctly', () => {
     const address = generateRandomAddress();
-    const encoded = V1HubCallsEncoder.userToToken(address);
+    const encoded = new V1HubCallsEncoder().userToToken(<inputTypes.UserToTokenInputs>{ arg0: address });
     const decoded = contractInterface.parseTransaction({ data: encoded });
 
     expect(decoded?.name).toBe('userToToken');
     expect(decoded?.args).toEqual([address]);
   });
 
-  test("signup() encodes and decodes correctly", () => {
-    const encoded = V1HubCallsEncoder.signup();
-    const decoded = new V1HubCallsDecoder().decodeFunctionCallData(encoded);
+  test('signup() encodes and decodes correctly', () => {
+    const encoded = new V1HubCallsEncoder().signup();
+    const decoded:any = new V1HubCallsDecoder().decode(encoded);
 
     expect(decoded?.name).toBe('signup');
     expect(decoded?.inputs).toEqual([]);

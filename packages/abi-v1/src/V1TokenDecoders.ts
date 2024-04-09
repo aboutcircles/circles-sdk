@@ -83,7 +83,7 @@ export class V1TokenDecoders {
     };
 
  
-    decode(callData: string): inputTypes.V1TokenFunctionInputs {
+    decode(callData: string): { name: string, inputs: inputTypes.V1TokenFunctionInputs} {
       if (callData.length < 10) {
         throw new Error(`Call data too short to encode a methodId: ${callData}`);
       }
@@ -94,30 +94,30 @@ export class V1TokenDecoders {
       }
 
       if (functionFragment.inputs.length === 0) {
-        return <inputTypes.NoInputs>[];
+        return {
+          name: functionFragment.name,
+          inputs: <inputTypes.NoInputs>[]
+        };
       }
 
+      let decoded: any;
       switch (<V1TokenFunctionName>functionFragment.name) {
-            case 'allowance':
-        return this.decodeAllowanceInputs(callData);
-            case 'approve':
-        return this.decodeApproveInputs(callData);
-            case 'balanceOf':
-        return this.decodeBalanceOfInputs(callData);
-            case 'decreaseAllowance':
-        return this.decodeDecreaseAllowanceInputs(callData);
-            case 'hubTransfer':
-        return this.decodeHubTransferInputs(callData);
-            case 'increaseAllowance':
-        return this.decodeIncreaseAllowanceInputs(callData);
-            case 'transfer':
-        return this.decodeTransferInputs(callData);
-            case 'transferFrom':
-        return this.decodeTransferFromInputs(callData);
+          case 'allowance': decoded = this.decodeAllowanceInputs(callData); break;
+          case 'approve': decoded = this.decodeApproveInputs(callData); break;
+          case 'balanceOf': decoded = this.decodeBalanceOfInputs(callData); break;
+          case 'decreaseAllowance': decoded = this.decodeDecreaseAllowanceInputs(callData); break;
+          case 'hubTransfer': decoded = this.decodeHubTransferInputs(callData); break;
+          case 'increaseAllowance': decoded = this.decodeIncreaseAllowanceInputs(callData); break;
+          case 'transfer': decoded = this.decodeTransferInputs(callData); break;
+          case 'transferFrom': decoded = this.decodeTransferFromInputs(callData); break;
       
       default:
         throw new Error(`Unknown function name '${functionFragment.name}' the code is out of sync with the ABI`);
     }
+    return {
+      name: functionFragment.name,
+      inputs: decoded
+    };
   }
   
 }

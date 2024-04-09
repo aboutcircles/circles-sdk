@@ -1,7 +1,7 @@
 <script lang="ts" context="module">
-  import { Avatar } from '@circles-sdk/sdk/dist/sdk/src';
+  import { Avatar } from '@circles-sdk/sdk/dist';
   import { get, writable } from 'svelte/store';
-  import type { AvatarEvent } from '@circles-sdk/sdk/dist/sdk/src/avatar';
+  import type { AvatarEvent } from '@circles-sdk/sdk/dist/avatar';
   import { onMount } from 'svelte';
 
 
@@ -47,7 +47,7 @@
     {#each $events as event}
       <li>
         <Collapsible label={event.name} isOpen={false}>
-                    <pre>{JSON.stringify(event.data, (a, b, c) => {
+                    <pre>{JSON.stringify(event.data, (_, b) => {
                       if (typeof b === 'bigint') {
                         return b.toString();
                       } else {
