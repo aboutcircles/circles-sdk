@@ -5,7 +5,6 @@ export type ConvertFromV1ToDemurrageInputs = {
 export type MigrateInputs = {
   _avatars: string[];
   _amounts: bigint[];
-  _hubV2: string;
 };
 
 export type NoInputs = [];

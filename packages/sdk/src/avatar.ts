@@ -211,8 +211,7 @@ export class Avatar {
     const migrationContract = new Migration(this.provider, this.migrationContract);
     const migrateTxReceipt = await migrationContract.migrate(
       tokensToMigrate.map(o => o.tokenOwner)
-      , tokensToMigrate.map(o => o.balance)
-      , this.v2Hub.address);
+      , tokensToMigrate.map(o => o.balance));
   };
 
   registerHuman = async (cidV0: string): Promise<TransactionReceipt | null> => {
@@ -271,9 +270,9 @@ export class Avatar {
     await this.initialize();
     return txReceipt;
   };
-
-  updateProfile = async (cidV0: string): Promise<TransactionReceipt | null> =>
-    await this.v2Hub.setIpfsCidV0(cidV0Digest(cidV0));
+  
+  // updateProfile = async (cidV0: string): Promise<TransactionReceipt | null> =>
+  //   await this.v2Hub.setIpfsCidV0(cidV0Digest(cidV0));
 
   transfer = async (to: string, amount: bigint): Promise<TransactionReceipt | null> => {
     if (!this.canTransfer()) {

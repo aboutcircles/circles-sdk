@@ -29,8 +29,8 @@ export class Sdk {
     this.rpcUrl = rpcUrl;
   }
 
-  getInvitationFee = async () =>
-    (await this.v2Hub.WELCOME_BONUS()) * BigInt(2);
+  // getInvitationFee = async () =>
+  //   (await this.v2Hub.WELCOME_BONUS()) * BigInt(2);
 
   isRegistrationPeriodOver: () => Promise<boolean> = async () =>
     (await this.v2Hub.invitationOnlyTime()) < BigInt(Date.now() / 1000);

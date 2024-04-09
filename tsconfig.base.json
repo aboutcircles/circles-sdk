@@ -1,0 +1,24 @@
+{
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.stub.ts",
+    "node_modules"
+  ],
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "declaration": true,
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "declarationMap": true,
+    "allowSyntheticDefaultImports": true,
+    "paths": {
+      "@circles-sdk/*": ["./packages/*/"]
+    }
+  }
+}

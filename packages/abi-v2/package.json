@@ -1,13 +1,20 @@
 {
   "name": "@circles-sdk/abi-v2",
-  "version": "0.0.5",
+  "version": "0.0.16",
   "description": "",
-  "main": "dist/index.js",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "package.json"
+  ],
   "devDependencies": {
     "typescript": "^5.3.3"
   },
   "scripts": {
-    "build": "rm -rf dist/* && tsc -p tsconfig.json"
+    "build": "rollup -c"
   },
   "dependencies": {
     "ethers": "^6.11.1"

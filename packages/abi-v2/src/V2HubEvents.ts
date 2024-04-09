@@ -8,38 +8,22 @@ export type ApprovalForAllEvent = Event & {
   approved: boolean;
 };
 
-export type CidV0Event = Event & {
-  avatar: string;
-  cidV0Digest: Uint8Array;
-};
-
 export type ConvertInflationEvent = Event & {
   inflationValue: bigint;
   demurrageValue: bigint;
   day: bigint;
 };
 
-export type DemurragedTransferBatchEvent = Event & {
-  operator: string;
-  from: string;
-  to: string;
-  ids: bigint[];
-  values: bigint[];
-  inflationaryValues: bigint[];
-};
-
-export type DemurragedTransferSingleEvent = Event & {
-  operator: string;
-  from: string;
-  to: string;
-  id: bigint;
-  value: bigint;
-  inflationaryValue: bigint;
-};
-
 export type InviteHumanEvent = Event & {
   inviter: string;
   invited: string;
+};
+
+export type PersonalMintEvent = Event & {
+  human: string;
+  amount: bigint;
+  startPeriod: bigint;
+  endPeriod: bigint;
 };
 
 export type RegisterGroupEvent = Event & {
@@ -57,6 +41,10 @@ export type RegisterHumanEvent = Event & {
 export type RegisterOrganizationEvent = Event & {
   organization: string;
   name: string;
+};
+
+export type StoppedEvent = Event & {
+  avatar: string;
 };
 
 export type TransferBatchEvent = Event & {
@@ -90,14 +78,13 @@ export type URIEvent = Event & {
 
 export type V2HubEvent =
   ApprovalForAllEvent |
-  CidV0Event |
   ConvertInflationEvent |
-  DemurragedTransferBatchEvent |
-  DemurragedTransferSingleEvent |
   InviteHumanEvent |
+  PersonalMintEvent |
   RegisterGroupEvent |
   RegisterHumanEvent |
   RegisterOrganizationEvent |
+  StoppedEvent |
   TransferBatchEvent |
   TransferSingleEvent |
   TrustEvent |
@@ -111,38 +98,22 @@ const parseApprovalForAllEvent = (log: ethers.LogDescription): ApprovalForAllEve
   approved: log.args.getValue('approved')
 });
 
-const parseCidV0Event = (log: ethers.LogDescription): CidV0Event => ({
-  avatar: getAddress(log.args.getValue('avatar')),
-  cidV0Digest: log.args.getValue('cidV0Digest')
-});
-
 const parseConvertInflationEvent = (log: ethers.LogDescription): ConvertInflationEvent => ({
   inflationValue: BigInt(log.args.getValue('inflationValue')),
   demurrageValue: BigInt(log.args.getValue('demurrageValue')),
   day: BigInt(log.args.getValue('day'))
 });
 
-const parseDemurragedTransferBatchEvent = (log: ethers.LogDescription): DemurragedTransferBatchEvent => ({
-  operator: getAddress(log.args.getValue('operator')),
-  from: getAddress(log.args.getValue('from')),
-  to: getAddress(log.args.getValue('to')),
-  ids: log.args.getValue('ids'),
-  values: log.args.getValue('values'),
-  inflationaryValues: log.args.getValue('inflationaryValues')
-});
-
-const parseDemurragedTransferSingleEvent = (log: ethers.LogDescription): DemurragedTransferSingleEvent => ({
-  operator: getAddress(log.args.getValue('operator')),
-  from: getAddress(log.args.getValue('from')),
-  to: getAddress(log.args.getValue('to')),
-  id: BigInt(log.args.getValue('id')),
-  value: BigInt(log.args.getValue('value')),
-  inflationaryValue: BigInt(log.args.getValue('inflationaryValue'))
-});
-
 const parseInviteHumanEvent = (log: ethers.LogDescription): InviteHumanEvent => ({
   inviter: getAddress(log.args.getValue('inviter')),
   invited: getAddress(log.args.getValue('invited'))
+});
+
+const parsePersonalMintEvent = (log: ethers.LogDescription): PersonalMintEvent => ({
+  human: getAddress(log.args.getValue('human')),
+  amount: BigInt(log.args.getValue('amount')),
+  startPeriod: BigInt(log.args.getValue('startPeriod')),
+  endPeriod: BigInt(log.args.getValue('endPeriod'))
 });
 
 const parseRegisterGroupEvent = (log: ethers.LogDescription): RegisterGroupEvent => ({
@@ -160,6 +131,10 @@ const parseRegisterHumanEvent = (log: ethers.LogDescription): RegisterHumanEvent
 const parseRegisterOrganizationEvent = (log: ethers.LogDescription): RegisterOrganizationEvent => ({
   organization: getAddress(log.args.getValue('organization')),
   name: log.args.getValue('name')
+});
+
+const parseStoppedEvent = (log: ethers.LogDescription): StoppedEvent => ({
+  avatar: getAddress(log.args.getValue('avatar'))
 });
 
 const parseTransferBatchEvent = (log: ethers.LogDescription): TransferBatchEvent => ({
@@ -208,20 +183,14 @@ export class V2HubEvents implements EventDecoder {
       case 'ApprovalForAll':
         eventData = parseApprovalForAllEvent(decoded);
         break;
-      case 'CidV0':
-        eventData = parseCidV0Event(decoded);
-        break;
       case 'ConvertInflation':
         eventData = parseConvertInflationEvent(decoded);
         break;
-      case 'DemurragedTransferBatch':
-        eventData = parseDemurragedTransferBatchEvent(decoded);
-        break;
-      case 'DemurragedTransferSingle':
-        eventData = parseDemurragedTransferSingleEvent(decoded);
-        break;
       case 'InviteHuman':
         eventData = parseInviteHumanEvent(decoded);
+        break;
+      case 'PersonalMint':
+        eventData = parsePersonalMintEvent(decoded);
         break;
       case 'RegisterGroup':
         eventData = parseRegisterGroupEvent(decoded);
@@ -231,6 +200,9 @@ export class V2HubEvents implements EventDecoder {
         break;
       case 'RegisterOrganization':
         eventData = parseRegisterOrganizationEvent(decoded);
+        break;
+      case 'Stopped':
+        eventData = parseStoppedEvent(decoded);
         break;
       case 'TransferBatch':
         eventData = parseTransferBatchEvent(decoded);

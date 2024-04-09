@@ -1,7 +1,8 @@
 export const MigrationFunctionNames = {
     'convertFromV1ToDemurrage': null,
-    'deployedAt': null,
     'hubV1': null,
+    'hubV2': null,
+    'inflationDayZero': null,
     'migrate': null,
     'period': null,
     

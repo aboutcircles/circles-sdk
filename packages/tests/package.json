@@ -1,6 +1,6 @@
 {
   "name": "@circles-sdk/tests",
-  "version": "0.0.5",
+  "version": "0.0.10",
   "description": "Circles v2 SDK tests",
   "scripts": {
     "test": "runTests.sh",

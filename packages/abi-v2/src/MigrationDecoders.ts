@@ -13,12 +13,12 @@ export class MigrationDecoders {
     };
 
 
+
     decodeMigrateInputs(callData: string): inputTypes.MigrateInputs {
     const decoded = this.contractInterface.decodeFunctionData('migrate', callData);
       return {
               _avatars: decoded[0].map((x: any) => getAddress(x)),
-      _amounts: decoded[1].map((x: any) => BigInt(x.toString())),
-      _hubV2: getAddress(decoded[2])
+      _amounts: decoded[1].map((x: any) => BigInt(x.toString()))
       };
     };
 

@@ -169,7 +169,7 @@ export class V2Avatar {
     return await this.v2Hub.trust(avatar, BigInt('0'));
   }
 
-  async getMintableAmount(): Promise<bigint> {
+  async getMintableAmount(): Promise<[bigint, bigint, bigint]> {
     return await this.v2Hub.calculateIssuance(this.avatarAddress);
   }
 }

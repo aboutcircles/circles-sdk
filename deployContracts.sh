@@ -102,6 +102,59 @@ V2_STANDARD_MINT_POLICY_DEPLOYMENT=$(forge create StandardMintPolicy \
   --constructor-args ${V2_HUB_ADDRESS})
 V2_STANDARD_MINT_POLICY_ADDRESS=$(echo "$V2_STANDARD_MINT_POLICY_DEPLOYMENT" | grep "Deployed to:" | awk '{print $3}')
 
+echo "Deploying NameRegistry ..."
+NAME_REGISTRY_DEPLOYMENT=$(forge create NameRegistry \
+  --rpc-url ${RPC_URL} \
+  --private-key ${PRIVATE_KEY} \
+  --constructor-args ${HUB})
+NAME_REGISTRY_ADDRESS=$(echo "$NAME_REGISTRY_DEPLOYMENT" | grep "Deployed to:" | awk '{print $3}')
+echo "NameRegistry deployed at ${NAME_REGISTRY_ADDRESS}"
+
+echo "Deploying ERC20Lift ..."
+ERC20LIFT_DEPLOYMENT=$(forge create ERC20Lift \
+  --rpc-url ${RPC_URL} \
+  --private-key ${PRIVATE_KEY} \
+  --constructor-args ${HUB} ${NAME_REGISTRY} ${MC_ERC20_DEMURRAGE} ${MC_ERC20_INFLATION})
+ERC20LIFT_ADDRESS=$(echo "$ERC20LIFT_DEPLOYMENT" | grep "Deployed to:" | awk '{print $3}')
+echo "ERC20Lift deployed at ${ERC20LIFT_ADDRESS}"
+
+echo "Deploying StandardTreasury ..."
+STANDARD_TREASURY_DEPLOYMENT=$(forge create StandardTreasury \
+  --rpc-url ${RPC_URL} \
+  --private-key ${PRIVATE_KEY} \
+  --constructor-args ${HUB} ${MC_STANDARD_VAULT})
+STANDARD_TREASURY_ADDRESS=$(echo "$STANDARD_TREASURY_DEPLOYMENT" | grep "Deployed to:" | awk '{print $3}')
+echo "StandardTreasury deployed at ${STANDARD_TREASURY_ADDRESS}"
+
+echo "Deploying BaseGroupMintPolicy ..."
+BASE_GROUP_MINT_POLICY_DEPLOYMENT=$(forge create BaseGroupMintPolicy \
+  --rpc-url ${RPC_URL} \
+  --private-key ${PRIVATE_KEY}) # This contract didn't have args in your provided snippets
+BASE_GROUP_MINT_POLICY_ADDRESS=$(echo "$BASE_GROUP_MINT_POLICY_DEPLOYMENT" | grep "Deployed to:" | awk '{print $3}')
+echo "BaseGroupMintPolicy deployed at ${BASE_GROUP_MINT_POLICY_ADDRESS}"
+
+echo "Deploying MastercopyDemurrageERC20 ..."
+MC_DEMURRAGE_ERC20_DEPLOYMENT=$(forge create MastercopyDemurrageERC20 \
+  --rpc-url ${RPC_URL} \
+  --private-key ${PRIVATE_KEY}) # This contract didn't have args in your provided snippets
+MC_DEMURRAGE_ERC20_ADDRESS=$(echo "$MC_DEMURRAGE_ERC20_DEPLOYMENT" | grep "Deployed to:" | awk '{print $3}')
+echo "MastercopyDemurrageERC20 deployed at ${MC_DEMURRAGE_ERC20_ADDRESS}"
+
+echo "Deploying MastercopyInflationaryERC20 ..."
+MC_INFLATIONARY_ERC20_DEPLOYMENT=$(forge create MastercopyInflationaryERC20 \
+  --rpc-url ${RPC_URL} \
+  --private-key ${PRIVATE_KEY}) # This contract didn't have args in your provided snippets
+MC_INFLATIONARY_ERC20_ADDRESS=$(echo "$MC_INFLATIONARY_ERC20_DEPLOYMENT" | grep "Deployed to:" | awk '{print $3}')
+echo "MastercopyInflationaryERC20 deployed at ${MC_INFLATIONARY_ERC20_ADDRESS}"
+
+echo "Deploying MastercopyStandardVault ..."
+MC_STANDARD_VAULT_DEPLOYMENT=$(forge create MastercopyStandardVault \
+  --rpc-url ${RPC_URL} \
+  --private-key ${PRIVATE_KEY}) # This contract didn't have args in your provided snippets
+MC_STANDARD_VAULT_ADDRESS=$(echo "$MC_STANDARD_VAULT_DEPLOYMENT" | grep "Deployed to:" | awk '{print $3}')
+echo "MastercopyStandardVault deployed at ${MC_STANDARD_VAULT_ADDRESS}"
+
+
 echo ""
 echo "Summary:"
 echo "========"
@@ -109,4 +162,11 @@ echo "V1 Hub: $V1_HUB_ADDRESS"
 echo "Migration: $MIGRATION_ADDRESS"
 echo "V2 Hub: $V2_HUB_ADDRESS"
 echo "V2 Standard Mint Policy: $V2_STANDARD_MINT_POLICY_ADDRESS"
+echo "NameRegistry: $NAME_REGISTRY_ADDRESS"
+echo "ERC20Lift: $ERC20LIFT_ADDRESS"
+echo "StandardTreasury: $STANDARD_TREASURY_ADDRESS"
+echo "BaseGroupMintPolicy: $BASE_GROUP_MINT_POLICY_ADDRESS"
+echo "MastercopyDemurrageERC20: $MC_DEMURRAGE_ERC20_ADDRESS"
+echo "MastercopyInflationaryERC20: $MC_INFLATIONARY_ERC20_ADDRESS"
+echo "MastercopyStandardVault: $MC_STANDARD_VAULT_ADDRESS"
 echo ""
