@@ -5,4 +5,3 @@
 [submodule "packages/circles-contracts-v2"]
 	path = packages/circles-contracts-v2
 	url = https://github.com/CirclesUBI/circles-contracts-v2.git
-	branch = develop
