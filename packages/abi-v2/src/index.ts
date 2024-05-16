@@ -25,7 +25,7 @@ import * as V2HubInputTypes from './V2HubFunctionInputTypes';
 import { V2HubFunctionName, V2HubFunctionNames } from './V2HubFunctionNames';
 import { V2HubCalls } from './V2HubEncoders';
 
-import { V2HubEvents, V2HubEvent , ApprovalForAllEvent, ConvertInflationEvent, InviteHumanEvent, PersonalMintEvent, RegisterGroupEvent, RegisterHumanEvent, RegisterOrganizationEvent, StoppedEvent, TransferBatchEvent, TransferSingleEvent, TrustEvent, URIEvent } from './V2HubEvents';
+import { V2HubEvents, V2HubEvent , ApprovalForAllEvent, DiscountCostEvent, InviteHumanEvent, PersonalMintEvent, RegisterGroupEvent, RegisterHumanEvent, RegisterOrganizationEvent, StoppedEvent, TransferBatchEvent, TransferSingleEvent, TrustEvent, URIEvent } from './V2HubEvents';
 import { V2Hub } from './V2HubWrapper';
 
 export {
@@ -37,6 +37,6 @@ export {
   V2HubCalls,
   
   V2HubEvents,
-  V2HubEvent, ApprovalForAllEvent, ConvertInflationEvent, InviteHumanEvent, PersonalMintEvent, RegisterGroupEvent, RegisterHumanEvent, RegisterOrganizationEvent, StoppedEvent, TransferBatchEvent, TransferSingleEvent, TrustEvent, URIEvent,
+  V2HubEvent, ApprovalForAllEvent, DiscountCostEvent, InviteHumanEvent, PersonalMintEvent, RegisterGroupEvent, RegisterHumanEvent, RegisterOrganizationEvent, StoppedEvent, TransferBatchEvent, TransferSingleEvent, TrustEvent, URIEvent,
   V2Hub,
 };

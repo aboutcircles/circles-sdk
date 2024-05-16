@@ -8,10 +8,10 @@ export type ApprovalForAllEvent = Event & {
   approved: boolean;
 };
 
-export type ConvertInflationEvent = Event & {
-  inflationValue: bigint;
-  demurrageValue: bigint;
-  day: bigint;
+export type DiscountCostEvent = Event & {
+  account: string;
+  id: bigint;
+  discountCost: bigint;
 };
 
 export type InviteHumanEvent = Event & {
@@ -78,7 +78,7 @@ export type URIEvent = Event & {
 
 export type V2HubEvent =
   ApprovalForAllEvent |
-  ConvertInflationEvent |
+  DiscountCostEvent |
   InviteHumanEvent |
   PersonalMintEvent |
   RegisterGroupEvent |
@@ -98,10 +98,10 @@ const parseApprovalForAllEvent = (log: ethers.LogDescription): ApprovalForAllEve
   approved: log.args.getValue('approved')
 });
 
-const parseConvertInflationEvent = (log: ethers.LogDescription): ConvertInflationEvent => ({
-  inflationValue: BigInt(log.args.getValue('inflationValue')),
-  demurrageValue: BigInt(log.args.getValue('demurrageValue')),
-  day: BigInt(log.args.getValue('day'))
+const parseDiscountCostEvent = (log: ethers.LogDescription): DiscountCostEvent => ({
+  account: getAddress(log.args.getValue('account')),
+  id: BigInt(log.args.getValue('id')),
+  discountCost: BigInt(log.args.getValue('discountCost'))
 });
 
 const parseInviteHumanEvent = (log: ethers.LogDescription): InviteHumanEvent => ({
@@ -183,8 +183,8 @@ export class V2HubEvents implements EventDecoder {
       case 'ApprovalForAll':
         eventData = parseApprovalForAllEvent(decoded);
         break;
-      case 'ConvertInflation':
-        eventData = parseConvertInflationEvent(decoded);
+      case 'DiscountCost':
+        eventData = parseDiscountCostEvent(decoded);
         break;
       case 'InviteHuman':
         eventData = parseInviteHumanEvent(decoded);

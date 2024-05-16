@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { Avatar, Sdk } from '@circles-sdk/sdk/dist';
   import AvatarComponent from '../components/avatar/Avatar.svelte';
   import { ethers, HDNodeWallet } from 'ethers';
   import HorizontalLayout from '../components/common/HorizontalLayout.svelte';
@@ -8,7 +7,6 @@
   import EventList, { subscribeAvatar } from '../components/EventList.svelte';
   import { onMount } from 'svelte';
   import HorizontalCollapsible from '../components/common/HorizontalCollapsible.svelte';
-  import { AvatarState } from '@circles-sdk/sdk/dist/avatar';
   import {
     PUBLIC_ANVIL_RPC_URL
     , PUBLIC_ANVIL_HUB_V1
@@ -19,6 +17,7 @@
     , PUBLIC_GC_HUB_V2
     , PUBLIC_GC_PRIVATE_KEY, PUBLIC_ANVIL_MIGRATION_CONTRACT, PUBLIC_GC_MIGRATION_CONTRACT
   } from '$env/static/public';
+  import { Avatar, AvatarState, Sdk } from '@circles-sdk/sdk/dist';
 
   let environment = 'gnosisChain';
   const environments : {

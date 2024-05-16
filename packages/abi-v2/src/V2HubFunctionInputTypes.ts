@@ -1,3 +1,7 @@
+export type AdvancedUsageFlagsInputs = {
+  arg0: string;
+};
+
 export type AvatarsInputs = {
   arg0: string;
 };
@@ -46,11 +50,6 @@ export type DayInputs = {
   _timestamp: bigint;
 };
 
-export type DiscountedBalancesInputs = {
-  arg0: bigint;
-  arg1: string;
-};
-
 export type GroupMintInputs = {
   _group: string;
   _collateralAvatars: string[];
@@ -79,6 +78,11 @@ export type IsOrganizationInputs = {
   _organization: string;
 };
 
+export type IsPermittedFlowInputs = {
+  _to: string;
+  _circlesAvatar: string;
+};
+
 export type IsTrustedInputs = {
   _truster: string;
   _trustee: string;
@@ -94,10 +98,6 @@ export type MintPoliciesInputs = {
   arg0: string;
 };
 
-export type MintTimesInputs = {
-  arg0: string;
-};
-
 export type OperateFlowMatrixInputs = {
   _flowVertices: string[];
   _flow: any[];
@@ -110,23 +110,23 @@ export type RegisterCustomGroupInputs = {
   _treasury: string;
   _name: string;
   _symbol: string;
-  _cidV0Digest: Uint8Array;
+  _metatdataDigest: Uint8Array;
 };
 
 export type RegisterGroupInputs = {
   _mint: string;
   _name: string;
   _symbol: string;
-  _cidV0Digest: Uint8Array;
+  _metatdataDigest: Uint8Array;
 };
 
 export type RegisterHumanInputs = {
-  _cidV0Digest: Uint8Array;
+  _metatdataDigest: Uint8Array;
 };
 
 export type RegisterOrganizationInputs = {
   _name: string;
-  _cidV0Digest: Uint8Array;
+  _metatdataDigest: Uint8Array;
 };
 
 export type SafeBatchTransferFromInputs = {
@@ -143,6 +143,10 @@ export type SafeTransferFromInputs = {
   _id: bigint;
   _value: bigint;
   _data: Uint8Array;
+};
+
+export type SetAdvancedUsageFlagInputs = {
+  _flag: Uint8Array;
 };
 
 export type SetApprovalForAllInputs = {
@@ -162,6 +166,10 @@ export type ToTokenIdInputs = {
   _avatar: string;
 };
 
+export type TotalSupplyInputs = {
+  _id: bigint;
+};
+
 export type TreasuriesInputs = {
   arg0: string;
 };
@@ -177,7 +185,7 @@ export type TrustMarkersInputs = {
 };
 
 export type UriInputs = {
-  _id: bigint;
+  arg0: bigint;
 };
 
 export type WrapInputs = {
@@ -189,6 +197,7 @@ export type WrapInputs = {
 export type NoInputs = [];
   
 export type V2HubFunctionInputs = 
+  | AdvancedUsageFlagsInputs
   | AvatarsInputs
   | BalanceOfInputs
   | BalanceOfBatchInputs
@@ -199,17 +208,16 @@ export type V2HubFunctionInputs =
   | ConvertBatchInflationaryToDemurrageValuesInputs
   | ConvertInflationaryToDemurrageValueInputs
   | DayInputs
-  | DiscountedBalancesInputs
   | GroupMintInputs
   | InviteHumanInputs
   | IsApprovedForAllInputs
   | IsGroupInputs
   | IsHumanInputs
   | IsOrganizationInputs
+  | IsPermittedFlowInputs
   | IsTrustedInputs
   | MigrateInputs
   | MintPoliciesInputs
-  | MintTimesInputs
   | OperateFlowMatrixInputs
   | RegisterCustomGroupInputs
   | RegisterGroupInputs
@@ -217,10 +225,12 @@ export type V2HubFunctionInputs =
   | RegisterOrganizationInputs
   | SafeBatchTransferFromInputs
   | SafeTransferFromInputs
+  | SetAdvancedUsageFlagInputs
   | SetApprovalForAllInputs
   | StoppedInputs
   | SupportsInterfaceInputs
   | ToTokenIdInputs
+  | TotalSupplyInputs
   | TreasuriesInputs
   | TrustInputs
   | TrustMarkersInputs

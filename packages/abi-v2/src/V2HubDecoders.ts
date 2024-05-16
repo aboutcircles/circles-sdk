@@ -5,6 +5,12 @@ import { V2HubFunctionName } from './V2HubFunctionNames';
 
 export class V2HubDecoders {
     private readonly contractInterface: ethers.Interface = ethers.Interface.from(contractAbi);
+    decodeAdvancedUsageFlagsInputs(callData: string): inputTypes.AdvancedUsageFlagsInputs {
+    const decoded = this.contractInterface.decodeFunctionData('advancedUsageFlags', callData);
+      return {
+              arg0: getAddress(decoded[0])
+      };
+    };
     decodeAvatarsInputs(callData: string): inputTypes.AvatarsInputs {
     const decoded = this.contractInterface.decodeFunctionData('avatars', callData);
       return {
@@ -73,13 +79,6 @@ export class V2HubDecoders {
               _timestamp: BigInt(decoded[0].toString())
       };
     };
-    decodeDiscountedBalancesInputs(callData: string): inputTypes.DiscountedBalancesInputs {
-    const decoded = this.contractInterface.decodeFunctionData('discountedBalances', callData);
-      return {
-              arg0: BigInt(decoded[0].toString()),
-      arg1: getAddress(decoded[1])
-      };
-    };
     decodeGroupMintInputs(callData: string): inputTypes.GroupMintInputs {
     const decoded = this.contractInterface.decodeFunctionData('groupMint', callData);
       return {
@@ -89,8 +88,6 @@ export class V2HubDecoders {
       _data: ethers.getBytes(decoded[3])
       };
     };
-
-
 
     decodeInviteHumanInputs(callData: string): inputTypes.InviteHumanInputs {
     const decoded = this.contractInterface.decodeFunctionData('inviteHuman', callData);
@@ -123,6 +120,13 @@ export class V2HubDecoders {
               _organization: getAddress(decoded[0])
       };
     };
+    decodeIsPermittedFlowInputs(callData: string): inputTypes.IsPermittedFlowInputs {
+    const decoded = this.contractInterface.decodeFunctionData('isPermittedFlow', callData);
+      return {
+              _to: getAddress(decoded[0]),
+      _circlesAvatar: getAddress(decoded[1])
+      };
+    };
     decodeIsTrustedInputs(callData: string): inputTypes.IsTrustedInputs {
     const decoded = this.contractInterface.decodeFunctionData('isTrusted', callData);
       return {
@@ -130,7 +134,6 @@ export class V2HubDecoders {
       _trustee: getAddress(decoded[1])
       };
     };
-
     decodeMigrateInputs(callData: string): inputTypes.MigrateInputs {
     const decoded = this.contractInterface.decodeFunctionData('migrate', callData);
       return {
@@ -139,20 +142,12 @@ export class V2HubDecoders {
       _amounts: decoded[2].map((x: any) => BigInt(x.toString()))
       };
     };
-
     decodeMintPoliciesInputs(callData: string): inputTypes.MintPoliciesInputs {
     const decoded = this.contractInterface.decodeFunctionData('mintPolicies', callData);
       return {
               arg0: getAddress(decoded[0])
       };
     };
-    decodeMintTimesInputs(callData: string): inputTypes.MintTimesInputs {
-    const decoded = this.contractInterface.decodeFunctionData('mintTimes', callData);
-      return {
-              arg0: getAddress(decoded[0])
-      };
-    };
-
     decodeOperateFlowMatrixInputs(callData: string): inputTypes.OperateFlowMatrixInputs {
     const decoded = this.contractInterface.decodeFunctionData('operateFlowMatrix', callData);
       return {
@@ -170,7 +165,7 @@ export class V2HubDecoders {
       _treasury: getAddress(decoded[1]),
       _name: decoded[2],
       _symbol: decoded[3],
-      _cidV0Digest: ethers.getBytes(decoded[4])
+      _metatdataDigest: ethers.getBytes(decoded[4])
       };
     };
     decodeRegisterGroupInputs(callData: string): inputTypes.RegisterGroupInputs {
@@ -179,20 +174,20 @@ export class V2HubDecoders {
               _mint: getAddress(decoded[0]),
       _name: decoded[1],
       _symbol: decoded[2],
-      _cidV0Digest: ethers.getBytes(decoded[3])
+      _metatdataDigest: ethers.getBytes(decoded[3])
       };
     };
     decodeRegisterHumanInputs(callData: string): inputTypes.RegisterHumanInputs {
     const decoded = this.contractInterface.decodeFunctionData('registerHuman', callData);
       return {
-              _cidV0Digest: ethers.getBytes(decoded[0])
+              _metatdataDigest: ethers.getBytes(decoded[0])
       };
     };
     decodeRegisterOrganizationInputs(callData: string): inputTypes.RegisterOrganizationInputs {
     const decoded = this.contractInterface.decodeFunctionData('registerOrganization', callData);
       return {
               _name: decoded[0],
-      _cidV0Digest: ethers.getBytes(decoded[1])
+      _metatdataDigest: ethers.getBytes(decoded[1])
       };
     };
     decodeSafeBatchTransferFromInputs(callData: string): inputTypes.SafeBatchTransferFromInputs {
@@ -215,6 +210,12 @@ export class V2HubDecoders {
       _data: ethers.getBytes(decoded[4])
       };
     };
+    decodeSetAdvancedUsageFlagInputs(callData: string): inputTypes.SetAdvancedUsageFlagInputs {
+    const decoded = this.contractInterface.decodeFunctionData('setAdvancedUsageFlag', callData);
+      return {
+              _flag: ethers.getBytes(decoded[0])
+      };
+    };
     decodeSetApprovalForAllInputs(callData: string): inputTypes.SetApprovalForAllInputs {
     const decoded = this.contractInterface.decodeFunctionData('setApprovalForAll', callData);
       return {
@@ -222,7 +223,6 @@ export class V2HubDecoders {
       _approved: decoded[1]
       };
     };
-
 
     decodeStoppedInputs(callData: string): inputTypes.StoppedInputs {
     const decoded = this.contractInterface.decodeFunctionData('stopped', callData);
@@ -240,6 +240,12 @@ export class V2HubDecoders {
     const decoded = this.contractInterface.decodeFunctionData('toTokenId', callData);
       return {
               _avatar: getAddress(decoded[0])
+      };
+    };
+    decodeTotalSupplyInputs(callData: string): inputTypes.TotalSupplyInputs {
+    const decoded = this.contractInterface.decodeFunctionData('totalSupply', callData);
+      return {
+              _id: BigInt(decoded[0].toString())
       };
     };
     decodeTreasuriesInputs(callData: string): inputTypes.TreasuriesInputs {
@@ -265,7 +271,7 @@ export class V2HubDecoders {
     decodeUriInputs(callData: string): inputTypes.UriInputs {
     const decoded = this.contractInterface.decodeFunctionData('uri', callData);
       return {
-              _id: BigInt(decoded[0].toString())
+              arg0: BigInt(decoded[0].toString())
       };
     };
     decodeWrapInputs(callData: string): inputTypes.WrapInputs {
@@ -296,6 +302,7 @@ export class V2HubDecoders {
 
       let decoded: any;
       switch (<V2HubFunctionName>functionFragment.name) {
+          case 'advancedUsageFlags': decoded = this.decodeAdvancedUsageFlagsInputs(callData); break;
           case 'avatars': decoded = this.decodeAvatarsInputs(callData); break;
           case 'balanceOf': decoded = this.decodeBalanceOfInputs(callData); break;
           case 'balanceOfBatch': decoded = this.decodeBalanceOfBatchInputs(callData); break;
@@ -306,17 +313,16 @@ export class V2HubDecoders {
           case 'convertBatchInflationaryToDemurrageValues': decoded = this.decodeConvertBatchInflationaryToDemurrageValuesInputs(callData); break;
           case 'convertInflationaryToDemurrageValue': decoded = this.decodeConvertInflationaryToDemurrageValueInputs(callData); break;
           case 'day': decoded = this.decodeDayInputs(callData); break;
-          case 'discountedBalances': decoded = this.decodeDiscountedBalancesInputs(callData); break;
           case 'groupMint': decoded = this.decodeGroupMintInputs(callData); break;
           case 'inviteHuman': decoded = this.decodeInviteHumanInputs(callData); break;
           case 'isApprovedForAll': decoded = this.decodeIsApprovedForAllInputs(callData); break;
           case 'isGroup': decoded = this.decodeIsGroupInputs(callData); break;
           case 'isHuman': decoded = this.decodeIsHumanInputs(callData); break;
           case 'isOrganization': decoded = this.decodeIsOrganizationInputs(callData); break;
+          case 'isPermittedFlow': decoded = this.decodeIsPermittedFlowInputs(callData); break;
           case 'isTrusted': decoded = this.decodeIsTrustedInputs(callData); break;
           case 'migrate': decoded = this.decodeMigrateInputs(callData); break;
           case 'mintPolicies': decoded = this.decodeMintPoliciesInputs(callData); break;
-          case 'mintTimes': decoded = this.decodeMintTimesInputs(callData); break;
           case 'operateFlowMatrix': decoded = this.decodeOperateFlowMatrixInputs(callData); break;
           case 'registerCustomGroup': decoded = this.decodeRegisterCustomGroupInputs(callData); break;
           case 'registerGroup': decoded = this.decodeRegisterGroupInputs(callData); break;
@@ -324,10 +330,12 @@ export class V2HubDecoders {
           case 'registerOrganization': decoded = this.decodeRegisterOrganizationInputs(callData); break;
           case 'safeBatchTransferFrom': decoded = this.decodeSafeBatchTransferFromInputs(callData); break;
           case 'safeTransferFrom': decoded = this.decodeSafeTransferFromInputs(callData); break;
+          case 'setAdvancedUsageFlag': decoded = this.decodeSetAdvancedUsageFlagInputs(callData); break;
           case 'setApprovalForAll': decoded = this.decodeSetApprovalForAllInputs(callData); break;
           case 'stopped': decoded = this.decodeStoppedInputs(callData); break;
           case 'supportsInterface': decoded = this.decodeSupportsInterfaceInputs(callData); break;
           case 'toTokenId': decoded = this.decodeToTokenIdInputs(callData); break;
+          case 'totalSupply': decoded = this.decodeTotalSupplyInputs(callData); break;
           case 'treasuries': decoded = this.decodeTreasuriesInputs(callData); break;
           case 'trust': decoded = this.decodeTrustInputs(callData); break;
           case 'trustMarkers': decoded = this.decodeTrustMarkersInputs(callData); break;

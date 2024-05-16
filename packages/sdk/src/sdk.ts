@@ -32,8 +32,8 @@ export class Sdk {
   // getInvitationFee = async () =>
   //   (await this.v2Hub.WELCOME_BONUS()) * BigInt(2);
 
-  isRegistrationPeriodOver: () => Promise<boolean> = async () =>
-    (await this.v2Hub.invitationOnlyTime()) < BigInt(Date.now() / 1000);
+  // isRegistrationPeriodOver: () => Promise<boolean> = async () =>
+  //   (await this.v2Hub.invitationOnlyTime()) < BigInt(Date.now() / 1000);
 
   getAvatar = async (avatarAddress: string) =>
     new Avatar(this.v1Hub, this.v2Hub, avatarAddress, this.migrationAddress, this.provider, this.rpcUrl);

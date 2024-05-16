@@ -31,7 +31,13 @@ export class V2Hub {
     return this.provider.sendTransaction(request);
   }
   
-  avatars = async (arg0: string): Promise<string> => {
+  advancedUsageFlags = async (arg0: string): Promise<Uint8Array> => {
+      return ethers.getBytes(await this.provider.call({
+      to: this.address,
+      data: this.callEncoder.advancedUsageFlags({ arg0: arg0 })
+    }));
+    };
+avatars = async (arg0: string): Promise<string> => {
       return await (async () => { const val = await this.provider.call({
       to: this.address,
       data: this.callEncoder.avatars({ arg0: arg0 })
@@ -49,11 +55,12 @@ balanceOfBatch = async (_accounts: string[], _ids: bigint[]): Promise<bigint[]> 
       data: this.callEncoder.balanceOfBatch({ _accounts: _accounts, _ids: _ids })
     }))[0].map((x:any) => BigInt(x));
     };
-balanceOfOnDay = async (_account: string, _id: bigint, _day: bigint): Promise<bigint> => {
-      return BigInt(await this.provider.call({
+balanceOfOnDay = async (_account: string, _id: bigint, _day: bigint): Promise<[bigint, bigint]> => {
+      const decoded = ethers.AbiCoder.defaultAbiCoder().decode(["uint256", "uint256"], await this.provider.call({
       to: this.address,
       data: this.callEncoder.balanceOfOnDay({ _account: _account, _id: _id, _day: _day })
     }));
+return [BigInt(decoded[0]), BigInt(decoded[1])];
     };
 calculateIssuance = async (_human: string): Promise<[bigint, bigint, bigint]> => {
       const decoded = ethers.AbiCoder.defaultAbiCoder().decode(["uint256", "uint256", "uint256"], await this.provider.call({
@@ -80,29 +87,10 @@ day = async (_timestamp: bigint): Promise<bigint> => {
       data: this.callEncoder.day({ _timestamp: _timestamp })
     }));
     };
-discountedBalances = async (arg0: bigint, arg1: string): Promise<[bigint, bigint]> => {
-      const decoded = ethers.AbiCoder.defaultAbiCoder().decode(["uint192", "uint64"], await this.provider.call({
-      to: this.address,
-      data: this.callEncoder.discountedBalances({ arg0: arg0, arg1: arg1 })
-    }));
-return [BigInt(decoded[0]), BigInt(decoded[1])];
-    };
-hubV1 = async (): Promise<string> => {
-      return await (async () => { const val = await this.provider.call({
-      to: this.address,
-      data: this.callEncoder.hubV1()
-    }); return val == "0x" ? ethers.ZeroAddress : ethers.getAddress(val.slice(-40)); })();
-    };
 inflationDayZero = async (): Promise<bigint> => {
       return BigInt(await this.provider.call({
       to: this.address,
       data: this.callEncoder.inflationDayZero()
-    }));
-    };
-invitationOnlyTime = async (): Promise<bigint> => {
-      return BigInt(await this.provider.call({
-      to: this.address,
-      data: this.callEncoder.invitationOnlyTime()
     }));
     };
 isApprovedForAll = async (_account: string, _operator: string): Promise<boolean> => {
@@ -129,47 +117,22 @@ isOrganization = async (_organization: string): Promise<boolean> => {
       data: this.callEncoder.isOrganization({ _organization: _organization })
     }) === '0x0000000000000000000000000000000000000000000000000000000000000001';
     };
+isPermittedFlow = async (_to: string, _circlesAvatar: string): Promise<boolean> => {
+      return await this.provider.call({
+      to: this.address,
+      data: this.callEncoder.isPermittedFlow({ _to: _to, _circlesAvatar: _circlesAvatar })
+    }) === '0x0000000000000000000000000000000000000000000000000000000000000001';
+    };
 isTrusted = async (_truster: string, _trustee: string): Promise<boolean> => {
       return await this.provider.call({
       to: this.address,
       data: this.callEncoder.isTrusted({ _truster: _truster, _trustee: _trustee })
     }) === '0x0000000000000000000000000000000000000000000000000000000000000001';
     };
-liftERC20 = async (): Promise<string> => {
-      return await (async () => { const val = await this.provider.call({
-      to: this.address,
-      data: this.callEncoder.liftERC20()
-    }); return val == "0x" ? ethers.ZeroAddress : ethers.getAddress(val.slice(-40)); })();
-    };
-migration = async (): Promise<string> => {
-      return await (async () => { const val = await this.provider.call({
-      to: this.address,
-      data: this.callEncoder.migration()
-    }); return val == "0x" ? ethers.ZeroAddress : ethers.getAddress(val.slice(-40)); })();
-    };
 mintPolicies = async (arg0: string): Promise<string> => {
       return await (async () => { const val = await this.provider.call({
       to: this.address,
       data: this.callEncoder.mintPolicies({ arg0: arg0 })
-    }); return val == "0x" ? ethers.ZeroAddress : ethers.getAddress(val.slice(-40)); })();
-    };
-mintTimes = async (arg0: string): Promise<[string, bigint]> => {
-      const decoded = ethers.AbiCoder.defaultAbiCoder().decode(["address", "uint96"], await this.provider.call({
-      to: this.address,
-      data: this.callEncoder.mintTimes({ arg0: arg0 })
-    }));
-return [await (async () => { const val = decoded[0]; return val == "0x" ? ethers.ZeroAddress : ethers.getAddress(val.slice(-40)); })(), BigInt(decoded[1])];
-    };
-nameRegistry = async (): Promise<string> => {
-      return await (async () => { const val = await this.provider.call({
-      to: this.address,
-      data: this.callEncoder.nameRegistry()
-    }); return val == "0x" ? ethers.ZeroAddress : ethers.getAddress(val.slice(-40)); })();
-    };
-standardTreasury = async (): Promise<string> => {
-      return await (async () => { const val = await this.provider.call({
-      to: this.address,
-      data: this.callEncoder.standardTreasury()
     }); return val == "0x" ? ethers.ZeroAddress : ethers.getAddress(val.slice(-40)); })();
     };
 stopped = async (_human: string): Promise<boolean> => {
@@ -190,6 +153,12 @@ toTokenId = async (_avatar: string): Promise<bigint> => {
       data: this.callEncoder.toTokenId({ _avatar: _avatar })
     }));
     };
+totalSupply = async (_id: bigint): Promise<bigint> => {
+      return BigInt(await this.provider.call({
+      to: this.address,
+      data: this.callEncoder.totalSupply({ _id: _id })
+    }));
+    };
 treasuries = async (arg0: string): Promise<string> => {
       return await (async () => { const val = await this.provider.call({
       to: this.address,
@@ -203,10 +172,10 @@ trustMarkers = async (arg0: string, arg1: string): Promise<[string, bigint]> => 
     }));
 return [await (async () => { const val = decoded[0]; return val == "0x" ? ethers.ZeroAddress : ethers.getAddress(val.slice(-40)); })(), BigInt(decoded[1])];
     };
-uri = async (_id: bigint): Promise<string> => {
+uri = async (arg0: bigint): Promise<string> => {
       return await this.provider.call({
       to: this.address,
-      data: this.callEncoder.uri({ _id: _id })
+      data: this.callEncoder.uri({ arg0: arg0 })
     });
     };
   burn = async (_id: bigint, _amount: bigint, _data: Uint8Array): Promise<ethers.TransactionReceipt | null> => {
@@ -265,34 +234,34 @@ personalMint = async (): Promise<ethers.TransactionReceipt | null> => {
       return tx.wait();
     }
 
-registerCustomGroup = async (_mint: string, _treasury: string, _name: string, _symbol: string, _cidV0Digest: Uint8Array): Promise<ethers.TransactionReceipt | null> => {
+registerCustomGroup = async (_mint: string, _treasury: string, _name: string, _symbol: string, _metatdataDigest: Uint8Array): Promise<ethers.TransactionReceipt | null> => {
        const tx = await this.sendTransaction({
          to: this.address,
-         data: this.callEncoder.registerCustomGroup({ _mint: _mint, _treasury: _treasury, _name: _name, _symbol: _symbol, _cidV0Digest: _cidV0Digest })
+         data: this.callEncoder.registerCustomGroup({ _mint: _mint, _treasury: _treasury, _name: _name, _symbol: _symbol, _metatdataDigest: _metatdataDigest })
       });
       return tx.wait();
     }
 
-registerGroup = async (_mint: string, _name: string, _symbol: string, _cidV0Digest: Uint8Array): Promise<ethers.TransactionReceipt | null> => {
+registerGroup = async (_mint: string, _name: string, _symbol: string, _metatdataDigest: Uint8Array): Promise<ethers.TransactionReceipt | null> => {
        const tx = await this.sendTransaction({
          to: this.address,
-         data: this.callEncoder.registerGroup({ _mint: _mint, _name: _name, _symbol: _symbol, _cidV0Digest: _cidV0Digest })
+         data: this.callEncoder.registerGroup({ _mint: _mint, _name: _name, _symbol: _symbol, _metatdataDigest: _metatdataDigest })
       });
       return tx.wait();
     }
 
-registerHuman = async (_cidV0Digest: Uint8Array): Promise<ethers.TransactionReceipt | null> => {
+registerHuman = async (_metatdataDigest: Uint8Array): Promise<ethers.TransactionReceipt | null> => {
        const tx = await this.sendTransaction({
          to: this.address,
-         data: this.callEncoder.registerHuman({ _cidV0Digest: _cidV0Digest })
+         data: this.callEncoder.registerHuman({ _metatdataDigest: _metatdataDigest })
       });
       return tx.wait();
     }
 
-registerOrganization = async (_name: string, _cidV0Digest: Uint8Array): Promise<ethers.TransactionReceipt | null> => {
+registerOrganization = async (_name: string, _metatdataDigest: Uint8Array): Promise<ethers.TransactionReceipt | null> => {
        const tx = await this.sendTransaction({
          to: this.address,
-         data: this.callEncoder.registerOrganization({ _name: _name, _cidV0Digest: _cidV0Digest })
+         data: this.callEncoder.registerOrganization({ _name: _name, _metatdataDigest: _metatdataDigest })
       });
       return tx.wait();
     }
@@ -309,6 +278,14 @@ safeTransferFrom = async (_from: string, _to: string, _id: bigint, _value: bigin
        const tx = await this.sendTransaction({
          to: this.address,
          data: this.callEncoder.safeTransferFrom({ _from: _from, _to: _to, _id: _id, _value: _value, _data: _data })
+      });
+      return tx.wait();
+    }
+
+setAdvancedUsageFlag = async (_flag: Uint8Array): Promise<ethers.TransactionReceipt | null> => {
+       const tx = await this.sendTransaction({
+         to: this.address,
+         data: this.callEncoder.setAdvancedUsageFlag({ _flag: _flag })
       });
       return tx.wait();
     }
