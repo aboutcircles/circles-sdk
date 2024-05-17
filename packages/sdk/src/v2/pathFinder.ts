@@ -68,7 +68,7 @@ export class Pathfinder {
             };
 
             return transformedResponse;
-            
+
         } catch (error) {
             if (error instanceof Error) {
                 throw error;
@@ -76,5 +76,33 @@ export class Pathfinder {
                 throw new Error('An unknown error occurred');
             }
         }
+    };
+}
+
+function transformToFlowMatrix(transfers: TransferPathStep[]) {
+    // Extract all unique addresses from transfers
+    const addressSet = new Set<string>();
+    for (const transfer of transfers) {
+        addressSet.add(transfer.from);
+        addressSet.add(transfer.to);
+        addressSet.add(transfer.tokenOwner);
     }
+
+    // Convert addresses to uint160 and sort
+    const sortedAddresses = Array.from(addressSet).sort((a, b) => {
+        const uint160A = BigInt(a);
+        const uint160B = BigInt(b);
+        return uint160A < uint160B ? -1 : uint160A > uint160B ? 1 : 0;
+    });
+
+    // Create the lookup map
+    const lookUpMap: { [address: string]: number } = {};
+    sortedAddresses.forEach((address, index) => {
+        lookUpMap[address] = index;
+    });
+
+    return {
+        sortedAddresses: sortedAddresses,
+        lookUpMap: lookUpMap
+    };
 }
