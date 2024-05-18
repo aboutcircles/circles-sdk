@@ -23,6 +23,25 @@ type directPathResponse = {
     };
 };
 
+type FlowEdge = {
+    streamSinkId: number;
+    amount: bigint;
+};
+
+type Stream = {
+    sourceCoordinate: bigint,
+    flowEdgeIds: number[],
+    data: Uint8Array
+}
+
+// Define FlowMatrix type
+type FlowMatrix = {
+    flowVertices: string[];
+    flowEdges: FlowEdge[];
+    streams: Stream[];
+};
+
+
 export class Pathfinder {
     pathfinderURL: string;
 
@@ -30,7 +49,7 @@ export class Pathfinder {
         this.pathfinderURL = pathfinderURL;
     }
 
-    async getArgsForPath(from: string, to: string, value: string): Promise<directPathResponse> {
+    async getArgsForPath(from: string, to: string, value: string): Promise<FlowMatrix> {
         const query = {
             method: 'compute_transfer',
             params: { from, to, value: value.toString() }
@@ -67,7 +86,14 @@ export class Pathfinder {
                 }
             };
 
-            return transformedResponse;
+            // todo: this is not great, I mangle the PathFinder response; should split these functions
+            if (transformedResponse.data?.directPath) {
+                const flowMatrix = createFlowMatrix(from, to, value, transformedResponse.data.directPath.transfers);
+                
+                return flowMatrix;
+            } else {
+                throw new Error('Invalid response from pathfinder');
+            }
 
         } catch (error) {
             if (error instanceof Error) {
@@ -79,7 +105,47 @@ export class Pathfinder {
     };
 }
 
-function transformToFlowMatrix(transfers: TransferPathStep[]) {
+// Function to create FlowMatrix from TransferPathStep[]
+// Warning, this is quick draft that explicitly only creates one stream, and sets streamSinkId to 1 explicitly
+function createFlowMatrix(from: string, to: string, value: string, transfers: TransferPathStep[]): FlowMatrix {
+    // Transform transfers to flow matrix structure
+    const { sortedAddresses, lookUpMap } = transformToFlowVertices(transfers);
+
+    // Initialize flow edges
+    const flowEdges: FlowEdge[] = transfers.map(transfer => ({
+        streamSinkId: transfer.to === to ? 1 : 0, // Set streamSinkId to 1 if transfer.to matches the given 'to' address
+        amount: BigInt(transfer.value) // Convert string value to bigint
+    }));
+
+    // Initialize stream object
+    const flowEdgeIds: number[] = flowEdges
+        .map((edge, index) => (edge.streamSinkId === 1 ? index : -1))
+        .filter(index => index !== -1);
+
+    // Check if the sum of terminal amounts matches the provided value
+    const totalTerminalAmount = flowEdges
+        .filter(edge => edge.streamSinkId === 1)
+        .reduce((sum, edge) => sum + edge.amount, BigInt(0));
+
+    if (totalTerminalAmount !== BigInt(value)) {
+        throw new Error(`The total terminal amount (${totalTerminalAmount}) does not match the provided value (${value}).`);
+    }
+
+    const stream: Stream = {
+        sourceCoordinate: BigInt(lookUpMap[from]),
+        flowEdgeIds: flowEdgeIds,
+        data: new Uint8Array() // Empty bytes for now
+    };
+
+    return {
+        flowVertices: sortedAddresses,
+        flowEdges: flowEdges,
+        streams: [stream]
+    };
+}
+
+// Function to transform TransferPathStep[] to flow vertices array with lookup map
+function transformToFlowVertices(transfers: TransferPathStep[]) {
     // Extract all unique addresses from transfers
     const addressSet = new Set<string>();
     for (const transfer of transfers) {
