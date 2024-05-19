@@ -40,6 +40,7 @@ type FlowMatrix = {
     flowEdges: FlowEdge[];
     streams: Stream[];
     packedCoordinates: Uint8Array;
+    sourceCoordinate: number;
 };
 
 
@@ -151,7 +152,8 @@ function createFlowMatrix(from: string, to: string, value: string, transfers: Tr
         flowVertices: sortedAddresses,
         flowEdges: flowEdges,
         streams: [stream],
-        packedCoordinates: packedCoordinates
+        packedCoordinates: packedCoordinates,
+        sourceCoordinate: lookUpMap[from] // Add sourceCoordinate using the lookup map
     };
 }
 
