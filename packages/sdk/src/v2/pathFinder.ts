@@ -39,6 +39,7 @@ type FlowMatrix = {
     flowVertices: string[];
     flowEdges: FlowEdge[];
     streams: Stream[];
+    packedCoordinates: Uint8Array;
 };
 
 
@@ -137,10 +138,20 @@ function createFlowMatrix(from: string, to: string, value: string, transfers: Tr
         data: new Uint8Array() // Empty bytes for now
     };
 
+    // Get coordinates for each triple (tokenOwner, sender, receiver) and pack them
+    const coordinates: number[] = [];
+    for (const transfer of transfers) {
+        coordinates.push(lookUpMap[transfer.tokenOwner]);
+        coordinates.push(lookUpMap[transfer.from]);
+        coordinates.push(lookUpMap[transfer.to]);
+    }
+    const packedCoordinates = packCoordinates(coordinates);
+
     return {
         flowVertices: sortedAddresses,
         flowEdges: flowEdges,
-        streams: [stream]
+        streams: [stream],
+        packedCoordinates: packedCoordinates
     };
 }
 
@@ -171,4 +182,13 @@ function transformToFlowVertices(transfers: TransferPathStep[]) {
         sortedAddresses: sortedAddresses,
         lookUpMap: lookUpMap
     };
+}
+
+function packCoordinates(coordinates: number[]): Uint8Array {
+    const packedCoordinates = new Uint8Array(coordinates.length * 2);
+    for (let i = 0; i < coordinates.length; i++) {
+        packedCoordinates[2 * i] = coordinates[i] >> 8; // High byte
+        packedCoordinates[2 * i + 1] = coordinates[i] & 0xFF; // Low byte
+    }
+    return packedCoordinates;
 }
