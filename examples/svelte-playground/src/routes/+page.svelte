@@ -1,6 +1,6 @@
 <script lang="ts">
   import AvatarComponent from '../components/avatar/Avatar.svelte';
-  import { ethers, HDNodeWallet } from 'ethers';
+  import { BaseWallet, ethers, HDNodeWallet } from 'ethers';
   import HorizontalLayout from '../components/common/HorizontalLayout.svelte';
   import VerticalCollapsible from '../components/common/VerticalCollapsible.svelte';
   import PromiseButton from '../components/common/ActionButton.svelte';
@@ -15,12 +15,19 @@
     , PUBLIC_GC_RPC_URL
     , PUBLIC_GC_HUB_V1
     , PUBLIC_GC_HUB_V2
-    , PUBLIC_GC_PRIVATE_KEY, PUBLIC_ANVIL_MIGRATION_CONTRACT, PUBLIC_GC_MIGRATION_CONTRACT
+    , PUBLIC_GC_PRIVATE_KEY
+    , PUBLIC_CHIADO_RPC_URL
+    , PUBLIC_CHIADO_HUB_V1
+    , PUBLIC_CHIADO_HUB_V2
+    , PUBLIC_CHIADO_PRIVATE_KEY
+    , PUBLIC_ANVIL_MIGRATION_CONTRACT
+    , PUBLIC_GC_MIGRATION_CONTRACT
   } from '$env/static/public';
   import { Avatar, AvatarState, Sdk } from '@circles-sdk/sdk/dist';
+  import type { ChainConfig } from '@circles-sdk/sdk';
 
   let environment = 'gnosisChain';
-  const environments : {
+  const environments: {
     [key: string]: {
       rpcUrl: string,
       hubv1Address: string,
@@ -42,10 +49,17 @@
       hubv2Address: PUBLIC_ANVIL_HUB_V2,
       migrationContract: PUBLIC_ANVIL_MIGRATION_CONTRACT,
       mainWallet: PUBLIC_ANVIL_PRIVATE_KEY
+    },
+    chiado: {
+      rpcUrl: PUBLIC_CHIADO_RPC_URL,
+      hubv1Address: PUBLIC_CHIADO_HUB_V1,
+      hubv2Address: PUBLIC_CHIADO_HUB_V2,
+      migrationContract: PUBLIC_ANVIL_MIGRATION_CONTRACT,
+      mainWallet: PUBLIC_CHIADO_PRIVATE_KEY
     }
   };
 
-  let chainId: number = 0;
+  let chainId: bigint = BigInt(0);
   let avatars: Avatar[] = [];
 
   async function onEnvironmentChange() {
@@ -54,13 +68,16 @@
   }
 
   function migrateLocalStorage() {
-    const newEntries = {};
+    const newEntries: { [x: string]: any } = {};
     const newIndex = [];
 
     if (!localStorage.getItem('v0.2')) {
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key === 'avatars') {
+          continue;
+        }
+        if (!key) {
           continue;
         }
         const newKey = key.replace('avatar_', '');
@@ -93,7 +110,14 @@
       }
       const jsonRpcProvider = new ethers.JsonRpcProvider(environments[environment].rpcUrl);
       const ethersWallet = new ethers.Wallet(avatarRecord.privateKey, jsonRpcProvider);
-      const sdk = new Sdk(environments[environment].hubv1Address, environments[environment].hubv2Address, environments[environment].migrationContract, ethersWallet);
+
+      const chainConfig: ChainConfig = {
+        circlesRpcUrl: environments[environment].rpcUrl,
+        v1HubAddress: environments[environment].hubv1Address,
+        v2HubAddress: environments[environment].hubv2Address,
+        migrationAddress: environments[environment].migrationContract
+      };
+      const sdk = new Sdk(chainConfig, <any>ethersWallet);
       const avatar = await sdk.getAvatar(avatarId.replace(`${chainId}_`, ''));
       await avatar.initialize();
 
@@ -110,7 +134,16 @@
   const createAvatar = async () => {
     const jsonRpcProvider = new ethers.JsonRpcProvider(environments[environment].rpcUrl);
     const subWallet = await randomFundedWallet(jsonRpcProvider);
-    const sdk = new Sdk(environments[environment].hubv1Address, environments[environment].hubv2Address, environments[environment].migrationContract, subWallet);
+    subWallet.connect(jsonRpcProvider);
+
+    const chainConfig: ChainConfig = {
+      circlesRpcUrl: environments[environment].rpcUrl,
+      v1HubAddress: environments[environment].hubv1Address,
+      v2HubAddress: environments[environment].hubv2Address,
+      migrationAddress: environments[environment].migrationContract
+    };
+
+    const sdk = new Sdk(chainConfig, <any>subWallet);
     const avatar = await sdk.getAvatar(await subWallet.getAddress());
     await avatar.initialize();
 
@@ -143,7 +176,7 @@
     await jsonRpcProvider.send('evm_mine', []);
   };
 
-  export const randomFundedWallet = async (jsonRpcProvider: ethers.JsonRpcProvider): Promise<HDNodeWallet> => {
+  export const randomFundedWallet = async (jsonRpcProvider: ethers.JsonRpcProvider): Promise<BaseWallet> => {
     const subWallet = ethers.Wallet.createRandom().connect(jsonRpcProvider);
     const mainWallet = new ethers.Wallet(environments[environment].mainWallet, jsonRpcProvider);
     const tx = await mainWallet.sendTransaction({

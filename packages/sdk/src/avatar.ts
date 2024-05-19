@@ -1,6 +1,5 @@
 import { V1Avatar, V1AvatarState } from './v1/v1Avatar';
 import { V2Avatar, V2AvatarState } from './v2/v2Avatar';
-import { V1Data } from './v1/v1Data';
 import { ethers, TransactionReceipt } from 'ethers';
 import { cidV0Digest } from './utils';
 import { ObservableProperty } from './observableProperty';
@@ -8,6 +7,7 @@ import { ParsedV1HubEvent, V1HubEvent } from '@circles-sdk/abi-v1/dist/V1HubEven
 import { ParsedV1TokenEvent, V1TokenEvent } from '@circles-sdk/abi-v1/dist/V1TokenEvents';
 import { Migration, ParsedEvent as ParsedV2HubEvent, V2Hub, V2HubEvent } from '@circles-sdk/abi-v2';
 import { V1Hub, V1Token } from '@circles-sdk/abi-v1';
+import { CirclesData } from '@circles-sdk/data';
 
 export enum AvatarState {
   NotInitialized,
@@ -28,10 +28,10 @@ export type AvatarEvent =
   | ParsedV2HubEvent<V2HubEvent>
 
 export class Avatar {
-  private readonly provider: ethers.Provider;
+  private readonly provider: ethers.BaseWallet;
   readonly v1Hub: V1Hub;
-  readonly v1Data: V1Data;
   readonly v2Hub: V2Hub;
+  readonly circlesData: CirclesData;
 
   public readonly address: string;
 
@@ -46,7 +46,13 @@ export class Avatar {
   public readonly lastEvent: ObservableProperty<AvatarEvent>;
   private readonly setLastEvent: (event: AvatarEvent) => void;
 
-  constructor(v1Hub: V1Hub, v2Hub: V2Hub, avatarAddress: string, migrationContract: string, provider: ethers.Provider, rpcEndpoint:string) {
+  constructor(
+    v1Hub: V1Hub,
+    v2Hub: V2Hub,
+    circlesData: CirclesData,
+    avatarAddress: string,
+    migrationContract: string,
+    provider: ethers.BaseWallet) {
     this.provider = provider;
     this.address = avatarAddress;
 
@@ -67,8 +73,7 @@ export class Avatar {
     this.v2Hub.events.subscribe(this.setLastEvent);
     this.v2Avatar = new V2Avatar(this.v2Hub, avatarAddress, provider);
 
-    this.v1Data = new V1Data(rpcEndpoint, v1Hub.address);
-
+    this.circlesData = circlesData;
     this.migrationContract = migrationContract;
   }
 
@@ -134,12 +139,17 @@ export class Avatar {
     this.setState(newState);
   };
 
-  getMintableAmount = () => {
+  getMintableAmount = async () => {
     if (!this.canMint()) {
       throw new Error(`Avatar cannot mint in state: ${this.state.value}`);
     }
     if (this.livesInV1()) {
-      return this.v1Avatar.v1Token?.look() ?? Promise.resolve(BigInt(0));
+      if (!this.v1Avatar.v1Token) {
+        return Promise.resolve(BigInt(0));
+      }
+      const mintableAmount = await this.v1Avatar.v1Token.look();
+      console.log(`mintableAmount for ${this.address}: ${mintableAmount}`);
+      return mintableAmount;
     } else if (this.livesInV2()) {
       return this.v2Avatar.getMintableAmount();
     }
@@ -180,38 +190,25 @@ export class Avatar {
   };
 
   migrateAllV1Tokens = async (): Promise<void> => {
-    const getTokensWithBalance = async (users: string[]) => {
-      const trustsTokens = await Promise.all(users.map(user => this.v1Hub.userToToken(user)));
-      return await Promise.all(trustsTokens.map(token => new V1Token(this.provider, token))
-        .map(async (t, i) => ({
-          balance: await t.balanceOf(this.address),
-          token: t,
-          tokenOwner: users[i]
-        })));
-    };
-
-    const trustsUsers = this.v1Data.queryTrustOnChainAsyncIterator(this.address, 12541946, 10);
-    let trustUsersArray: string[] = [];
-    for await (const user of trustsUsers) {
-      trustUsersArray = [...user];
-    }
-
-    const tokensToMigrate = (await getTokensWithBalance(trustUsersArray))
-      .filter(o => o.balance > BigInt(0));
+    const balances = await this.circlesData.getTokenBalances(this.address, false);
+    const tokensToMigrate = balances
+      .filter(o => BigInt(o.balance) > 0);
 
     // TODO: Send in one transaction if sent to Safe
     await Promise.all(tokensToMigrate.map(async (t, i) => {
-      const allowance = await t.token.allowance(this.address, this.migrationContract);
-      if (allowance < t.balance) {
-        const increase = t.balance - allowance;
-        const txReceipt = await t.token.increaseAllowance(this.migrationContract, increase);
+      const balance = BigInt(t.balance);
+      const token = new V1Token(this.provider, t.token);
+      const allowance = await token.allowance(this.address, this.migrationContract);
+      if (allowance < balance) {
+        const increase = balance - allowance;
+        const txReceipt = await token.increaseAllowance(this.migrationContract, increase);
       }
     }));
 
     const migrationContract = new Migration(this.provider, this.migrationContract);
     const migrateTxReceipt = await migrationContract.migrate(
       tokensToMigrate.map(o => o.tokenOwner)
-      , tokensToMigrate.map(o => o.balance));
+      , tokensToMigrate.map(o => BigInt(o.balance)));
   };
 
   registerHuman = async (cidV0: string): Promise<TransactionReceipt | null> => {
@@ -219,6 +216,7 @@ export class Avatar {
       throw new Error('Avatar must be V1 stopped human');
     }
     const txReceipt = await this.v2Hub.registerHuman(cidV0Digest(cidV0));
+    console.log(`register human txReceipt:`, txReceipt);
     await this.initialize();
     return txReceipt;
   };
@@ -270,7 +268,7 @@ export class Avatar {
     await this.initialize();
     return txReceipt;
   };
-  
+
   // updateProfile = async (cidV0: string): Promise<TransactionReceipt | null> =>
   //   await this.v2Hub.setIpfsCidV0(cidV0Digest(cidV0));
 

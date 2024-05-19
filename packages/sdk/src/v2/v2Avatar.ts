@@ -23,14 +23,14 @@ export type Stream = {
 }
 
 export class V2Avatar {
-  private readonly provider: ethers.Provider;
+  private readonly provider: ethers.BaseWallet;
   private readonly v2Hub: V2Hub;
   private readonly avatarAddress: string;
 
   public readonly state: ObservableProperty<V2AvatarState>;
   private readonly setState: (state: V2AvatarState) => void;
 
-  constructor(v2Hub: V2Hub, avatarAddress: string, provider: ethers.Provider) {
+  constructor(v2Hub: V2Hub, avatarAddress: string, provider: ethers.BaseWallet) {
     this.v2Hub = v2Hub;
     this.avatarAddress = avatarAddress;
     this.provider = provider;

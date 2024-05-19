@@ -10,6 +10,7 @@
     "@circles-sdk/abi-v1": "../abi-v1",
     "@circles-sdk/abi-v2": "../abi-v2",
     "@circles-sdk/sdk": "../sdk",
+    "@circles-sdk/data": "../data",
     "@circles/circles-contracts": "../circles-contracts",
     "@circles/circles-contracts-v2": "../circles-contracts-v2",
     "ethers": "^6.11.1"

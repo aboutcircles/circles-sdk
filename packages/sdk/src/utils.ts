@@ -6,5 +6,6 @@ export const cidV0Digest = (cidV0: string) => {
   }
   const cidBytes = multihashes.fromB58String(cidV0);
   const decodedCid = multihashes.decode(cidBytes);
+  console.log(decodedCid);
   return decodedCid.digest;
 }
