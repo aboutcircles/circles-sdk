@@ -40,8 +40,8 @@ export type TransferFromInputs = {
 };
 
 export type NoInputs = [];
-  
-export type V1TokenFunctionInputs = 
+
+export type V1TokenFunctionInputs =
   | AllowanceInputs
   | ApproveInputs
   | BalanceOfInputs

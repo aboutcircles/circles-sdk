@@ -2,7 +2,7 @@ import { CirclesQuery } from './pagedQuery/circlesQuery';
 import { TransactionHistoryRow } from './rows/transactionHistoryRow';
 import { TrustListRow } from './rows/trustListRow';
 import { TokenBalanceRow } from './rows/tokenBalanceRow';
-import { Rpc } from './rpc';
+import { CirclesRpc } from './circlesRpc';
 import { AvatarRow } from './rows/avatarRow';
 
 export interface ICirclesData {
@@ -58,9 +58,9 @@ export interface ICirclesData {
 }
 
 export class CirclesData implements ICirclesData {
-  readonly rpc: Rpc;
+  readonly rpc: CirclesRpc;
 
-  constructor(rpc: Rpc) {
+  constructor(rpc: CirclesRpc) {
     this.rpc = rpc;
   }
 
@@ -155,6 +155,7 @@ export class CirclesData implements ICirclesData {
 
   /**
    * Gets the current incoming and outgoing trust relations of an address.
+   * Expired or revoked trust relations are not included.
    * @param avatar The address to get the trust list for.
    * @param pageSize The maximum number of trust relations per page.
    */

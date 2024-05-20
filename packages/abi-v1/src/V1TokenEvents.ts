@@ -15,7 +15,6 @@ export type TransferEvent = Event & {
 };
 
 
-
 export type V1TokenEvent =
   ApprovalEvent |
   TransferEvent;
@@ -33,7 +32,6 @@ const parseTransferEvent = (log: ethers.LogDescription): TransferEvent => ({
   to: getAddress(log.args.getValue('to')),
   value: BigInt(log.args.getValue('value'))
 });
-
 
 
 export class V1TokenEvents implements EventDecoder {

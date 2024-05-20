@@ -7,7 +7,7 @@ import { Filter } from '../rpcSchema/filter';
 import { Order } from '../rpcSchema/order';
 import { PagedQueryResult } from './pagedQueryResult';
 import { Row } from './row';
-import { Rpc } from '../rpc';
+import { CirclesRpc } from '../circlesRpc';
 import { CirclesQueryRpcResult } from '../../dist/circlesQueryRpcResult';
 
 /**
@@ -17,7 +17,7 @@ import { CirclesQueryRpcResult } from '../../dist/circlesQueryRpcResult';
  */
 export class CirclesQuery<TRow extends Row> {
   private readonly params: PagedQueryParams;
-  private readonly rpc: Rpc;
+  private readonly rpc: CirclesRpc;
 
   private _currentPage?: PagedQueryResult<TRow>;
 
@@ -25,7 +25,7 @@ export class CirclesQuery<TRow extends Row> {
     return this._currentPage;
   }
 
-  constructor(rpc: Rpc, params: PagedQueryParams) {
+  constructor(rpc: CirclesRpc, params: PagedQueryParams) {
     this.params = params;
     this.rpc = rpc;
   }

@@ -2,7 +2,6 @@
   "private": true,
   "workspaces": [
     "packages/abi-v1",
-    "packages/abi-v2",
     "packages/sdk",
     "packages/data",
     "packages/utils"
