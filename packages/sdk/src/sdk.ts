@@ -2,7 +2,7 @@ import { Avatar } from './avatar';
 import { V1Hub } from '@circles-sdk/abi-v1';
 import { ethers } from 'ethers';
 import { ChainConfig } from './chainConfig';
-import { CirclesData, CirclesRpc } from '@circles-sdk/data';
+import { AvatarRow, CirclesData, CirclesRpc } from '@circles-sdk/data';
 import { Pathfinder } from './v1/pathfinder';
 import { AvatarInterface } from './AvatarInterface';
 
@@ -61,5 +61,53 @@ export class Sdk {
     await avatar.initialize();
 
     return avatar;
+  };
+
+  /**
+   * Registers the connected wallet as a human avatar.
+   * @returns The avatar instance.
+   */
+  registerHuman = async (): Promise<AvatarInterface> => {
+    const receipt = await this.v1Hub.signup();
+    if (!receipt) {
+      throw new Error('Signup failed (no receipt)');
+    }
+
+    const signerAddress = await this.signer.getAddress();
+    await this.waitForAvatarInfo(signerAddress);
+
+    return this.getAvatar(signerAddress);
+  };
+
+  /**
+   * Registers the connected wallet as an organization avatar.
+   * @returns The avatar instance.
+   */
+  registerOrganization = async (): Promise<AvatarInterface> => {
+    const receipt = await this.v1Hub.organizationSignup();
+    if (!receipt) {
+      throw new Error('Signup failed (no receipt)');
+    }
+
+    const signerAddress = await this.signer.getAddress();
+    await this.waitForAvatarInfo(signerAddress);
+
+    return this.getAvatar(signerAddress);
+  };
+
+  private waitForAvatarInfo = async (address: string): Promise<AvatarRow> => {
+    let avatarRow: AvatarRow | undefined;
+    let retries = 0;
+    do {
+      avatarRow = await this.data.getAvatarInfo(address);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      retries++;
+
+      if (retries > 120) {
+        throw new Error(`Timeout getting avatar info for ${address}`);
+      }
+    } while (!avatarRow);
+
+    return avatarRow;
   };
 }

@@ -30,3 +30,6 @@ export {
   V1TokenCalls
 } from '@circles-sdk/abi-v1';
 export { ChainConfig } from './chainConfig';
+export { AvatarRow, TrustListRow } from '@circles-sdk/data';
+export { TrustRelation, TrustRelationRow } from './AvatarInterface';
+export { AvatarInterface } from './AvatarInterface';

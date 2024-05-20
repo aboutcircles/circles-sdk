@@ -22,7 +22,7 @@ export class V1Avatar implements AvatarInterface {
 
   constructor(sdk: Sdk, avatarAddress: string) {
     this.sdk = sdk;
-    this.address = avatarAddress;
+    this.address = avatarAddress.toLowerCase();
   }
 
   async initialize() {
@@ -75,7 +75,7 @@ export class V1Avatar implements AvatarInterface {
       to,
       amount);
 
-    if (!transferPath.isValid) {
+    if (!transferPath.isValid || transferPath.transferSteps.length === 0) {
       throw new Error(`Couldn't find a valid path from ${this.address} to ${to} for ${amount}.`);
     }
 
@@ -204,19 +204,30 @@ export class V1Avatar implements AvatarInterface {
     // Every bucket can have 1 or 2 trust list rows.
     // If it has 2, the trust relation is mutual.
     for (const avatar in trustBucket) {
-      const trustListRows = trustBucket[avatar];
-      const maxTimestamp = Math.max(...trustListRows.map(o => o.timestamp));
-      const relation: TrustRelation = trustListRows.length === 2
-        ? 'mutuallyTrusts'
-        : trustListRows[0].truster === this.address
-          ? 'trusts'
-          : 'trustedBy';
+      const trustListRowsInBucket = trustBucket[avatar];
+      const maxTimestamp = Math.max(...trustListRowsInBucket.map(o => o.timestamp));
 
+      if (this.address == avatar) {
+        continue;
+      }
+
+      let relation: TrustRelation;
+
+      if (trustListRowsInBucket.length === 2) {
+        relation = 'mutuallyTrusts';
+      } else {
+        if (trustListRowsInBucket[0].trustee === this.address) {
+          relation = 'trustedBy';
+        } else if (trustListRowsInBucket[0].truster === this.address) {
+          relation = 'trusts';
+        } else {
+          throw new Error(`Unexpected trust list row. Couldn't determine trust relation.`);
+        }
+      }
       const trustRelation: TrustRelationRow = {
         subjectAvatar: this.address,
         relation: relation,
-        objectAvatar:
-        avatar,
+        objectAvatar: avatar,
         timestamp: maxTimestamp
       };
 

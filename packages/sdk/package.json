@@ -1,6 +1,6 @@
 {
   "name": "@circles-sdk/sdk",
-  "version": "0.0.23",
+  "version": "0.0.29",
   "description": "",
   "type": "module",
   "main": "./dist/index.js",
@@ -17,8 +17,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@circles-sdk/abi-v1": "0.0.23",
-    "@circles-sdk/data": "0.0.23",
+    "@circles-sdk/abi-v1": "0.0.29",
+    "@circles-sdk/data": "0.0.29",
     "ethers": "^6.11.1",
     "multihashes": "^4.0.3"
   },

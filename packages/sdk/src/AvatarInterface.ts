@@ -100,5 +100,5 @@ export interface AvatarInterface {
   /**
    * Gets all trust relations of the avatar.
    */
-  getTrustRelations: () => Promise<TrustRelationRow[]>;
+  getTrustRelations(): Promise<TrustRelationRow[]>;
 }

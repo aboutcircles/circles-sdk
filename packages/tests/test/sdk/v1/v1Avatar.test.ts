@@ -14,7 +14,7 @@ describe('V1Avatar', () => {
     it('should initialize the avatar', async () => {
       const wallet = ethers.Wallet.createRandom();
       const sdk = new Sdk(chainConfig, wallet);
-      const avatar = await sdk.getAvatar('0x965090908dcd0b134802f35c9138a7e987b5182f');
+      const avatar = await sdk.getAvatar('0xD68193591d47740E51dFBc410da607A351b56586');
       const trustRelations = await avatar.getTrustRelations();
       console.log(trustRelations);
     });
