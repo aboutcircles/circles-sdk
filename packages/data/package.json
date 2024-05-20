@@ -1,5 +1,5 @@
 {
-  "name": "@circles-sdk/abi-v1",
+  "name": "@circles-sdk/data",
   "version": "0.0.22",
   "description": "",
   "type": "module",
@@ -17,7 +17,6 @@
     "build": "rollup -c"
   },
   "dependencies": {
-    "ethers": "^6.11.1"
   },
   "keywords": [],
   "author": "",

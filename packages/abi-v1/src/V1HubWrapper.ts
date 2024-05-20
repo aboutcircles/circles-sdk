@@ -5,7 +5,7 @@ import { Observable } from "./common";
 
 export class V1Hub {
   readonly address: string;
-  private readonly provider: ethers.Provider;
+  private readonly provider: ethers.AbstractSigner;
   
   private readonly eventDecoder: V1HubEvents = new V1HubEvents();
   public readonly events: Observable<ParsedV1HubEvent<V1HubEvent>>;
@@ -13,7 +13,7 @@ export class V1Hub {
 
   private callEncoder: V1HubCalls = new V1HubCalls(); 
 
-  constructor(provider: ethers.Provider, address: string) {
+  constructor(provider: ethers.AbstractSigner, address: string) {
       this.provider = provider;
       this.address = address;
       

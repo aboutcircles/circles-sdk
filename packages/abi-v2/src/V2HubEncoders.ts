@@ -5,7 +5,11 @@ import contractAbi from './V2HubAbi.json';
 export class V2HubCalls {
     private readonly contractInterface: ethers.Interface = new ethers.Interface(contractAbi);
 
-        avatars(params: inputTypes.AvatarsInputs): string {
+        advancedUsageFlags(params: inputTypes.AdvancedUsageFlagsInputs): string {
+        return this.contractInterface.encodeFunctionData('advancedUsageFlags', [params.arg0]);
+    }
+
+    avatars(params: inputTypes.AvatarsInputs): string {
         return this.contractInterface.encodeFunctionData('avatars', [params.arg0]);
     }
 
@@ -45,24 +49,12 @@ export class V2HubCalls {
         return this.contractInterface.encodeFunctionData('day', [params._timestamp]);
     }
 
-    discountedBalances(params: inputTypes.DiscountedBalancesInputs): string {
-        return this.contractInterface.encodeFunctionData('discountedBalances', [params.arg0, params.arg1]);
-    }
-
     groupMint(params: inputTypes.GroupMintInputs): string {
         return this.contractInterface.encodeFunctionData('groupMint', [params._group, params._collateralAvatars, params._amounts, params._data]);
     }
 
-    hubV1(): string {
-        return this.contractInterface.encodeFunctionData('hubV1', []);
-    }
-
     inflationDayZero(): string {
         return this.contractInterface.encodeFunctionData('inflationDayZero', []);
-    }
-
-    invitationOnlyTime(): string {
-        return this.contractInterface.encodeFunctionData('invitationOnlyTime', []);
     }
 
     inviteHuman(params: inputTypes.InviteHumanInputs): string {
@@ -85,32 +77,20 @@ export class V2HubCalls {
         return this.contractInterface.encodeFunctionData('isOrganization', [params._organization]);
     }
 
-    isTrusted(params: inputTypes.IsTrustedInputs): string {
-        return this.contractInterface.encodeFunctionData('isTrusted', [params._truster, params._trustee]);
+    isPermittedFlow(params: inputTypes.IsPermittedFlowInputs): string {
+        return this.contractInterface.encodeFunctionData('isPermittedFlow', [params._to, params._circlesAvatar]);
     }
 
-    liftERC20(): string {
-        return this.contractInterface.encodeFunctionData('liftERC20', []);
+    isTrusted(params: inputTypes.IsTrustedInputs): string {
+        return this.contractInterface.encodeFunctionData('isTrusted', [params._truster, params._trustee]);
     }
 
     migrate(params: inputTypes.MigrateInputs): string {
         return this.contractInterface.encodeFunctionData('migrate', [params._owner, params._avatars, params._amounts]);
     }
 
-    migration(): string {
-        return this.contractInterface.encodeFunctionData('migration', []);
-    }
-
     mintPolicies(params: inputTypes.MintPoliciesInputs): string {
         return this.contractInterface.encodeFunctionData('mintPolicies', [params.arg0]);
-    }
-
-    mintTimes(params: inputTypes.MintTimesInputs): string {
-        return this.contractInterface.encodeFunctionData('mintTimes', [params.arg0]);
-    }
-
-    nameRegistry(): string {
-        return this.contractInterface.encodeFunctionData('nameRegistry', []);
     }
 
     operateFlowMatrix(params: inputTypes.OperateFlowMatrixInputs): string {
@@ -122,19 +102,19 @@ export class V2HubCalls {
     }
 
     registerCustomGroup(params: inputTypes.RegisterCustomGroupInputs): string {
-        return this.contractInterface.encodeFunctionData('registerCustomGroup', [params._mint, params._treasury, params._name, params._symbol, params._cidV0Digest]);
+        return this.contractInterface.encodeFunctionData('registerCustomGroup', [params._mint, params._treasury, params._name, params._symbol, params._metatdataDigest]);
     }
 
     registerGroup(params: inputTypes.RegisterGroupInputs): string {
-        return this.contractInterface.encodeFunctionData('registerGroup', [params._mint, params._name, params._symbol, params._cidV0Digest]);
+        return this.contractInterface.encodeFunctionData('registerGroup', [params._mint, params._name, params._symbol, params._metatdataDigest]);
     }
 
     registerHuman(params: inputTypes.RegisterHumanInputs): string {
-        return this.contractInterface.encodeFunctionData('registerHuman', [params._cidV0Digest]);
+        return this.contractInterface.encodeFunctionData('registerHuman', [params._metatdataDigest]);
     }
 
     registerOrganization(params: inputTypes.RegisterOrganizationInputs): string {
-        return this.contractInterface.encodeFunctionData('registerOrganization', [params._name, params._cidV0Digest]);
+        return this.contractInterface.encodeFunctionData('registerOrganization', [params._name, params._metatdataDigest]);
     }
 
     safeBatchTransferFrom(params: inputTypes.SafeBatchTransferFromInputs): string {
@@ -145,12 +125,12 @@ export class V2HubCalls {
         return this.contractInterface.encodeFunctionData('safeTransferFrom', [params._from, params._to, params._id, params._value, params._data]);
     }
 
-    setApprovalForAll(params: inputTypes.SetApprovalForAllInputs): string {
-        return this.contractInterface.encodeFunctionData('setApprovalForAll', [params._operator, params._approved]);
+    setAdvancedUsageFlag(params: inputTypes.SetAdvancedUsageFlagInputs): string {
+        return this.contractInterface.encodeFunctionData('setAdvancedUsageFlag', [params._flag]);
     }
 
-    standardTreasury(): string {
-        return this.contractInterface.encodeFunctionData('standardTreasury', []);
+    setApprovalForAll(params: inputTypes.SetApprovalForAllInputs): string {
+        return this.contractInterface.encodeFunctionData('setApprovalForAll', [params._operator, params._approved]);
     }
 
     stop(): string {
@@ -169,6 +149,10 @@ export class V2HubCalls {
         return this.contractInterface.encodeFunctionData('toTokenId', [params._avatar]);
     }
 
+    totalSupply(params: inputTypes.TotalSupplyInputs): string {
+        return this.contractInterface.encodeFunctionData('totalSupply', [params._id]);
+    }
+
     treasuries(params: inputTypes.TreasuriesInputs): string {
         return this.contractInterface.encodeFunctionData('treasuries', [params.arg0]);
     }
@@ -182,7 +166,7 @@ export class V2HubCalls {
     }
 
     uri(params: inputTypes.UriInputs): string {
-        return this.contractInterface.encodeFunctionData('uri', [params._id]);
+        return this.contractInterface.encodeFunctionData('uri', [params.arg0]);
     }
 
     wrap(params: inputTypes.WrapInputs): string {
