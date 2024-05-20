@@ -12,7 +12,7 @@ export enum V1AvatarState {
 }
 
 export class V1Avatar {
-  private readonly provider: ethers.BaseWallet;
+  private readonly provider: ethers.AbstractSigner;
   private readonly v1Hub: V1Hub;
   private readonly avatarAddress: string;
 
@@ -25,7 +25,7 @@ export class V1Avatar {
   public readonly state: ObservableProperty<V1AvatarState>;
   private readonly setState: (state: V1AvatarState) => void;
 
-  constructor(v1Hub: V1Hub, avatarAddress: string, provider: ethers.BaseWallet) {
+  constructor(v1Hub: V1Hub, avatarAddress: string, provider: ethers.AbstractSigner) {
     this.v1Hub = v1Hub;
     this.avatarAddress = avatarAddress;
     this.provider = provider;

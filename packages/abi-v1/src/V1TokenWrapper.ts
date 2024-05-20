@@ -5,7 +5,7 @@ import { Observable } from "./common";
 
 export class V1Token {
   readonly address: string;
-  private readonly provider: ethers.BaseWallet;
+  private readonly provider: ethers.AbstractSigner;
   
   private readonly eventDecoder: V1TokenEvents = new V1TokenEvents();
   public readonly events: Observable<ParsedV1TokenEvent<V1TokenEvent>>;
@@ -13,7 +13,7 @@ export class V1Token {
 
   private callEncoder: V1TokenCalls = new V1TokenCalls(); 
 
-  constructor(provider: ethers.BaseWallet, address: string) {
+  constructor(provider: ethers.AbstractSigner, address: string) {
       this.provider = provider;
       this.address = address;
       

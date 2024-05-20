@@ -4,12 +4,12 @@ import { Observable } from "./common";
 
 export class Migration {
   readonly address: string;
-  private readonly provider: ethers.BaseWallet;
+  private readonly provider: ethers.AbstractSigner;
   
 
   private callEncoder: MigrationCalls = new MigrationCalls(); 
 
-  constructor(provider: ethers.BaseWallet, address: string) {
+  constructor(provider: ethers.AbstractSigner, address: string) {
       this.provider = provider;
       this.address = address;
       

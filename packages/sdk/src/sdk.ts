@@ -6,7 +6,7 @@ import { ChainConfig } from './chainConfig';
 import { CirclesData, Rpc } from '@circles-sdk/data';
 
 export class Sdk {
-  private readonly provider: ethers.BaseWallet;
+  private readonly provider: ethers.AbstractSigner;
 
   public readonly chainConfig: ChainConfig;
 
@@ -15,7 +15,7 @@ export class Sdk {
   public readonly v1Hub: V1Hub;
   public readonly v2Hub: V2Hub;
 
-  constructor(chainConfig: ChainConfig, provider: ethers.BaseWallet) {
+  constructor(chainConfig: ChainConfig, provider: ethers.AbstractSigner) {
     this.provider = provider;
     this.chainConfig = chainConfig;
 

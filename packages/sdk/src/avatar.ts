@@ -28,7 +28,7 @@ export type AvatarEvent =
   | ParsedV2HubEvent<V2HubEvent>
 
 export class Avatar {
-  private readonly provider: ethers.BaseWallet;
+  private readonly provider: ethers.AbstractSigner;
   readonly v1Hub: V1Hub;
   readonly v2Hub: V2Hub;
   readonly circlesData: CirclesData;
@@ -52,7 +52,7 @@ export class Avatar {
     circlesData: CirclesData,
     avatarAddress: string,
     migrationContract: string,
-    provider: ethers.BaseWallet) {
+    provider: ethers.AbstractSigner) {
     this.provider = provider;
     this.address = avatarAddress;
 

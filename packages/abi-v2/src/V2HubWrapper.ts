@@ -5,7 +5,7 @@ import { Observable } from './common';
 
 export class V2Hub {
   readonly address: string;
-  private readonly provider: ethers.BaseWallet;
+  private readonly provider: ethers.AbstractSigner;
 
   private readonly eventDecoder: V2HubEvents = new V2HubEvents();
   public readonly events: Observable<ParsedV2HubEvent<V2HubEvent>>;
@@ -13,7 +13,7 @@ export class V2Hub {
 
   private callEncoder: V2HubCalls = new V2HubCalls();
 
-  constructor(provider: ethers.BaseWallet, address: string) {
+  constructor(provider: ethers.AbstractSigner, address: string) {
     this.provider = provider;
     this.address = address;
 

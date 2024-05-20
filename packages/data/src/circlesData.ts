@@ -3,8 +3,16 @@ import { TransactionHistoryRow } from './rows/transactionHistoryRow';
 import { TrustListRow } from './rows/trustListRow';
 import { TokenBalanceRow } from './rows/tokenBalanceRow';
 import { Rpc } from './rpc';
+import { AvatarRow } from './rows/avatarRow';
 
 export interface ICirclesData {
+  /**
+   * Gets basic information about an avatar.
+   * This includes the signup timestamp, circles version, avatar type and token address/id.
+   * @param avatar The address to check.
+   */
+  getAvatarInfo(avatar: string): Promise<AvatarRow | undefined>;
+
   /**
    * Gets the total CRC v1 balance of an address.
    * @param avatar The address to get the CRC balance for.
@@ -189,5 +197,44 @@ export class CirclesData implements ICirclesData {
         }
       ]
     });
+  }
+
+  /**
+   * Gets basic information about an avatar.
+   * This includes the signup timestamp, circles version, avatar type and token address/id.
+   * @param avatar The address to check.
+   */
+  async getAvatarInfo(avatar: string): Promise<AvatarRow | undefined> {
+    const circlesQuery = new CirclesQuery<AvatarRow>(this.rpc, {
+      namespace: 'V_Crc',
+      table: 'Avatars',
+      columns: [
+        'blockNumber',
+        'timestamp',
+        'transactionIndex',
+        'logIndex',
+        'transactionHash',
+        'version',
+        'type',
+        'avatar',
+        'tokenId'
+      ],
+      filter: [
+        {
+          Type: 'FilterPredicate',
+          FilterType: 'Equals',
+          Column: 'avatar',
+          Value: avatar.toLowerCase()
+        }
+      ],
+      sortOrder: 'DESC',
+      limit: 1
+    });
+
+    if (!await circlesQuery.queryNextPage()) {
+      return undefined;
+    }
+
+    return circlesQuery.currentPage?.results[0];
   }
 }

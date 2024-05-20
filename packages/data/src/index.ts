@@ -18,4 +18,5 @@ export { ICirclesData, CirclesData } from './circlesData';
 export { TransactionHistoryRow } from './rows/transactionHistoryRow';
 export { TrustListRow } from './rows/trustListRow';
 export { TokenBalanceRow } from './rows/tokenBalanceRow';
+export { AvatarRow } from './rows/avatarRow';
 export { Rpc } from './rpc';

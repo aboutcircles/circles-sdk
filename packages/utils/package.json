@@ -1,5 +1,5 @@
 {
-  "name": "@circles-sdk/data",
+  "name": "@circles-sdk/utils",
   "version": "0.0.22",
   "description": "",
   "type": "module",
@@ -17,6 +17,7 @@
     "build": "rollup -c"
   },
   "dependencies": {
+    "bignumber.js": "^9.1.2"
   },
   "keywords": [],
   "author": "",
