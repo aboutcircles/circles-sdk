@@ -3,10 +3,15 @@ import { V1Token } from '@circles-sdk/abi-v1';
 import { Sdk } from '../sdk';
 import { AvatarRow, TrustListRow } from '@circles-sdk/data';
 import { AvatarInterface, TrustRelation, TrustRelationRow } from '../AvatarInterface';
+import { ObservableProperty } from '../observableProperty';
+import { AvatarEvent } from '../avatar';
 
 export class V1Avatar implements AvatarInterface {
   public readonly sdk: Sdk;
   readonly address: string;
+
+  // TODO: Empty stream makes no sense
+  readonly lastEvent: ObservableProperty<AvatarEvent> = ObservableProperty.create<AvatarEvent>().property;
 
   get v1Token(): V1Token | undefined {
     return this._v1Token;

@@ -6,7 +6,7 @@ export type ObservableAndEmitter<TValue> = {
 export class Observable<TEvent> {
     private readonly _subscribers: ((event: TEvent) => void)[] = [];
 
-    subscribe (subscriber: (value: TEvent) => void): (() => void) {
+    subscribe (subscriber: (value?: TEvent) => void): (() => void) {
         this._subscribers.push(subscriber);
         return () => {
             this._subscribers.splice(this._subscribers.indexOf(subscriber), 1);

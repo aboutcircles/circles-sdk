@@ -1,14 +1,14 @@
 import { ethers } from 'ethers';
-import TokenV1 from '@circles/circles-contracts/out/Token.sol/Token.json';
 import { generateRandomAddress } from '../util';
 import { V1TokenCalls as V1TokenCallsEncoder } from '@circles-sdk/abi-v1';
 import {
   V1TokenInputTypes,
   V1TokenDecoders as V1TokenCallsDecoder
 } from '@circles-sdk/abi-v1';
+import { V1TokenAbi } from '../V1TokenAbi';
 
 describe('V1TokenCalls', () => {
-  const contractInterface = new ethers.Interface(TokenV1.abi);
+  const contractInterface = new ethers.Interface(V1TokenAbi);
 
   // Test for the deployedAt method
   test('approve() encodes and decodes correctly', () => {

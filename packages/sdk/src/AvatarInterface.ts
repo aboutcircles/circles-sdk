@@ -1,5 +1,7 @@
 import { AvatarRow } from '@circles-sdk/data';
 import { TransactionReceipt } from 'ethers';
+import { ObservableProperty } from './observableProperty';
+import { AvatarEvent } from './avatar';
 
 /**
  * A trust relation between two avatars.
@@ -48,6 +50,11 @@ export interface AvatarInterface {
    * If the avatar is initialized and this field is `undefined`, the avatar is not signed up at Circles.
    */
   readonly avatarInfo: AvatarRow | undefined;
+
+  /**
+   * A stream of events that have been caused by the avatar executing transactions.
+   */
+  readonly lastEvent: ObservableProperty<AvatarEvent>;
 
   /**
    * Calculates the maximum Circles amount that can be transferred to another avatar.

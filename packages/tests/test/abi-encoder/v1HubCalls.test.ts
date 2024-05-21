@@ -1,12 +1,12 @@
 import { ethers } from 'ethers';
 import { V1HubCalls as V1HubCallsEncoder } from '@circles-sdk/abi-v1';
 import { V1HubDecoders as V1HubCallsDecoder } from '@circles-sdk/abi-v1';
-import HubV1 from '@circles/circles-contracts/out/Hub.sol/Hub.json';
 import { generateRandomAddress } from '../util';
 import * as inputTypes from '@circles-sdk/abi-v1/dist/V1HubFunctionInputTypes';
+import { V1HubAbi } from '../V1HubAbi';
 
 describe('V1HubCalls', () => {
-  const contractInterface = new ethers.Interface(HubV1.abi);
+  const contractInterface = new ethers.Interface(V1HubAbi);
 
   test('deployedAt() encodes and decodes correctly', () => {
     const encoded = new V1HubCallsEncoder().deployedAt();

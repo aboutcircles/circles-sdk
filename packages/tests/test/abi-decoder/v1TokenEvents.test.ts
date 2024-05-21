@@ -1,18 +1,18 @@
 import { ethers } from 'ethers';
 import { createLog } from '../util';
-import TokenV1 from '@circles/circles-contracts/out/Token.sol/Token.json';
 import {
   V1TokenEvents as V1TokenEventDecoder,
   TransferEvent as TokenTransferEvent,
   ApprovalEvent as TokenApprovalEvent
 } from '@circles-sdk/abi-v1';
+import { V1TokenAbi } from '../V1TokenAbi';
 
 export const V1TokenEvents = {
   'Transfer': null,
   'Approval': null
 } as const;
 
-const contractInterface: ethers.Interface = ethers.Interface.from(TokenV1.abi);
+const contractInterface: ethers.Interface = ethers.Interface.from(V1TokenAbi);
 
 describe('V1TokenEvents', () => {
   test('Transfer event decodes correctly', () => {
