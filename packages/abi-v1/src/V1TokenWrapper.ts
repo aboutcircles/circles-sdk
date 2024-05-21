@@ -1,7 +1,8 @@
 import { V1TokenCalls } from './V1TokenEncoders';
 import { ParsedV1TokenEvent, V1TokenEvent, V1TokenEvents } from './V1TokenEvents';
-import { ethers, TransactionRequest, TransactionResponse } from 'ethers';
+import { ethers, TransactionReceipt, TransactionRequest, TransactionResponse } from 'ethers';
 import { Observable } from './common';
+import { processEvents } from './processEvents';
 
 export class V1Token {
   readonly address: string;
@@ -23,12 +24,25 @@ export class V1Token {
     this.emitEvent = events.emit;
 
   }
-  
-  private sendTransaction(request: TransactionRequest): Promise<TransactionResponse> {
+
+  private async sendTransaction(request: TransactionRequest): Promise<TransactionReceipt> {
     if (!this.provider.sendTransaction) {
       throw new Error('sendTransaction not available on this provider');
     }
-    return this.provider.sendTransaction(request);
+
+    const transactionResponse = await this.provider.sendTransaction(request);
+    const receipt = await transactionResponse.wait();
+    if (!receipt) {
+      throw new Error('Transaction failed (no receipt)');
+    }
+    if (receipt.status === 0) {
+      throw new Error('Transaction failed');
+    }
+
+    const events = await processEvents(receipt, this.eventDecoder);
+    events.forEach(e => this.emitEvent(e));
+
+    return receipt;
   }
 
   allowance = async (owner: string, spender: string): Promise<bigint> => {
@@ -158,70 +172,62 @@ export class V1Token {
     }));
   };
   approve = async (spender: string, amount: bigint): Promise<ethers.TransactionReceipt | null> => {
-    const tx = await this.sendTransaction({
+    return await this.sendTransaction({
       to: this.address,
       data: this.callEncoder.approve({ spender: spender, amount: amount })
     });
-    return tx.wait();
   };
 
   decreaseAllowance = async (spender: string, subtractedValue: bigint): Promise<ethers.TransactionReceipt | null> => {
-    const tx = await this.sendTransaction({
+    return await this.sendTransaction({
       to: this.address,
       data: this.callEncoder.decreaseAllowance({
         spender: spender,
         subtractedValue: subtractedValue
       })
     });
-    return tx.wait();
   };
 
   hubTransfer = async (from: string, to: string, amount: bigint): Promise<ethers.TransactionReceipt | null> => {
-    const tx = await this.sendTransaction({
+    return await this.sendTransaction({
       to: this.address,
       data: this.callEncoder.hubTransfer({ from: from, to: to, amount: amount })
     });
-    return tx.wait();
   };
 
   increaseAllowance = async (spender: string, addedValue: bigint): Promise<ethers.TransactionReceipt | null> => {
-    const tx = await this.sendTransaction({
+    return await this.sendTransaction({
       to: this.address,
       data: this.callEncoder.increaseAllowance({ spender: spender, addedValue: addedValue })
     });
-    return tx.wait();
   };
 
   stop = async (): Promise<ethers.TransactionReceipt | null> => {
-    const tx = await this.sendTransaction({
+    return await this.sendTransaction({
       to: this.address,
       data: this.callEncoder.stop()
     });
-    return tx.wait();
   };
 
   transfer = async (dst: string, wad: bigint): Promise<ethers.TransactionReceipt | null> => {
-    const tx = await this.sendTransaction({
+    return await this.sendTransaction({
       to: this.address,
       data: this.callEncoder.transfer({ dst: dst, wad: wad })
     });
-    return tx.wait();
   };
 
   transferFrom = async (sender: string, recipient: string, amount: bigint): Promise<ethers.TransactionReceipt | null> => {
-    const tx = await this.sendTransaction({
+    return await this.sendTransaction({
       to: this.address,
       data: this.callEncoder.transferFrom({ sender: sender, recipient: recipient, amount: amount })
     });
-    return tx.wait();
   };
 
   update = async (): Promise<ethers.TransactionReceipt | null> => {
-    const tx = await this.sendTransaction({
+    return await this.sendTransaction({
       to: this.address,
       data: this.callEncoder.update()
     });
-    return tx.wait();
   };
 
 }

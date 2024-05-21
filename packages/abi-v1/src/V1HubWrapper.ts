@@ -1,7 +1,8 @@
 import { V1HubCalls } from './V1HubEncoders';
 import { ParsedV1HubEvent, V1HubEvent, V1HubEvents } from './V1HubEvents';
-import { ethers, TransactionRequest, TransactionResponse } from 'ethers';
-import { Observable } from './common';
+import { ethers, TransactionReceipt, TransactionRequest, TransactionResponse } from 'ethers';
+import { EventDecoder, Observable } from './common';
+import { processEvents } from './processEvents';
 
 export class V1Hub {
   readonly address: string;
@@ -17,18 +18,29 @@ export class V1Hub {
     this.provider = provider;
     this.address = address;
 
-
     const events = Observable.create<ParsedV1HubEvent<V1HubEvent>>();
     this.events = events.property;
     this.emitEvent = events.emit;
-
   }
 
-  private sendTransaction(request: TransactionRequest): Promise<TransactionResponse> {
+  private async sendTransaction(request: TransactionRequest): Promise<TransactionReceipt> {
     if (!this.provider.sendTransaction) {
       throw new Error('sendTransaction not available on this provider');
     }
-    return this.provider.sendTransaction(request);
+
+    const transactionResponse = await this.provider.sendTransaction(request);
+    const receipt = await transactionResponse.wait();
+    if (!receipt) {
+      throw new Error('Transaction failed (no receipt)');
+    }
+    if (receipt.status === 0) {
+      throw new Error('Transaction failed');
+    }
+
+    const events = await processEvents(receipt, this.eventDecoder);
+    events.forEach(e => this.emitEvent(e));
+
+    return receipt;
   }
 
   checkSendLimit = async (tokenOwner: string, src: string, dest: string): Promise<bigint> => {
@@ -168,23 +180,21 @@ export class V1Hub {
     return [decoded[0] === '0x0000000000000000000000000000000000000000000000000000000000000001', BigInt(decoded[1]), BigInt(decoded[2])];
   };
   organizationSignup = async (): Promise<ethers.TransactionReceipt | null> => {
-    const tx = await this.sendTransaction({
+    return await this.sendTransaction({
       to: this.address,
       data: this.callEncoder.organizationSignup()
     });
-    return tx.wait();
   };
 
   signup = async (): Promise<ethers.TransactionReceipt | null> => {
-    const tx = await this.sendTransaction({
+    return await this.sendTransaction({
       to: this.address,
       data: this.callEncoder.signup()
     });
-    return tx.wait();
   };
 
   transferThrough = async (tokenOwners: string[], srcs: string[], dests: string[], wads: bigint[]): Promise<ethers.TransactionReceipt | null> => {
-    const tx = await this.sendTransaction({
+    return await this.sendTransaction({
       to: this.address,
       data: this.callEncoder.transferThrough({
         tokenOwners: tokenOwners,
@@ -193,15 +203,13 @@ export class V1Hub {
         wads: wads
       })
     });
-    return tx.wait();
   };
 
   trust = async (user: string, limit: bigint): Promise<ethers.TransactionReceipt | null> => {
-    const tx = await this.sendTransaction({
+    return await this.sendTransaction({
       to: this.address,
       data: this.callEncoder.trust({ user: user, limit: limit })
     });
-    return tx.wait();
   };
 
 }
