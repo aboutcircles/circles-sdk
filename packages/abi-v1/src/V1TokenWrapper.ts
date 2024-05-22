@@ -17,12 +17,10 @@ export class V1Token {
   constructor(provider: ethers.AbstractSigner, address: string) {
     this.provider = provider;
     this.address = address;
-
-
+    
     const events = Observable.create<ParsedV1TokenEvent<V1TokenEvent>>();
     this.events = events.property;
     this.emitEvent = events.emit;
-
   }
 
   private async sendTransaction(request: TransactionRequest): Promise<TransactionReceipt> {

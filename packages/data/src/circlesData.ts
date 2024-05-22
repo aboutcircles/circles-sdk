@@ -4,6 +4,8 @@ import { TrustListRow } from './rows/trustListRow';
 import { TokenBalanceRow } from './rows/tokenBalanceRow';
 import { CirclesRpc } from './circlesRpc';
 import { AvatarRow } from './rows/avatarRow';
+import { crcToTc } from '@circles-sdk/utils';
+import { ethers } from 'ethers';
 
 export interface ICirclesData {
   /**
@@ -150,7 +152,17 @@ export class CirclesData implements ICirclesData {
           ]
         }
       ]
-    });
+    }, [{
+      name: 'timeCircles',
+      generator: (row: TransactionHistoryRow) => {
+        if (row.version === 1) {
+          const timestamp = new Date(row.timestamp * 1000);
+          return crcToTc(timestamp, parseFloat(ethers.formatEther(row.value))).toFixed(2);
+        } else {
+          return parseFloat(ethers.formatEther(row.value)).toFixed(2);
+        }
+      }
+    }]);
   }
 
   /**

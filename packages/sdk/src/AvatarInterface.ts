@@ -1,7 +1,7 @@
-import { AvatarRow } from '@circles-sdk/data';
+import { AvatarRow, CirclesQuery, TransactionHistoryRow } from '@circles-sdk/data';
 import { TransactionReceipt } from 'ethers';
-import { ObservableProperty } from './observableProperty';
 import { AvatarEvent } from './avatar';
+import { Observable } from './observable';
 
 /**
  * A trust relation between two avatars.
@@ -54,7 +54,7 @@ export interface AvatarInterface {
   /**
    * A stream of events that have been caused by the avatar executing transactions.
    */
-  readonly lastEvent: ObservableProperty<AvatarEvent>;
+  readonly events: Observable<AvatarEvent>;
 
   /**
    * Calculates the maximum Circles amount that can be transferred to another avatar.
@@ -108,4 +108,10 @@ export interface AvatarInterface {
    * Gets all trust relations of the avatar.
    */
   getTrustRelations(): Promise<TrustRelationRow[]>;
+
+  /**
+   * Gets a paged query of the transaction history of the avatar.
+   * @param pageSize The maximum number of transactions per page.
+   */
+  getTransactionHistory(pageSize: number): Promise<CirclesQuery<TransactionHistoryRow>>;
 }

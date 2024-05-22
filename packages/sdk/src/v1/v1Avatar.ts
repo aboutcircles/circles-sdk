@@ -1,17 +1,18 @@
-import { TransactionReceipt } from 'ethers';
+import { ethers, TransactionReceipt } from 'ethers';
 import { V1Token } from '@circles-sdk/abi-v1';
 import { Sdk } from '../sdk';
-import { AvatarRow, TrustListRow } from '@circles-sdk/data';
+import { AvatarRow, CirclesQuery, TransactionHistoryRow, TrustListRow } from '@circles-sdk/data';
 import { AvatarInterface, TrustRelation, TrustRelationRow } from '../AvatarInterface';
-import { ObservableProperty } from '../observableProperty';
 import { AvatarEvent } from '../avatar';
+import { Observable } from '../observable';
+import { crcToTc, tcToCrc } from '@circles-sdk/utils';
 
 export class V1Avatar implements AvatarInterface {
   public readonly sdk: Sdk;
   readonly address: string;
 
   // TODO: Empty stream makes no sense
-  readonly lastEvent: ObservableProperty<AvatarEvent> = ObservableProperty.create<AvatarEvent>().property;
+  readonly events: Observable<AvatarEvent> = Observable.create<AvatarEvent>().property;
 
   get v1Token(): V1Token | undefined {
     return this._v1Token;
@@ -173,72 +174,61 @@ export class V1Avatar implements AvatarInterface {
   async getTrustRelations(): Promise<TrustRelationRow[]> {
     // TODO: Remove magic number `1000`
     //       https://github.com/CirclesUBI/circles-nethermind-plugin/blob/206841901f26d53eefc6bf40cded518695439454/Circles.Index.Query/Select.cs#L15
-    const trustsQuery = this.sdk.data.getTrustRelations(this.address, 1000);
-    let trustListRows: TrustListRow[] = [];
+    const pageSize = 1000;
+    const trustsQuery = this.sdk.data.getTrustRelations(this.address, pageSize);
+    const trustListRows: TrustListRow[] = [];
 
-    // Make sure we get all trust relations
+    // Fetch all trust relations
     while (await trustsQuery.queryNextPage()) {
-      const resultRows = trustsQuery.currentPage?.results;
-      if (!resultRows || resultRows.length === 0) {
-        break;
-      }
-      trustListRows = trustListRows.concat(resultRows);
+      const resultRows = trustsQuery.currentPage?.results ?? [];
+      if (resultRows.length === 0) break;
+      trustListRows.push(...resultRows);
+      if (resultRows.length < pageSize) break;
     }
 
-    // Create a bucket for each truster and trustee we encounter (excluding the avatar itself)
-    // and collect all trust list rows in these buckets.
+    // Group trust list rows by truster and trustee
     const trustBucket: { [avatar: string]: TrustListRow[] } = {};
-    for (const trustListRow of trustListRows) {
-      if (trustListRow.truster !== this.address) {
-        if (!trustBucket[trustListRow.truster]) {
-          trustBucket[trustListRow.truster] = [];
-        }
-        trustBucket[trustListRow.truster].push(trustListRow);
+    trustListRows.forEach(row => {
+      if (row.truster !== this.address) {
+        trustBucket[row.truster] = trustBucket[row.truster] || [];
+        trustBucket[row.truster].push(row);
       }
-
-      if (trustListRow.trustee !== this.address) {
-        if (!trustBucket[trustListRow.trustee]) {
-          trustBucket[trustListRow.trustee] = [];
-        }
-        trustBucket[trustListRow.trustee].push(trustListRow);
+      if (row.trustee !== this.address) {
+        trustBucket[row.trustee] = trustBucket[row.trustee] || [];
+        trustBucket[row.trustee].push(row);
       }
-    }
+    });
 
-    const trustRelations: TrustRelationRow[] = [];
+    // Determine trust relations
+    return Object.entries(trustBucket)
+      .filter(([avatar]) => avatar !== this.address)
+      .map(([avatar, rows]) => {
+        const maxTimestamp = Math.max(...rows.map(o => o.timestamp));
+        let relation: TrustRelation;
 
-    // Every bucket can have 1 or 2 trust list rows.
-    // If it has 2, the trust relation is mutual.
-    for (const avatar in trustBucket) {
-      const trustListRowsInBucket = trustBucket[avatar];
-      const maxTimestamp = Math.max(...trustListRowsInBucket.map(o => o.timestamp));
-
-      if (this.address == avatar) {
-        continue;
-      }
-
-      let relation: TrustRelation;
-
-      if (trustListRowsInBucket.length === 2) {
-        relation = 'mutuallyTrusts';
-      } else {
-        if (trustListRowsInBucket[0].trustee === this.address) {
+        if (rows.length === 2) {
+          relation = 'mutuallyTrusts';
+        } else if (rows[0].trustee === this.address) {
           relation = 'trustedBy';
-        } else if (trustListRowsInBucket[0].truster === this.address) {
+        } else if (rows[0].truster === this.address) {
           relation = 'trusts';
         } else {
           throw new Error(`Unexpected trust list row. Couldn't determine trust relation.`);
         }
-      }
-      const trustRelation: TrustRelationRow = {
-        subjectAvatar: this.address,
-        relation: relation,
-        objectAvatar: avatar,
-        timestamp: maxTimestamp
-      };
 
-      trustRelations.push(trustRelation);
-    }
+        return {
+          subjectAvatar: this.address,
+          relation: relation,
+          objectAvatar: avatar,
+          timestamp: maxTimestamp
+        };
+      });
+  }
 
-    return trustRelations;
+  async getTransactionHistory(pageSize: number): Promise<CirclesQuery<TransactionHistoryRow>> {
+    const query = this.sdk.data.getTransactionHistory(this.address, pageSize);
+    await query.queryNextPage();
+
+    return query;
   }
 }

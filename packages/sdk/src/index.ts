@@ -1,6 +1,5 @@
 export { Avatar, AvatarEvent } from './avatar';
 export { Observable } from './observable';
-export { ObservableProperty } from './observableProperty';
 export { Sdk } from './sdk';
 export { V1Avatar } from './v1/v1Avatar';
 export {

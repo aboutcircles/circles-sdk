@@ -1,4 +1,4 @@
-import { BigNumber } from "bignumber.js";
+import { BigNumber } from 'bignumber.js';
 
 /**
  * Formats the token balance in time circles.
@@ -15,8 +15,7 @@ function formatTimeCircles(tokenBalance: BigNumber): string {
     : ether.toString();
 }
 
-const CirclesInceptionTimestamp = new Date("2020-10-15T00:00:00.000Z").getTime();
-
+const CirclesInceptionTimestamp = new Date('2020-10-15T00:00:00.000Z').getTime();
 const OneDayInMilliseconds = new BigNumber(86400).multipliedBy(1000);
 const OneCirclesYearInDays = new BigNumber(365.25);
 const OneCirclesYearInMilliseconds = OneCirclesYearInDays.multipliedBy(24).multipliedBy(60).multipliedBy(60).multipliedBy(1000);
@@ -52,4 +51,15 @@ export function crcToTc(timestamp: Date, amount: number): number {
   const ts = timestamp.getTime();
   const payoutAtTimestamp = getCrcPayoutAt(ts);
   return amount / payoutAtTimestamp * 24;
+}
+
+/**
+ * Converts a TC amount to a CRC amount.
+ * @param timestamp The point in time when the CRC transaction happened.
+ * @param amount The TC value of the transaction.
+ */
+export function tcToCrc(timestamp: Date, amount: number): number {
+  const ts = timestamp.getTime();
+  const payoutAtTimestamp = getCrcPayoutAt(ts);
+  return amount / 24 * payoutAtTimestamp;
 }

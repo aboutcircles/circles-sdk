@@ -10,24 +10,52 @@ import { Row } from './row';
 import { CirclesRpc } from '../circlesRpc';
 import { CirclesQueryRpcResult } from '../../dist/circlesQueryRpcResult';
 
+export class CalculatedColumn {
+  constructor(public readonly name: string
+    , public readonly generator: (row: any) => any) {
+  }
+}
+
 /**
  * A class for querying Circles RPC nodes with pagination.
  * The class maintains the state of the current page and provides methods for querying the next pages.
+ *
+ * Usage:
+ * 1. Create a new instance of CirclesQuery with the CirclesRpc instance and the query parameters.
+ * 2. Call queryNextPage() to get the next page of results.
+ * 3. Access the results and cursors from the currentPage property.
+ * 4. Repeat step 2 until there are no more results.
+ *
  * @typeParam TRow The type of the rows returned by the query.
  */
 export class CirclesQuery<TRow extends Row> {
   private readonly params: PagedQueryParams;
   private readonly rpc: CirclesRpc;
 
-  private _currentPage?: PagedQueryResult<TRow>;
-
+  /**
+   * The current page of the query (or undefined).
+   */
   get currentPage(): PagedQueryResult<TRow> | undefined {
     return this._currentPage;
   }
 
-  constructor(rpc: CirclesRpc, params: PagedQueryParams) {
+  private _currentPage?: PagedQueryResult<TRow>;
+
+  private _calculatedColumns: {
+    [name: string]: CalculatedColumn
+  } = {};
+
+  constructor(rpc: CirclesRpc, params: PagedQueryParams, calculatedColumns?: CalculatedColumn[]) {
     this.params = params;
     this.rpc = rpc;
+
+    if (!calculatedColumns) {
+      return;
+    }
+
+    calculatedColumns.forEach(column => {
+      this._calculatedColumns[column.name] = column;
+    });
   }
 
   /**
@@ -228,11 +256,22 @@ export class CirclesQuery<TRow extends Row> {
    */
   private rowsToObjects(jsonResponse: JsonRpcResponse<CirclesQueryRpcResult>): TRow[] {
     const { columns, rows } = jsonResponse.result;
+
+    const calculatedColumns = Object.entries(this._calculatedColumns);
+    if (calculatedColumns.length > 0) {
+      calculatedColumns.forEach(col => columns.push(col[0]));
+    }
+
     return <TRow[]>rows.map(row => {
       const rowObj: Record<string, any> = {};
       row.forEach((value, index) => {
         rowObj[columns[index]] = value;
       });
+
+      for (const [name, column] of calculatedColumns) {
+        rowObj[name] = column.generator(rowObj);
+      }
+
       return rowObj;
     });
   }
