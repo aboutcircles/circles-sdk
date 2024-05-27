@@ -23,19 +23,8 @@ jobs:
         with:
           node-version: '21'
 
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-
-      - name: Build Contracts & SDK
+      - name: Build SDK
         run: |
-          echo "Building contracts and SDK"
-          ./buildContracts.sh
+          echo "Building SDK"
           npm i
-          npm run build
-
-      - name: Build example app
-        run: |
-          cd examples/svelte-playground
-          npm i
-          cp .env.example .env
           npm run build
