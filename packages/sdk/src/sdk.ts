@@ -46,7 +46,7 @@ export class Sdk {
 
     this.circlesRpc = new CirclesRpc(chainConfig.circlesRpcUrl);
     this.data = new CirclesData(this.circlesRpc);
-    this.v1Hub = new V1Hub(signer, chainConfig.v1HubAddress);
+    this.v1Hub = new V1Hub(signer, chainConfig.v1HubAddress ?? '0x29b9a7fBb8995b2423a71cC17cf9810798F6C543');
     this.pathfinder = new Pathfinder(chainConfig.pathfinderUrl);
   }
 
