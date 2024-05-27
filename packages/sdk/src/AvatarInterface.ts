@@ -114,4 +114,9 @@ export interface AvatarInterface {
    * @param pageSize The maximum number of transactions per page.
    */
   getTransactionHistory(pageSize: number): Promise<CirclesQuery<TransactionHistoryRow>>;
+
+  /**
+   * Gets the avatar's total circles balance.
+   */
+  getTotalBalance(): Promise<number>;
 }

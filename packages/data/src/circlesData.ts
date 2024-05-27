@@ -157,7 +157,7 @@ export class CirclesData implements ICirclesData {
       generator: (row: TransactionHistoryRow) => {
         if (row.version === 1) {
           const timestamp = new Date(row.timestamp * 1000);
-          return crcToTc(timestamp, parseFloat(ethers.formatEther(row.value))).toFixed(2);
+          return crcToTc(timestamp, BigInt(row.value)).toFixed(2);
         } else {
           return parseFloat(ethers.formatEther(row.value)).toFixed(2);
         }

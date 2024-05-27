@@ -16,5 +16,5 @@ export default {
       tsconfig: './tsconfig.json'
     })
   ],
-  external: ['bignumber.js']
+external: ['bignumber.js', 'ethers']
 };

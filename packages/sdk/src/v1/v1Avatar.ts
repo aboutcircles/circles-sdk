@@ -5,7 +5,6 @@ import { AvatarRow, CirclesQuery, TransactionHistoryRow, TrustListRow } from '@c
 import { AvatarInterface, TrustRelation, TrustRelationRow } from '../AvatarInterface';
 import { AvatarEvent } from '../avatar';
 import { Observable } from '../observable';
-import { crcToTc, tcToCrc } from '@circles-sdk/utils';
 
 export class V1Avatar implements AvatarInterface {
   public readonly sdk: Sdk;
@@ -230,5 +229,9 @@ export class V1Avatar implements AvatarInterface {
     await query.queryNextPage();
 
     return query;
+  }
+
+  async getTotalBalance(): Promise<number> {
+    return parseFloat(await this.sdk.data.getTotalBalance(this.address, true));
   }
 }

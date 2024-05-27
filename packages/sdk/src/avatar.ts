@@ -35,7 +35,7 @@ export class Avatar implements AvatarInterface {
   private _tokenEventSubscription?: () => void = undefined;
 
   constructor(sdk: Sdk, avatarAddress: string) {
-    this.address = avatarAddress;
+    this.address = avatarAddress.toLowerCase();
 
     const eventsProperty = Observable.create<AvatarEvent>();
     this.events = eventsProperty.property;
@@ -69,4 +69,5 @@ export class Avatar implements AvatarInterface {
   untrust = (avatar: string): Promise<TransactionReceipt> => this.v1Avatar.untrust(avatar);
   getTrustRelations = (): Promise<TrustRelationRow[]> => this.v1Avatar.getTrustRelations();
   getTransactionHistory = (pageSize: number): Promise<CirclesQuery<TransactionHistoryRow>> => this.v1Avatar.getTransactionHistory(pageSize);
+  getTotalBalance = (): Promise<number> => this.v1Avatar.getTotalBalance();
 }
