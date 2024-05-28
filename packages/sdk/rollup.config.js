@@ -1,6 +1,5 @@
 import typescript from '@rollup/plugin-typescript';
 import json from '@rollup/plugin-json';
-import resolve from '@rollup/plugin-node-resolve';
 
 export default {
   input: './src/index.ts',
@@ -12,11 +11,10 @@ export default {
     }
   ],
   plugins: [
-    resolve(),
     json(),
     typescript({
       tsconfig: './tsconfig.json'
-    }),
+    })
   ],
-  external: ['ethers', 'multihashes']
+  external: ['ethers', 'multihashes', '@circles-sdk/abi-v1', '@circles-sdk/data']
 };

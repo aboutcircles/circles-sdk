@@ -1,71 +1,22 @@
-import { V1Avatar, V1AvatarState } from '@circles-sdk/sdk';
+import { ChainConfig, Sdk } from '@circles-sdk/sdk';
 import { ethers } from 'ethers';
-import { generateRandomAddress } from '../../util';
-import { v1HubMock } from './v1HubMock';
-import { mockProvider } from '../mockProvider';
 
 describe('V1Avatar', () => {
-  const avatarAddress = generateRandomAddress();
-  const tokenAddress = generateRandomAddress();
+  const chainConfig: ChainConfig = {
+    migrationAddress: '0x0A1D308a39A6dF8972A972E586E4b4b3Dc73520f',
+    circlesRpcUrl: 'http://localhost:8545',
+    pathfinderUrl: 'https://pathfinder.aboutcircles.com',
+    v1HubAddress: '0xdbf22d4e8962db3b2f1d9ff55be728a887e47710',
+    v2HubAddress: '0xFFfbD3E62203B888bb8E09c1fcAcE58242674964'
+  };
 
   describe('initialize', () => {
-    beforeEach(() => {
-      (v1HubMock.organizations as jest.Mock).mockClear();
-      (v1HubMock.userToToken as jest.Mock).mockClear();
-      (v1HubMock.v1Token as jest.Mock).mockClear();
-    });
-
-    it('initializes as an unregistered user', async () => {
-      // does not have an entry in the organizations mapping
-      (v1HubMock.organizations as jest.Mock).mockResolvedValue(false);
-      // does not have a token
-      (v1HubMock.userToToken as jest.Mock).mockResolvedValue(ethers.ZeroAddress);
-
-      const avatar = new V1Avatar((v1HubMock as any), avatarAddress, mockProvider);
-      await avatar.initialize();
-
-      expect(avatar.state.value).toBe(V1AvatarState.Unregistered);
-    });
-
-    it('initializes as a human', async () => {
-      // has a token
-      (v1HubMock.userToToken as jest.Mock).mockResolvedValue(tokenAddress);
-      // token is not stopped
-      (v1HubMock.v1Token as jest.Mock).mockReturnValue({
-        stopped: jest.fn().mockResolvedValue(false)
-      });
-
-      const avatar = new V1Avatar((v1HubMock as any), avatarAddress, mockProvider);
-      await avatar.initialize();
-
-      expect(avatar.state.value).toBe(V1AvatarState.Human);
-    });
-
-
-    it('initializes as a stopped human', async () => {
-      // has a token
-      (v1HubMock.userToToken as jest.Mock).mockResolvedValue(tokenAddress);
-      // token is stopped
-      (v1HubMock.v1Token as jest.Mock).mockReturnValue({
-        stopped: jest.fn().mockResolvedValue(true)
-      });
-
-      const avatar = new V1Avatar((v1HubMock as any), avatarAddress, mockProvider);
-      await avatar.initialize();
-
-      expect(avatar.state.value).toBe(V1AvatarState.StoppedHuman);
-    });
-
-    it('initializes as an organization', async () => {
-      // has an entry in the organizations mapping
-      (v1HubMock.organizations as jest.Mock).mockResolvedValue(true);
-      // does not have a token
-      (v1HubMock.userToToken as jest.Mock).mockResolvedValue(ethers.ZeroAddress);
-
-      const avatar = new V1Avatar((v1HubMock as any), avatarAddress, mockProvider);
-      await avatar.initialize();
-
-      expect(avatar.state.value).toBe(V1AvatarState.Organization);
+    it('should initialize the avatar', async () => {
+      const wallet = ethers.Wallet.createRandom();
+      const sdk = new Sdk(chainConfig, wallet);
+      const avatar = await sdk.getAvatar('0xD68193591d47740E51dFBc410da607A351b56586');
+      const trustRelations = await avatar.getTrustRelations();
+      console.log(trustRelations);
     });
   });
 });

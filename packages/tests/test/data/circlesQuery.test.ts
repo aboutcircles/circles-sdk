@@ -1,14 +1,14 @@
 import { CirclesQuery } from '@circles-sdk/data';
 import { TransactionHistoryRow } from '@circles-sdk/data';
 import { TrustListRow } from '@circles-sdk/data/dist/rows/trustListRow';
-import { Rpc } from '@circles-sdk/data';
+import { CirclesRpc } from '@circles-sdk/data';
 
 // Run on chiado
 // - V1_HUB_ADDRESS=0xdbf22d4e8962db3b2f1d9ff55be728a887e47710
 // - V2_HUB_ADDRESS=0xFFfbD3E62203B888bb8E09c1fcAcE58242674964
 // - V2_NAME_REGISTRY_ADDRESS=0x0A1D308a39A6dF8972A972E586E4b4b3Dc73520f
 const circlesRpc = `http://localhost:8545`;
-const rpc = new Rpc(circlesRpc);
+const rpc = new CirclesRpc(circlesRpc);
 
 describe('CirclesQuery', () => {
   it('should return a paged result for wallet transactions', async () => {

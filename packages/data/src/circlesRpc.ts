@@ -1,7 +1,7 @@
 import { JsonRpcRequest } from './rpcSchema/jsonRpcRequest';
 import { JsonRpcResponse } from './rpcSchema/jsonRpcResponse';
 
-export class Rpc {
+export class CirclesRpc {
   private readonly rpcUrl: string;
   private idCounter = 0;
 
@@ -33,3 +33,8 @@ export class Rpc {
     return jsonResponse;
   }
 }
+
+export type CirclesQueryRpcResult = {
+  columns: string[];
+  rows: any[][];
+};

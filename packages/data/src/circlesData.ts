@@ -2,14 +2,17 @@ import { CirclesQuery } from './pagedQuery/circlesQuery';
 import { TransactionHistoryRow } from './rows/transactionHistoryRow';
 import { TrustListRow } from './rows/trustListRow';
 import { TokenBalanceRow } from './rows/tokenBalanceRow';
-import { Rpc } from './rpc';
+import { CirclesRpc } from './circlesRpc';
 import { AvatarRow } from './rows/avatarRow';
+import { crcToTc } from '@circles-sdk/utils';
+import { ethers } from 'ethers';
 
 export interface ICirclesData {
   /**
    * Gets basic information about an avatar.
    * This includes the signup timestamp, circles version, avatar type and token address/id.
    * @param avatar The address to check.
+   * @returns The avatar information or undefined if the address is not an avatar.
    */
   getAvatarInfo(avatar: string): Promise<AvatarRow | undefined>;
 
@@ -17,6 +20,7 @@ export interface ICirclesData {
    * Gets the total CRC v1 balance of an address.
    * @param avatar The address to get the CRC balance for.
    * @param asTimeCircles Whether to return the balance as TimeCircles or not (default: true).
+   * @returns The total CRC balance (either as TC 'number' or as CRC in 'wei').
    */
   getTotalBalance(avatar: string, asTimeCircles: boolean): Promise<string>;
 
@@ -58,9 +62,9 @@ export interface ICirclesData {
 }
 
 export class CirclesData implements ICirclesData {
-  readonly rpc: Rpc;
+  readonly rpc: CirclesRpc;
 
-  constructor(rpc: Rpc) {
+  constructor(rpc: CirclesRpc) {
     this.rpc = rpc;
   }
 
@@ -150,11 +154,22 @@ export class CirclesData implements ICirclesData {
           ]
         }
       ]
-    });
+    }, [{
+      name: 'timeCircles',
+      generator: (row: TransactionHistoryRow) => {
+        if (row.version === 1) {
+          const timestamp = new Date(row.timestamp * 1000);
+          return crcToTc(timestamp, BigInt(row.value)).toFixed(2);
+        } else {
+          return parseFloat(ethers.formatEther(row.value)).toFixed(2);
+        }
+      }
+    }]);
   }
 
   /**
    * Gets the current incoming and outgoing trust relations of an address.
+   * Expired or revoked trust relations are not included.
    * @param avatar The address to get the trust list for.
    * @param pageSize The maximum number of trust relations per page.
    */

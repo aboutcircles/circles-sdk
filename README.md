@@ -1,246 +1,104 @@
 # Circles SDK
-The Circles SDK is a library that allows you to interact with the Circles protocol.
-It supports version 1 and 2 of the Circles contracts.
 
-*Warning: This library is in a very early development stage. Things are broken and the api surface is pretty much WIP.*
+The Circles SDK is a TypeScript library designed to simplify the interaction with
+the [circles-contracts](https://github.com/circlesUBI/circles-contracts).
 
-## Getting started
-This section will guide you through the process of setting up a local development environment for Circles.
+## Installation
 
-### Prerequisites
-Make sure you have all the following prerequisites installed:
-* [git](https://git-scm.com/)
-* [jq](https://jqlang.github.io/jq/)
-* [nodejs](https://nodejs.org/)
-* [foundry](https://getfoundry.sh/)
+Install the Circles SDK using npm:
 
-### 1) Clone the repository:
-This is a monorepo using npm workspaces.
 ```bash
-git clone --branch 20240215-examples https://github.com/CirclesUBI/circles-sdk.git 
-cd circles-sdk
+npm install @circles-sdk/sdk
 ```
 
-### 2) Build the SDK
-```bash
-./buildContracts.sh
-npm i
-npm run build
+## Initialization
+
+Configure the Circles SDK with a Circles RPC and a Pathfinder endpoint.
+
+```typescript 
+import { ChainConfig } from "@circles-sdk/sdk";
+
+const chainConfig: ChainConfig = {
+  circlesRpcUrl: 'https://rpc.aboutcircles.com',
+  pathfinderUrl: 'https://pathfinder.aboutcircles.com'
+};
 ```
 
-### 3) Run anvil
-```bash
-anvil --port 8545 --gas-limit 8000000 --accounts 10 --code-size-limit 32000
-```
-When [anvil](https://book.getfoundry.sh/reference/anvil/) was started with default values, you can use the following values to connect to:
-* URL: http://localhost:8545
-* Address: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
-* Key: 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
-
-If you need more accounts, see anvil's console output.
-
-### 4) Deploy the contracts
-The SDK comes with a script that deploys all relevant contracts with `forge create`.
-The `deployContracts.sh` script can be configured with environment variables or an `.env` file.
-
-Create custom .env files if you want to deploy to other targets. For a local deployment, you can use `.env.anvil`:
-```bash
-./deployContracts.sh .env.anvil
-```
-
-After the deployment, the script will print the addresses of the deployed contracts.
-```
-Summary:
-========
-V1 Hub: 0x5FbDB2315678afecb367f032d93F642f64180aa3
-V2 Hub: 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
-```
-
-### 5) Run the example application
-```bash
-cd examples/svelte-playground
-npm install
-cp .env.example .env
-npm run dev
-```
-
-### 6) Run tests
-To run the 'jest' tests, use the following command in the repository root directory:
-```bash
-npm run test
-```
-
-### 7) Configure the Circles SDK
-You can use the following code to configure the Circles SDK so that it uses the local anvil environment.
-Here we're using the values from above:
-```typescript
-import {Sdk} from '@circles-sdk/sdk/dist';
-import {ethers} from "ethers";
-
-const privateKey = '0x..';
-
-const rpcUrl = 'http://localhost:8545';
-const v1HubAddress = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
-const v2HubAddress = '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512';
-
-const jsonRpcProvider = new ethers.JsonRpcProvider(rpcUrl);
-const wallet = new ethers.Wallet(privateKey, jsonRpcProvider);
-const sdk = new Sdk(v1HubAddress, v2HubAddress, wallet);
-```
-
-### Next steps
-* Explore the methods of the sdk and avatar object.
-* You can create an avatar for any account to access its public data.
-
-## Reference
-### Sdk configuration
-In order to use the sdk you must supply the contracts addresses and a provider:
+Additionally, you need an ethers.js provider and a signer. Assuming you are using MetaMask:
 
 ```typescript
-import { Sdk } from '@circles-sdk/sdk';
+import { ethers } from "ethers";
 
-const v1HubAddress = '0x123...';
-const v2HubAddress = '0x123...';
-const wallet = // ethers.Wallet or ethers.providers.JsonRpcProvider
-
-const sdk = new Sdk(v1HubAddress, v2HubAddress, wallet);
+const windowEthereum = (window as any).ethereum;
+if (!windowEthereum) {
+  throw new Error('window.ethereum is not installed');
+}
+const browserProvider = new ethers.BrowserProvider(windowEthereum);
+const signer = await browserProvider.getSigner();
 ```
+
+Initialize and use the Circles SDK:
+
+```typescript
+const sdk = new Sdk(chainConfig, signer);
+```
+
+## Usage
 
 ### Avatar
-#### Create an avatar
-To interact with Circles, you need an avatar. You can create one by calling `createAvatar`.  
-The address can be any address (EOA, smart contract wallet) that you control.
+
+For regular Circles interactions, use the Avatar class:
 
 ```typescript
-const avatar = await sdk.createAvatar("0x123..."); // Supply the avatar address
-await avatar.init();
-```
-Depending on your previous usage of the address, the avatar will be initialized in one of these states:
-```typescript
-enum AvatarState {
-  Unregistered,                 // The address has not been used with Circles before
-  V1_Human,                     // The address is only a V1 human
-  V1_StoppedHuman,              // The address is only a V1 human that has been stopped
-  V1_Organization,              // The address is only a V1 organization
-  V2_Human,                     // The address is only a V2 human
-  V2_Group,                     // The address is only a V2 group
-  V2_Organization,              // The address is only a V2 organizations
-  V1_StoppedHuman_and_V2_Human, // The address is a V1 human that has been stopped and a V2 human
-  Unknown                       // The address has been used with Circles before, but the state is unknown
-}
-```
+const avatar = await sdk.getAvatar("0x1234...");
+````
 
-#### Use an existing Circles account
-If you already have a v1 Circles account, you can upgrade it to v2.
+The `getAvatar` method will throw an error if the address is not registered.
+Use `sdk.data.getAvatarInfo` to check if an address is registered.
 
-After upgrading,  
-* ... you will have a new personal v2 token that you can use to mint.  
-* ... you can convert all your v1 token holdings to v2 tokens as long as they're available on v2 already.  
-
-If your friends haven't upgraded to v2 yet, you can 'invite' them. This will cost you a fee, but everyone will be able to convert v1 tokens of the invited person to v2 tokens immediately (See *'Invite a friend'* below).
-
-Note: *If these prerequisites aren't met, you must be invited by an existing member instead.*
-
-##### 1) Prerequisites:  
-* The registration period is not over
-* Your v1 token must be stopped
-```typescript
-// Check if the registration period is already over
-if (await sdk.isRegistrationPeriodOver()) {
-  throw new Error('The registration period is already over');
-}
-
-// Check if the avatar is a V1 human and has been stopped
-if (avatar.state.value !== AvatarState.V1_StoppedHuman) {
-  throw new Error('You cannot register at Circles v2 because your v1 token is not stopped');
-}
-```
-If you're v1 token is not stopped, you can stop it like this:
-```typescript
-if (avatar.state.value !== AvatarState.V1_Human) {
-  throw new Error(`You don't have a v1 token`);
-}
-const txReceipt = await avatar.stopV1();
-```
-
-##### 2) Register at Circles v2:  
-In Circles v2, every human has a profile. The profile is a JSON object that is stored on IPFS.
-The profile is identified by a CIDv0 (Content Identifier). The CID is updatable for the case that the profile changes in the future.    
-
-The profile schema is defined in [ERC-1155 Metadata URI JSON Schema](https://eips.ethereum.org/EIPS/eip-1155#erc-1155-metadata-uri-json-schema). 
-```typescript
-const cidV0 = 'Qm...'; // CIDv0 of your profile
-const txReceipt = await avatar.registerHuman(cidV0);
-```
-##### 3) Verify:
-If the registration was successful, the state of your avatar should have changed to `V1_StoppedHuman_and_V2_Human`.
-```typescript
-if (avatar.state.value !== AvatarState.V1_StoppedHuman_and_V2_Human) {
-  throw new Error('Something went wrong');
-}
-```
-
-#### Invite a friend
-If you are already a member of Circles, you can invite a friend to join.  
-After the end of the registration period, this is the only way for new people to register at Circles.
-
-The friend is identified by their address. The address can be any address (EOA, smart contract wallet) that your friend controls.
-
-You can invite someone in order to:
-* ... allow them to join Circles for the first time
-* ... allow them to upgrade their existing accounts
-* ... convert v1 token holdings to v2 tokens if the person hasn't upgraded yet
-
-After inviting,
-* ... the invited person will have a new personal v2 token.
-* ... you (and others) can convert v1 token holdings of the invitee's token to v2 tokens.
-
-Note: *The inviter must pay an invitation fee. The invitee will get a welcome bonus.*
-
-##### 1) Prerequisites:
-```typescript
-// Mint the outstanding amount of personal tokens to maximize the chances of being able to invite someone.
-await avatar.mintPersonalTokens();
-
-// How high is the invitation fee?
-const invitationFee: bigint = await sdk.getInvitationFee();
-
-// Whats the balance of the avatar's own token?
-const ownTokenBalance: bigint = await avatar.getTokenBalance();
-
-// Can be paid?
-if (invitationFee > ownTokenBalance) {
-  throw new Error('You must mint more personal tokens before you can invite someone.');
-}
-```
-
-##### 2) Send the invitation:
-```typescript
-const txReceipt = await avatar.inviteHuman('0x123...');
-```
-
-##### 3) Verify:
-If the invitation was successful, the state of the invited avatar should have changed to `V2_Human`.
-```typescript
-const invitedAvatar = await sdk.createAvatar('0x123...');
-await invitedAvatar.init();
-
-if (invitedAvatar.state.value !== AvatarState.V2_Human) {
-  throw new Error('Something went wrong');
-}
-```
-
-#### Update your profile
-In Circles v2, every human has a profile. The profile is a JSON object that is stored on IPFS.
-The profile is identified by a CIDv0 (Content Identifier). The CID is updatable for the case that the profile changes in the future.
-
-The profile schema is defined in [ERC-1155 Metadata URI JSON Schema](https://eips.ethereum.org/EIPS/eip-1155#erc-1155-metadata-uri-json-schema).
-
-Use this method, if
-* ... you want to update your profile.
-* ... you have been invited and don't have a profile yet.
+If you want to sign the connected wallet up for Circles, use the `registerHuman`
+or `registerOrganization` methods.
 
 ```typescript
-const cidV0 = 'Qm...'; // New CIDv0 of your profile
-const txReceipt = await avatar.updateProfile(cidV0);
+const human = await sdk.registerHuman();
+const organization = await sdk.registerOrganization();
 ```
+
+Note that a wallet can only be signed up for Circles once. Either as a human or as an organization.
+
+The `Avatar` class provides the following methods:
+
+* __trust__: Trusts another avatar. Trusting an avatar means you're willing to accept Circles that
+  have been issued by this avatar.
+* __untrust__: Revokes trust from another avatar. This means you will no longer accept Circles
+  issued by this avatar.
+* __getMintableAmount__: Gets the amount available to mint via `personalMint`.
+* __personalMint__: Mints the available Circles for the avatar.
+* __transfer__: Transfers Circles to another avatar.
+* __getTrustRelations__: Gets the current incoming and outgoing trust relations of the avatar.
+* __getTotalBalance__: Gets the total balance of the avatar.
+* __getTransactionHistory__: Gets the transaction history of the avatar.
+
+### Data
+
+If you are only interested in reading Circles data, use the CirclesData class:
+
+```typescript
+import { CirclesData, CirclesRpc } from '@circles-sdk/data';
+
+const rpc = new CirclesRpc(chainConfig.circlesRpcUrl);
+const data = new CirclesData(rpc);
+```
+
+The `CirclesData` class provides the following methods:
+
+* __getAvatarInfo__: Gets basic information about an avatar, including signup timestamp, Circles
+  version, avatar type, and token address/id.
+* __getTotalBalance__: Gets the total balance of an avatar.
+* __getTokenBalances__: Gets the detailed token balances of an avatar.
+* __getTransactionHistory__: Gets the transaction history of an avatar.
+* __getTrustRelations__: Gets the current incoming and outgoing trust relations of an address.
+
+If you need more control about the queried data, you can query the RPC directly. Please refer to the
+[circles-nethermind-plugin](https://github.com/CirclesUBI/circles-nethermind-plugin?tab=readme-ov-file#quickstart)
+docs for more information.

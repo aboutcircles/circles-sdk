@@ -56,8 +56,8 @@ export type ValidationInputs = {
 };
 
 export type NoInputs = [];
-  
-export type V1HubFunctionInputs = 
+
+export type V1HubFunctionInputs =
   | CheckSendLimitInputs
   | InflateInputs
   | IssuanceByStepInputs

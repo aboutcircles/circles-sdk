@@ -4,7 +4,7 @@ import {
 } from '@circles-sdk/abi-v1';
 import { ethers } from 'ethers';
 import { createLog } from '../util';
-import HubV1 from '@circles/circles-contracts/out/Hub.sol/Hub.json';
+import { V1HubAbi } from '../V1HubAbi';
 
 export const V1HubEventNames = {
   'HubTransfer': null,
@@ -13,7 +13,7 @@ export const V1HubEventNames = {
   'Trust': null
 } as const;
 
-const contractInterface: ethers.Interface = ethers.Interface.from(HubV1.abi);
+const contractInterface: ethers.Interface = ethers.Interface.from(V1HubAbi);
 
 describe('V1HubEvents', () => {
   test('HubTransfer event decodes correctly', () => {

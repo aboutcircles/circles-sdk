@@ -23,8 +23,6 @@ export type TrustEvent = Event & {
   limit: bigint;
 };
 
-
-
 export type V1HubEvent =
   HubTransferEvent |
   OrganizationSignupEvent |
@@ -53,7 +51,6 @@ const parseTrustEvent = (log: ethers.LogDescription): TrustEvent => ({
   user: getAddress(log.args.getValue('user')),
   limit: BigInt(log.args.getValue('limit'))
 });
-
 
 
 export class V1HubEvents implements EventDecoder {
