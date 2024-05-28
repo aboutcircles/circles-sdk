@@ -12,6 +12,7 @@ export interface ICirclesData {
    * Gets basic information about an avatar.
    * This includes the signup timestamp, circles version, avatar type and token address/id.
    * @param avatar The address to check.
+   * @returns The avatar information or undefined if the address is not an avatar.
    */
   getAvatarInfo(avatar: string): Promise<AvatarRow | undefined>;
 
@@ -19,6 +20,7 @@ export interface ICirclesData {
    * Gets the total CRC v1 balance of an address.
    * @param avatar The address to get the CRC balance for.
    * @param asTimeCircles Whether to return the balance as TimeCircles or not (default: true).
+   * @returns The total CRC balance (either as TC 'number' or as CRC in 'wei').
    */
   getTotalBalance(avatar: string, asTimeCircles: boolean): Promise<string>;
 

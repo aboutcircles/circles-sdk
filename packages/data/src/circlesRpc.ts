@@ -33,3 +33,8 @@ export class CirclesRpc {
     return jsonResponse;
   }
 }
+
+export type CirclesQueryRpcResult = {
+  columns: string[];
+  rows: any[][];
+};

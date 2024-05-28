@@ -1,14 +1,12 @@
 import { PagedQueryParams } from './pagedQueryParams';
 import { Cursor } from './cursor';
 import { CirclesQueryParams } from '../rpcSchema/circlesQueryParams';
-import { JsonRpcRequest } from '../rpcSchema/jsonRpcRequest';
 import { JsonRpcResponse } from '../rpcSchema/jsonRpcResponse';
 import { Filter } from '../rpcSchema/filter';
 import { Order } from '../rpcSchema/order';
 import { PagedQueryResult } from './pagedQueryResult';
 import { Row } from './row';
-import { CirclesRpc } from '../circlesRpc';
-import { CirclesQueryRpcResult } from '../../dist/circlesQueryRpcResult';
+import { CirclesQueryRpcResult, CirclesRpc } from '../circlesRpc';
 
 export class CalculatedColumn {
   constructor(public readonly name: string
