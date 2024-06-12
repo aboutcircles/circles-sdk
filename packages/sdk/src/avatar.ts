@@ -1,5 +1,5 @@
 import { V1Avatar } from './v1/v1Avatar';
-import { TransactionReceipt } from 'ethers';
+import { ContractTransactionResponse, TransactionReceipt } from 'ethers';
 import { ParsedV1HubEvent, V1HubEvent } from '@circles-sdk/abi-v1/dist/V1HubEvents';
 import { ParsedV1TokenEvent, V1TokenEvent } from '@circles-sdk/abi-v1/dist/V1TokenEvents';
 import { Sdk } from './sdk';
@@ -40,7 +40,8 @@ export class Avatar implements AvatarInterface {
     const eventsProperty = Observable.create<AvatarEvent>();
     this.events = eventsProperty.property;
     this.emitEvent = eventsProperty.emit;
-    sdk.v1Hub.events.subscribe(this.emitEvent);
+    // TODO: re-implement events
+    // sdk.v1Hub.events.subscribe(this.emitEvent);
 
     this.v1Avatar = new V1Avatar(sdk, avatarAddress);
   }
@@ -56,17 +57,18 @@ export class Avatar implements AvatarInterface {
     await this.v1Avatar.initialize();
 
     if (this.v1Avatar.v1Token) {
-      this._tokenEventSubscription = this.v1Avatar.v1Token.events.subscribe(this.emitEvent);
+      // TODO: re-implement events
+      // this._tokenEventSubscription = this.v1Avatar.v1Token.events.subscribe(this.emitEvent);
     }
   };
 
   getMintableAmount = (): Promise<bigint> => this.v1Avatar.getMintableAmount();
-  personalMint = (): Promise<TransactionReceipt> => this.v1Avatar.personalMint();
-  stop = (): Promise<TransactionReceipt> => this.v1Avatar.stop();
+  personalMint = (): Promise<ContractTransactionResponse> => this.v1Avatar.personalMint();
+  stop = (): Promise<ContractTransactionResponse> => this.v1Avatar.stop();
   getMaxTransferableAmount = (to: string): Promise<bigint> => this.v1Avatar.getMaxTransferableAmount(to);
-  transfer = (to: string, amount: bigint): Promise<TransactionReceipt> => this.v1Avatar.transfer(to, amount);
-  trust = (avatar: string): Promise<TransactionReceipt> => this.v1Avatar.trust(avatar);
-  untrust = (avatar: string): Promise<TransactionReceipt> => this.v1Avatar.untrust(avatar);
+  transfer = (to: string, amount: bigint): Promise<ContractTransactionResponse> => this.v1Avatar.transfer(to, amount);
+  trust = (avatar: string): Promise<ContractTransactionResponse> => this.v1Avatar.trust(avatar);
+  untrust = (avatar: string): Promise<ContractTransactionResponse> => this.v1Avatar.untrust(avatar);
   getTrustRelations = (): Promise<TrustRelationRow[]> => this.v1Avatar.getTrustRelations();
   getTransactionHistory = (pageSize: number): Promise<CirclesQuery<TransactionHistoryRow>> => this.v1Avatar.getTransactionHistory(pageSize);
   getTotalBalance = (): Promise<number> => this.v1Avatar.getTotalBalance();

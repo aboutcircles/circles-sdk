@@ -1,5 +1,5 @@
 import { AvatarRow, CirclesQuery, TransactionHistoryRow } from '@circles-sdk/data';
-import { TransactionReceipt } from 'ethers';
+import { ContractTransactionResponse, TransactionReceipt } from 'ethers';
 import { AvatarEvent } from './avatar';
 import { Observable } from './observable';
 
@@ -74,19 +74,19 @@ export interface AvatarInterface {
    * @param to The address of the avatar to transfer to.
    * @param amount The amount to transfer.
    */
-  transfer(to: string, amount: bigint): Promise<TransactionReceipt>;
+  transfer(to: string, amount: bigint): Promise<ContractTransactionResponse>;
 
   /**
    * Trusts another avatar. Trusting an avatar means you're willing to accept Circles that have been issued by this avatar.
    * @param avatar The address of the avatar to trust.
    */
-  trust(avatar: string): Promise<TransactionReceipt>;
+  trust(avatar: string): Promise<ContractTransactionResponse>;
 
   /**
    * Revokes trust from another avatar. This means you will no longer accept Circles issued by this avatar.
    * @param avatar
    */
-  untrust(avatar: string): Promise<TransactionReceipt>;
+  untrust(avatar: string): Promise<ContractTransactionResponse>;
 
   /**
    * Gets the amount available to mint via `personalMint()`.
@@ -97,12 +97,12 @@ export interface AvatarInterface {
   /**
    * Mints the available CRC for the avatar.
    */
-  personalMint(): Promise<TransactionReceipt>;
+  personalMint(): Promise<ContractTransactionResponse>;
 
   /**
    * Stops the avatar's token. This will prevent any future `personalMint()` calls.
    */
-  stop(): Promise<TransactionReceipt>;
+  stop(): Promise<ContractTransactionResponse>;
 
   /**
    * Gets all trust relations of the avatar.

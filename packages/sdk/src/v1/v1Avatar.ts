@@ -1,10 +1,11 @@
-import { ethers, TransactionReceipt } from 'ethers';
-import { V1Token } from '@circles-sdk/abi-v1';
+import { ContractTransactionResponse } from 'ethers';
 import { Sdk } from '../sdk';
 import { AvatarRow, CirclesQuery, TransactionHistoryRow, TrustListRow } from '@circles-sdk/data';
 import { AvatarInterface, TrustRelation, TrustRelationRow } from '../AvatarInterface';
 import { AvatarEvent } from '../avatar';
 import { Observable } from '../observable';
+import { Token } from '@circles-sdk/abi-v1/dist/Token';
+import { Token__factory } from '@circles-sdk/abi-v1/dist/token';
 
 export class V1Avatar implements AvatarInterface {
   public readonly sdk: Sdk;
@@ -13,11 +14,11 @@ export class V1Avatar implements AvatarInterface {
   // TODO: Empty stream makes no sense
   readonly events: Observable<AvatarEvent> = Observable.create<AvatarEvent>().property;
 
-  get v1Token(): V1Token | undefined {
+  get v1Token(): Token | undefined {
     return this._v1Token;
   }
 
-  private _v1Token?: V1Token;
+  private _v1Token?: Token;
 
   get avatarInfo(): AvatarRow | undefined {
     return this._avatarInfo;
@@ -42,7 +43,7 @@ export class V1Avatar implements AvatarInterface {
     }
 
     if (this.avatarInfo && this.avatarInfo.tokenId) {
-      this._v1Token = new V1Token(this.sdk.signer, this.avatarInfo.tokenId);
+      this._v1Token = Token__factory.connect(this.avatarInfo.tokenId, this.sdk.signer);
     }
   }
 
@@ -72,7 +73,7 @@ export class V1Avatar implements AvatarInterface {
    * @param to The recipient
    * @param amount The amount to send
    */
-  async transfer(to: string, amount: bigint): Promise<TransactionReceipt> {
+  async transfer(to: string, amount: bigint): Promise<ContractTransactionResponse> {
     this.throwIfNotInitialized();
 
     const transferPath = await this.sdk.pathfinder.getTransferPath(
@@ -127,7 +128,7 @@ export class V1Avatar implements AvatarInterface {
     return this.v1Token.look();
   }
 
-  async personalMint(): Promise<TransactionReceipt> {
+  async personalMint(): Promise<ContractTransactionResponse> {
     this.throwIfNotInitialized();
 
     if (!this.v1Token) {
@@ -145,7 +146,7 @@ export class V1Avatar implements AvatarInterface {
     return receipt;
   }
 
-  async stop(): Promise<TransactionReceipt> {
+  async stop(): Promise<ContractTransactionResponse> {
     this.throwIfNotInitialized();
 
     if (!this.v1Token) {

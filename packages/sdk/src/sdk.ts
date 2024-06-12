@@ -1,10 +1,11 @@
 import { Avatar } from './avatar';
-import { V1Hub } from '@circles-sdk/abi-v1';
 import { ethers } from 'ethers';
 import { ChainConfig } from './chainConfig';
 import { AvatarRow, CirclesData, CirclesRpc } from '@circles-sdk/data';
 import { Pathfinder } from './v1/pathfinder';
 import { AvatarInterface } from './AvatarInterface';
+import { Hub } from '@circles-sdk/abi-v1/dist/Hub';
+import { Hub__factory } from '@circles-sdk/abi-v1/dist/hub';
 
 /**
  * The SDK provides a high-level interface to interact with the Circles protocol.
@@ -29,7 +30,7 @@ export class Sdk {
   /**
    * The V1 hub contract wrapper.
    */
-  public readonly v1Hub: V1Hub;
+  public readonly v1Hub: Hub;
   /**
    * The pathfinder client.
    */
@@ -46,7 +47,7 @@ export class Sdk {
 
     this.circlesRpc = new CirclesRpc(chainConfig.circlesRpcUrl);
     this.data = new CirclesData(this.circlesRpc);
-    this.v1Hub = new V1Hub(signer, chainConfig.v1HubAddress ?? '0x29b9a7fBb8995b2423a71cC17cf9810798F6C543');
+    this.v1Hub = Hub__factory.connect(chainConfig.v1HubAddress ?? '0x29b9a7fBb8995b2423a71cC17cf9810798F6C543', signer);
     this.pathfinder = new Pathfinder(chainConfig.pathfinderUrl);
   }
 
