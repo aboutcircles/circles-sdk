@@ -4,8 +4,8 @@ import { ChainConfig } from './chainConfig';
 import { AvatarRow, CirclesData, CirclesRpc } from '@circles-sdk/data';
 import { Pathfinder } from './v1/pathfinder';
 import { AvatarInterface } from './AvatarInterface';
-import { Hub } from '@circles-sdk/abi-v1/dist/Hub';
-import { Hub__factory } from '@circles-sdk/abi-v1/dist/hub';
+import { Hub } from '@circles-sdk/abi-v1';
+import { Hub__factory } from '@circles-sdk/abi-v1';
 
 /**
  * The SDK provides a high-level interface to interact with the Circles protocol.

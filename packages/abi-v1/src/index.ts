@@ -1,2 +1,4 @@
-export * as hub from "./hub";
-export * as token from "./token";
+export { Hub } from './hub';
+export { Hub__factory } from './hub/factories';
+export { Token } from './token';
+export { Token__factory } from './token/factories';

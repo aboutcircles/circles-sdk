@@ -1,7 +1,7 @@
 import { AvatarRow, CirclesQuery, TransactionHistoryRow } from '@circles-sdk/data';
-import { ContractTransactionResponse, TransactionReceipt } from 'ethers';
-import { AvatarEvent } from './avatar';
-import { Observable } from './observable';
+import { ContractTransactionResponse } from 'ethers';
+// import { AvatarEvent } from './avatar';
+// import { Observable } from './observable';
 
 /**
  * A trust relation between two avatars.
@@ -54,7 +54,8 @@ export interface AvatarInterface {
   /**
    * A stream of events that have been caused by the avatar executing transactions.
    */
-  readonly events: Observable<AvatarEvent>;
+  // TODO: re-implement events
+  // readonly events: Observable<AvatarEvent>;
 
   /**
    * Calculates the maximum Circles amount that can be transferred to another avatar.

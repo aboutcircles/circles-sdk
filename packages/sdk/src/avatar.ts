@@ -1,15 +1,13 @@
 import { V1Avatar } from './v1/v1Avatar';
-import { ContractTransactionResponse, TransactionReceipt } from 'ethers';
-import { ParsedV1HubEvent, V1HubEvent } from '@circles-sdk/abi-v1/dist/V1HubEvents';
-import { ParsedV1TokenEvent, V1TokenEvent } from '@circles-sdk/abi-v1/dist/V1TokenEvents';
+import { ContractTransactionResponse } from 'ethers';
 import { Sdk } from './sdk';
 import { AvatarRow, CirclesQuery, TransactionHistoryRow } from '@circles-sdk/data';
 import { AvatarInterface, TrustRelationRow } from './AvatarInterface';
 import { Observable } from './observable';
 
-export type AvatarEvent =
-  ParsedV1HubEvent<V1HubEvent>
-  | ParsedV1TokenEvent<V1TokenEvent>;
+// export type AvatarEvent =
+//   ParsedV1HubEvent<V1HubEvent>
+//   | ParsedV1TokenEvent<V1TokenEvent>;
 
 /**
  * An Avatar represents a user registered at Circles.
@@ -25,8 +23,8 @@ export class Avatar implements AvatarInterface {
    */
   private readonly v1Avatar: V1Avatar;
 
-  public readonly events: Observable<AvatarEvent>;
-  private readonly emitEvent: (event: AvatarEvent) => void;
+  // public readonly events: Observable<AvatarEvent>;
+  // private readonly emitEvent: (event: AvatarEvent) => void;
 
   get avatarInfo(): AvatarRow | undefined {
     return this.v1Avatar.avatarInfo;
@@ -37,10 +35,10 @@ export class Avatar implements AvatarInterface {
   constructor(sdk: Sdk, avatarAddress: string) {
     this.address = avatarAddress.toLowerCase();
 
-    const eventsProperty = Observable.create<AvatarEvent>();
-    this.events = eventsProperty.property;
-    this.emitEvent = eventsProperty.emit;
     // TODO: re-implement events
+    // const eventsProperty = Observable.create<AvatarEvent>();
+    // this.events = eventsProperty.property;
+    // this.emitEvent = eventsProperty.emit;
     // sdk.v1Hub.events.subscribe(this.emitEvent);
 
     this.v1Avatar = new V1Avatar(sdk, avatarAddress);

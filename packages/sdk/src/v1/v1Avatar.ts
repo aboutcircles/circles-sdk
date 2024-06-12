@@ -2,17 +2,17 @@ import { ContractTransactionResponse } from 'ethers';
 import { Sdk } from '../sdk';
 import { AvatarRow, CirclesQuery, TransactionHistoryRow, TrustListRow } from '@circles-sdk/data';
 import { AvatarInterface, TrustRelation, TrustRelationRow } from '../AvatarInterface';
-import { AvatarEvent } from '../avatar';
+// import { AvatarEvent } from '../avatar';
 import { Observable } from '../observable';
-import { Token } from '@circles-sdk/abi-v1/dist/Token';
-import { Token__factory } from '@circles-sdk/abi-v1/dist/token';
+import { Token } from '@circles-sdk/abi-v1';
+import { Token__factory } from '@circles-sdk/abi-v1';
 
 export class V1Avatar implements AvatarInterface {
   public readonly sdk: Sdk;
   readonly address: string;
 
   // TODO: Empty stream makes no sense
-  readonly events: Observable<AvatarEvent> = Observable.create<AvatarEvent>().property;
+  // readonly events: Observable<AvatarEvent> = Observable.create<AvatarEvent>().property;
 
   get v1Token(): Token | undefined {
     return this._v1Token;
