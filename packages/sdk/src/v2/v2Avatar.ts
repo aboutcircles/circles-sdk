@@ -1,4 +1,4 @@
-import { AvatarInterface } from '../AvatarInterface';
+import { AvatarInterfaceV2 } from '../AvatarInterface';
 import { ContractTransactionResponse } from 'ethers';
 import { Sdk } from '../sdk';
 import {
@@ -19,7 +19,7 @@ export type Stream = {
   data: Uint8Array
 }
 
-export class V2Avatar implements AvatarInterface {
+export class V2Avatar implements AvatarInterfaceV2 {
   public readonly sdk: Sdk;
 
   get address(): string {
@@ -163,5 +163,13 @@ export class V2Avatar implements AvatarInterface {
       throw new Error('Group mint failed');
     }
     return txReceipt;
+  }
+
+  wrapDemurrageErc20(amount: bigint): Promise<ContractTransactionResponse> {
+    throw new Error("Not implemented");
+  }
+
+  wrapInflationErc20(amount: bigint): Promise<ContractTransactionResponse> {
+    throw new Error("Not implemented");
   }
 }

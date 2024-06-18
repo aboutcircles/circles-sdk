@@ -92,3 +92,10 @@ export interface AvatarInterface {
    */
   getTotalBalance(): Promise<number>;
 }
+
+export interface AvatarInterfaceV2 extends AvatarInterface {
+  groupMint(group: string, collateral: string[], amounts: bigint[], data: Uint8Array): Promise<ContractTransactionResponse>;
+
+  wrapDemurrageErc20(amount: bigint): Promise<ContractTransactionResponse>;
+  wrapInflationErc20(amount: bigint): Promise<ContractTransactionResponse>;
+}

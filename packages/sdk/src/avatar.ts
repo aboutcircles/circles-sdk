@@ -1,7 +1,7 @@
 import { V1Avatar } from './v1/v1Avatar';
 import { ContractTransactionResponse } from 'ethers';
 import { Sdk } from './sdk';
-import { AvatarInterface } from './AvatarInterface';
+import { AvatarInterface, AvatarInterfaceV2 } from './AvatarInterface';
 import {
   AvatarRow,
   CirclesQuery,
@@ -18,7 +18,7 @@ import { V2Avatar } from './v2/v2Avatar';
  * An Avatar represents a user registered at Circles.
  * It provides methods to interact with the Circles protocol, such as minting, transferring and trusting other avatars.
  */
-export class Avatar implements AvatarInterface {
+export class Avatar implements AvatarInterfaceV2 {
 
   public readonly address: string;
 
@@ -79,6 +79,13 @@ export class Avatar implements AvatarInterface {
     return func();
   }
 
+  private onlyIfV2<T>(func: (avatar: AvatarInterfaceV2) => T) {
+    if (!this._avatar || this._avatarInfo?.version !== 2) {
+      throw new Error('Avatar is not initialized or is not a v2 avatar');
+    }
+    return func(<AvatarInterfaceV2>this._avatar);
+  }
+
   getMintableAmount = (): Promise<bigint> => this.onlyIfInitialized(() => this._avatar!.getMintableAmount());
   personalMint = (): Promise<ContractTransactionResponse> => this.onlyIfInitialized(() => this._avatar!.personalMint());
   stop = (): Promise<ContractTransactionResponse> => this.onlyIfInitialized(() => this._avatar!.stop());
@@ -89,4 +96,7 @@ export class Avatar implements AvatarInterface {
   getTrustRelations = (): Promise<TrustRelationRow[]> => this.onlyIfInitialized(() => this._avatar!.getTrustRelations());
   getTransactionHistory = (pageSize: number): Promise<CirclesQuery<TransactionHistoryRow>> => this.onlyIfInitialized(() => this._avatar!.getTransactionHistory(pageSize));
   getTotalBalance = (): Promise<number> => this.onlyIfInitialized(() => this._avatar!.getTotalBalance());
+  groupMint = (group: string, collateral: string[], amounts: bigint[], data: Uint8Array): Promise<ContractTransactionResponse> => this.onlyIfV2((avatar) => avatar.groupMint(group, collateral, amounts, data));
+  wrapDemurrageErc20 = (amount: bigint): Promise<ContractTransactionResponse> => this.onlyIfV2((avatar) => avatar.wrapDemurrageErc20(amount));
+  wrapInflationErc20 = (amount: bigint): Promise<ContractTransactionResponse> => this.onlyIfV2((avatar) => avatar.wrapInflationErc20(amount));
 }

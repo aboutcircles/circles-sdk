@@ -3,11 +3,12 @@ import { ethers } from 'ethers';
 import { ChainConfig } from './chainConfig';
 import { Pathfinder } from './v1/pathfinder';
 import { AvatarInterface } from './AvatarInterface';
-import { Hub as HubV1 } from '@circles-sdk/abi-v1';
+import { Hub as HubV1, Token__factory } from '@circles-sdk/abi-v1';
 import { Hub__factory as HubV1Factory } from '@circles-sdk/abi-v1';
-import { Hub as HubV2 } from '@circles-sdk/abi-v2';
+import { Hub as HubV2, Migration__factory } from '@circles-sdk/abi-v2';
 import { Hub__factory as HubV2Factory } from '@circles-sdk/abi-v2';
 import { AvatarRow, CirclesData, CirclesRpc } from '@circles-sdk/data';
+import { V1Avatar } from './v1/v1Avatar';
 
 /**
  * The SDK provides a high-level interface to interact with the Circles protocol.
@@ -97,7 +98,7 @@ export class Sdk {
     await this.waitForAvatarInfo(signerAddress);
 
     return this.getAvatar(signerAddress);
-  }
+  };
 
   /**
    * Registers the connected wallet as an organization avatar.
@@ -129,5 +130,47 @@ export class Sdk {
     } while (!avatarRow);
 
     return avatarRow;
+  };
+
+  migrateAvatar = async (avatar: string, cidV0: string): Promise<void> => {
+    const avatarInfo = await this.data.getAvatarInfo(avatar);
+    if (!avatarInfo) {
+      throw new Error('Avatar not found');
+    }
+    if (avatarInfo.version != 1) {
+      throw new Error('Avatar is not a V1 avatar');
+    }
+
+    const v1Avatar = new V1Avatar(this, avatarInfo);
+    const result = await v1Avatar.stop();
+    await result.wait();
+
+    await this.registerHumanV2(cidV0);
+    await this.migrateAllV1Tokens(avatar);
+  };
+
+  migrateAllV1Tokens = async (avatar: string): Promise<void> => {
+    const balances = await this.data.getTokenBalances(avatar, false);
+    const tokensToMigrate = balances
+      .filter(o => BigInt(o.balance) > 0);
+
+    // TODO: Send in one transaction if sent to Safe
+    await Promise.all(tokensToMigrate.map(async (t, i) => {
+      const balance = BigInt(t.balance);
+      const token = Token__factory.connect(t.token, this.signer);
+      const allowance = await token.allowance(avatar, this.chainConfig.migrationAddress);
+      if (allowance < balance) {
+        const increase = balance - allowance;
+        const tx = await token.increaseAllowance(this.chainConfig.migrationAddress, increase);
+        await tx.wait();
+      }
+    }));
+
+    const migrationContract = Migration__factory.connect(this.chainConfig.migrationAddress, this.signer);
+    const migrateTx = await migrationContract.migrate(
+      tokensToMigrate.map(o => o.tokenOwner)
+      , tokensToMigrate.map(o => BigInt(o.balance)));
+
+    await migrateTx.wait();
   };
 }
