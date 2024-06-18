@@ -1,15 +1,24 @@
 import { ContractTransactionResponse } from 'ethers';
 import { Sdk } from '../sdk';
-import { AvatarRow, CirclesQuery, TransactionHistoryRow, TrustListRow } from '@circles-sdk/data';
-import { AvatarInterface, TrustRelation, TrustRelationRow } from '../AvatarInterface';
-// import { AvatarEvent } from '../avatar';
-import { Observable } from '../observable';
+import { AvatarInterface } from '../AvatarInterface';
 import { Token } from '@circles-sdk/abi-v1';
 import { Token__factory } from '@circles-sdk/abi-v1';
+import {
+  AvatarRow,
+  CirclesQuery,
+  TransactionHistoryRow,
+  TrustRelationRow
+} from '@circles-sdk/data';
 
 export class V1Avatar implements AvatarInterface {
   public readonly sdk: Sdk;
-  readonly address: string;
+
+  get address(): string {
+    if (!this.avatarInfo) {
+      throw new Error('Avatar is not initialized');
+    }
+    return this.avatarInfo.avatar;
+  }
 
   // TODO: Empty stream makes no sense
   // readonly events: Observable<AvatarEvent> = Observable.create<AvatarEvent>().property;
@@ -20,29 +29,17 @@ export class V1Avatar implements AvatarInterface {
 
   private _v1Token?: Token;
 
-  get avatarInfo(): AvatarRow | undefined {
-    return this._avatarInfo;
-  }
+  public readonly avatarInfo: AvatarRow;
 
-  private _avatarInfo?: AvatarRow;
-
-  constructor(sdk: Sdk, avatarAddress: string) {
+  constructor(sdk: Sdk, avatarInfo: AvatarRow) {
     this.sdk = sdk;
-    this.address = avatarAddress.toLowerCase();
-  }
+    this.avatarInfo = avatarInfo;
 
-  async initialize() {
-    this._avatarInfo = await this.sdk.data.getAvatarInfo(this.address);
-
-    if (!this.avatarInfo) {
-      throw new Error(`Couldn't find avatar info for ${this.address}`);
-    }
-
-    if (this.avatarInfo && this.avatarInfo.version > 1) {
+    if (this.avatarInfo.version != 1) {
       throw new Error('Avatar is not a v1 avatar');
     }
 
-    if (this.avatarInfo && this.avatarInfo.tokenId) {
+    if (this.avatarInfo.tokenId) {
       this._v1Token = Token__factory.connect(this.avatarInfo.tokenId, this.sdk.signer);
     }
   }
@@ -56,7 +53,7 @@ export class V1Avatar implements AvatarInterface {
     this.throwIfNotInitialized();
 
     const largeAmount = BigInt('999999999999999999999999999999');
-    const transferPath = await this.sdk.pathfinder.getTransferPath(
+    const transferPath = await this.sdk.v1Pathfinder.getTransferPath(
       this.address,
       to,
       largeAmount);
@@ -76,7 +73,7 @@ export class V1Avatar implements AvatarInterface {
   async transfer(to: string, amount: bigint): Promise<ContractTransactionResponse> {
     this.throwIfNotInitialized();
 
-    const transferPath = await this.sdk.pathfinder.getTransferPath(
+    const transferPath = await this.sdk.v1Pathfinder.getTransferPath(
       this.address,
       to,
       amount);
@@ -165,64 +162,14 @@ export class V1Avatar implements AvatarInterface {
   }
 
   private throwIfNotInitialized() {
-    if (this._avatarInfo) {
+    if (this.avatarInfo) {
       return;
     }
     throw new Error('Avatar is either not initialized or is not signed up at Circles.');
   }
 
   async getTrustRelations(): Promise<TrustRelationRow[]> {
-    // TODO: Remove magic number `1000`
-    //       https://github.com/CirclesUBI/circles-nethermind-plugin/blob/206841901f26d53eefc6bf40cded518695439454/Circles.Index.Query/Select.cs#L15
-    const pageSize = 1000;
-    const trustsQuery = this.sdk.data.getTrustRelations(this.address, pageSize);
-    const trustListRows: TrustListRow[] = [];
-
-    // Fetch all trust relations
-    while (await trustsQuery.queryNextPage()) {
-      const resultRows = trustsQuery.currentPage?.results ?? [];
-      if (resultRows.length === 0) break;
-      trustListRows.push(...resultRows);
-      if (resultRows.length < pageSize) break;
-    }
-
-    // Group trust list rows by truster and trustee
-    const trustBucket: { [avatar: string]: TrustListRow[] } = {};
-    trustListRows.forEach(row => {
-      if (row.truster !== this.address) {
-        trustBucket[row.truster] = trustBucket[row.truster] || [];
-        trustBucket[row.truster].push(row);
-      }
-      if (row.trustee !== this.address) {
-        trustBucket[row.trustee] = trustBucket[row.trustee] || [];
-        trustBucket[row.trustee].push(row);
-      }
-    });
-
-    // Determine trust relations
-    return Object.entries(trustBucket)
-      .filter(([avatar]) => avatar !== this.address)
-      .map(([avatar, rows]) => {
-        const maxTimestamp = Math.max(...rows.map(o => o.timestamp));
-        let relation: TrustRelation;
-
-        if (rows.length === 2) {
-          relation = 'mutuallyTrusts';
-        } else if (rows[0].trustee === this.address) {
-          relation = 'trustedBy';
-        } else if (rows[0].truster === this.address) {
-          relation = 'trusts';
-        } else {
-          throw new Error(`Unexpected trust list row. Couldn't determine trust relation.`);
-        }
-
-        return {
-          subjectAvatar: this.address,
-          relation: relation,
-          objectAvatar: avatar,
-          timestamp: maxTimestamp
-        };
-      });
+    return this.sdk.data.getAggregatedTrustRelations(this.address);
   }
 
   async getTransactionHistory(pageSize: number): Promise<CirclesQuery<TransactionHistoryRow>> {

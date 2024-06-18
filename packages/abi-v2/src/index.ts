@@ -1,3 +1,6 @@
-export * as hub from "./hub";
-export * as migration from "./migration";
-export * as nameRegistry from "./nameRegistry";
+export { Hub } from './hub';
+export { Hub__factory } from './hub/factories';
+export { Migration } from './migration';
+export { Migration__factory } from './migration/factories';
+export { NameRegistry } from './nameRegistry';
+export { NameRegistry__factory } from './nameRegistry/factories';

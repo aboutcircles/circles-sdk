@@ -1,11 +1,13 @@
 import { Avatar } from './avatar';
 import { ethers } from 'ethers';
 import { ChainConfig } from './chainConfig';
-import { AvatarRow, CirclesData, CirclesRpc } from '@circles-sdk/data';
 import { Pathfinder } from './v1/pathfinder';
 import { AvatarInterface } from './AvatarInterface';
-import { Hub } from '@circles-sdk/abi-v1';
-import { Hub__factory } from '@circles-sdk/abi-v1';
+import { Hub as HubV1 } from '@circles-sdk/abi-v1';
+import { Hub__factory as HubV1Factory } from '@circles-sdk/abi-v1';
+import { Hub as HubV2 } from '@circles-sdk/abi-v2';
+import { Hub__factory as HubV2Factory } from '@circles-sdk/abi-v2';
+import { AvatarRow, CirclesData, CirclesRpc } from '@circles-sdk/data';
 
 /**
  * The SDK provides a high-level interface to interact with the Circles protocol.
@@ -30,11 +32,15 @@ export class Sdk {
   /**
    * The V1 hub contract wrapper.
    */
-  public readonly v1Hub: Hub;
+  public readonly v1Hub: HubV1;
+  /**
+   * The V2 hub contract wrapper.
+   */
+  public readonly v2Hub: HubV2;
   /**
    * The pathfinder client.
    */
-  public readonly pathfinder: Pathfinder;
+  public readonly v1Pathfinder: Pathfinder;
 
   /**
    * Creates a new SDK instance.
@@ -47,8 +53,9 @@ export class Sdk {
 
     this.circlesRpc = new CirclesRpc(chainConfig.circlesRpcUrl);
     this.data = new CirclesData(this.circlesRpc);
-    this.v1Hub = Hub__factory.connect(chainConfig.v1HubAddress ?? '0x29b9a7fBb8995b2423a71cC17cf9810798F6C543', signer);
-    this.pathfinder = new Pathfinder(chainConfig.pathfinderUrl);
+    this.v1Hub = HubV1Factory.connect(chainConfig.v1HubAddress ?? '0x29b9a7fBb8995b2423a71cC17cf9810798F6C543', signer);
+    this.v2Hub = HubV2Factory.connect(chainConfig.v2HubAddress, signer);
+    this.v1Pathfinder = new Pathfinder(chainConfig.pathfinderUrl);
   }
 
   /**
@@ -79,6 +86,18 @@ export class Sdk {
 
     return this.getAvatar(signerAddress);
   };
+
+  registerHumanV2 = async (metadataDigest: any): Promise<AvatarInterface> => {
+    const receipt = await this.v2Hub.registerHuman(metadataDigest);
+    if (!receipt) {
+      throw new Error('Signup failed (no receipt)');
+    }
+
+    const signerAddress = await this.signer.getAddress();
+    await this.waitForAvatarInfo(signerAddress);
+
+    return this.getAvatar(signerAddress);
+  }
 
   /**
    * Registers the connected wallet as an organization avatar.
