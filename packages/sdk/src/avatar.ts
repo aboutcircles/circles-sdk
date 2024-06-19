@@ -1,21 +1,24 @@
-import { V1Avatar } from './v1/v1Avatar';
-import { TransactionReceipt } from 'ethers';
-import { ParsedV1HubEvent, V1HubEvent } from '@circles-sdk/abi-v1/dist/V1HubEvents';
-import { ParsedV1TokenEvent, V1TokenEvent } from '@circles-sdk/abi-v1/dist/V1TokenEvents';
+import { V1Person } from './v1/v1Person';
+import { ContractTransactionReceipt, ContractTransactionResponse } from 'ethers';
 import { Sdk } from './sdk';
-import { AvatarRow, CirclesQuery, TransactionHistoryRow } from '@circles-sdk/data';
-import { AvatarInterface, TrustRelationRow } from './AvatarInterface';
-import { Observable } from './observable';
+import { Person, PersonV2 } from './Person';
+import {
+  AvatarRow,
+  CirclesQuery,
+  TransactionHistoryRow,
+  TrustRelationRow
+} from '@circles-sdk/data';
+import { V2Person } from './v2/v2Person';
 
-export type AvatarEvent =
-  ParsedV1HubEvent<V1HubEvent>
-  | ParsedV1TokenEvent<V1TokenEvent>;
+// export type AvatarEvent =
+//   ParsedV1HubEvent<V1HubEvent>
+//   | ParsedV1TokenEvent<V1TokenEvent>;
 
 /**
  * An Avatar represents a user registered at Circles.
  * It provides methods to interact with the Circles protocol, such as minting, transferring and trusting other avatars.
  */
-export class Avatar implements AvatarInterface {
+export class Avatar implements PersonV2 {
 
   public readonly address: string;
 
@@ -23,26 +26,28 @@ export class Avatar implements AvatarInterface {
    * The actual avatar implementation to use behind this facade.
    * @private
    */
-  private readonly v1Avatar: V1Avatar;
+  private _avatar: Person | undefined;
+  private _avatarInfo: AvatarRow | undefined;
+  private _sdk: Sdk;
 
-  public readonly events: Observable<AvatarEvent>;
-  private readonly emitEvent: (event: AvatarEvent) => void;
+  // public readonly events: Observable<AvatarEvent>;
+  // private readonly emitEvent: (event: AvatarEvent) => void;
 
   get avatarInfo(): AvatarRow | undefined {
-    return this.v1Avatar.avatarInfo;
+    return this._avatarInfo;
   }
 
   private _tokenEventSubscription?: () => void = undefined;
 
   constructor(sdk: Sdk, avatarAddress: string) {
     this.address = avatarAddress.toLowerCase();
+    this._sdk = sdk;
 
-    const eventsProperty = Observable.create<AvatarEvent>();
-    this.events = eventsProperty.property;
-    this.emitEvent = eventsProperty.emit;
-    sdk.v1Hub.events.subscribe(this.emitEvent);
-
-    this.v1Avatar = new V1Avatar(sdk, avatarAddress);
+    // TODO: re-implement events
+    // const eventsProperty = Observable.create<AvatarEvent>();
+    // this.events = eventsProperty.property;
+    // this.emitEvent = eventsProperty.emit;
+    // sdk.v1Hub.events.subscribe(this.emitEvent);
   }
 
   /**
@@ -53,21 +58,45 @@ export class Avatar implements AvatarInterface {
       this._tokenEventSubscription();
     }
 
-    await this.v1Avatar.initialize();
+    this._avatarInfo = await this._sdk.data.getAvatarInfo(this.address);
+    if (!this._avatarInfo) {
+      throw new Error('Avatar is not signed up at Circles');
+    }
 
-    if (this.v1Avatar.v1Token) {
-      this._tokenEventSubscription = this.v1Avatar.v1Token.events.subscribe(this.emitEvent);
+    if (this._avatarInfo.version === 1) {
+      this._avatar = new V1Person(this._sdk, this._avatarInfo);
+    } else if (this._avatarInfo.version === 2) {
+      this._avatar = new V2Person(this._sdk, this._avatarInfo);
+    } else {
+      throw new Error('Unsupported avatar');
     }
   };
 
-  getMintableAmount = (): Promise<bigint> => this.v1Avatar.getMintableAmount();
-  personalMint = (): Promise<TransactionReceipt> => this.v1Avatar.personalMint();
-  stop = (): Promise<TransactionReceipt> => this.v1Avatar.stop();
-  getMaxTransferableAmount = (to: string): Promise<bigint> => this.v1Avatar.getMaxTransferableAmount(to);
-  transfer = (to: string, amount: bigint): Promise<TransactionReceipt> => this.v1Avatar.transfer(to, amount);
-  trust = (avatar: string): Promise<TransactionReceipt> => this.v1Avatar.trust(avatar);
-  untrust = (avatar: string): Promise<TransactionReceipt> => this.v1Avatar.untrust(avatar);
-  getTrustRelations = (): Promise<TrustRelationRow[]> => this.v1Avatar.getTrustRelations();
-  getTransactionHistory = (pageSize: number): Promise<CirclesQuery<TransactionHistoryRow>> => this.v1Avatar.getTransactionHistory(pageSize);
-  getTotalBalance = (): Promise<number> => this.v1Avatar.getTotalBalance();
+  private onlyIfInitialized<T>(func: () => T) {
+    if (!this._avatar) {
+      throw new Error('Avatar is not initialized');
+    }
+    return func();
+  }
+
+  private onlyIfV2<T>(func: (avatar: PersonV2) => T) {
+    if (!this._avatar || this._avatarInfo?.version !== 2) {
+      throw new Error('Avatar is not initialized or is not a v2 avatar');
+    }
+    return func(<PersonV2>this._avatar);
+  }
+
+  getMintableAmount = (): Promise<bigint> => this.onlyIfInitialized(() => this._avatar!.getMintableAmount());
+  personalMint = (): Promise<ContractTransactionReceipt> => this.onlyIfInitialized(() => this._avatar!.personalMint());
+  stop = (): Promise<ContractTransactionReceipt> => this.onlyIfInitialized(() => this._avatar!.stop());
+  getMaxTransferableAmount = (to: string): Promise<bigint> => this.onlyIfInitialized(() => this._avatar!.getMaxTransferableAmount(to));
+  transfer = (to: string, amount: bigint): Promise<ContractTransactionReceipt> => this.onlyIfInitialized(() => this._avatar!.transfer(to, amount));
+  trust = (avatar: string): Promise<ContractTransactionReceipt> => this.onlyIfInitialized(() => this._avatar!.trust(avatar));
+  untrust = (avatar: string): Promise<ContractTransactionReceipt> => this.onlyIfInitialized(() => this._avatar!.untrust(avatar));
+  getTrustRelations = (): Promise<TrustRelationRow[]> => this.onlyIfInitialized(() => this._avatar!.getTrustRelations());
+  getTransactionHistory = (pageSize: number): Promise<CirclesQuery<TransactionHistoryRow>> => this.onlyIfInitialized(() => this._avatar!.getTransactionHistory(pageSize));
+  getTotalBalance = (): Promise<number> => this.onlyIfInitialized(() => this._avatar!.getTotalBalance());
+  groupMint = (group: string, collateral: string[], amounts: bigint[], data: Uint8Array): Promise<ContractTransactionReceipt> => this.onlyIfV2((avatar) => avatar.groupMint(group, collateral, amounts, data));
+  wrapDemurrageErc20 = (amount: bigint): Promise<ContractTransactionReceipt> => this.onlyIfV2((avatar) => avatar.wrapDemurrageErc20(amount));
+  wrapInflationErc20 = (amount: bigint): Promise<ContractTransactionReceipt> => this.onlyIfV2((avatar) => avatar.wrapInflationErc20(amount));
 }

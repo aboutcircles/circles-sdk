@@ -102,3 +102,12 @@ The `CirclesData` class provides the following methods:
 If you need more control about the queried data, you can query the RPC directly. Please refer to the
 [circles-nethermind-plugin](https://github.com/CirclesUBI/circles-nethermind-plugin?tab=readme-ov-file#quickstart)
 docs for more information.
+
+
+## Building from source
+```shell
+git clone https://github.com/CirclesUBI/circles-sdk.git
+cd circles-sdk
+npm install
+npm run build
+```

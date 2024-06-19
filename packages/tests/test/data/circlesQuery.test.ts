@@ -1,6 +1,5 @@
-import { CirclesQuery } from '@circles-sdk/data';
+import { CirclesQuery, TrustListRow } from '@circles-sdk/data';
 import { TransactionHistoryRow } from '@circles-sdk/data';
-import { TrustListRow } from '@circles-sdk/data/dist/rows/trustListRow';
 import { CirclesRpc } from '@circles-sdk/data';
 
 // Run on chiado

@@ -1,10 +1,14 @@
 import { Avatar } from './avatar';
-import { V1Hub } from '@circles-sdk/abi-v1';
 import { ethers } from 'ethers';
 import { ChainConfig } from './chainConfig';
-import { AvatarRow, CirclesData, CirclesRpc } from '@circles-sdk/data';
 import { Pathfinder } from './v1/pathfinder';
-import { AvatarInterface } from './AvatarInterface';
+import { Person } from './Person';
+import { Hub as HubV1, Token__factory } from '@circles-sdk/abi-v1';
+import { Hub__factory as HubV1Factory } from '@circles-sdk/abi-v1';
+import { Hub as HubV2, Migration__factory } from '@circles-sdk/abi-v2';
+import { Hub__factory as HubV2Factory } from '@circles-sdk/abi-v2';
+import { AvatarRow, CirclesData, CirclesRpc } from '@circles-sdk/data';
+import { V1Person } from './v1/v1Person';
 
 /**
  * The SDK provides a high-level interface to interact with the Circles protocol.
@@ -29,11 +33,15 @@ export class Sdk {
   /**
    * The V1 hub contract wrapper.
    */
-  public readonly v1Hub: V1Hub;
+  public readonly v1Hub: HubV1;
+  /**
+   * The V2 hub contract wrapper.
+   */
+  public readonly v2Hub: HubV2;
   /**
    * The pathfinder client.
    */
-  public readonly pathfinder: Pathfinder;
+  public readonly v1Pathfinder: Pathfinder;
 
   /**
    * Creates a new SDK instance.
@@ -46,8 +54,9 @@ export class Sdk {
 
     this.circlesRpc = new CirclesRpc(chainConfig.circlesRpcUrl);
     this.data = new CirclesData(this.circlesRpc);
-    this.v1Hub = new V1Hub(signer, chainConfig.v1HubAddress ?? '0x29b9a7fBb8995b2423a71cC17cf9810798F6C543');
-    this.pathfinder = new Pathfinder(chainConfig.pathfinderUrl);
+    this.v1Hub = HubV1Factory.connect(chainConfig.v1HubAddress ?? '0x29b9a7fBb8995b2423a71cC17cf9810798F6C543', signer);
+    this.v2Hub = HubV2Factory.connect(chainConfig.v2HubAddress, signer);
+    this.v1Pathfinder = new Pathfinder(chainConfig.pathfinderUrl);
   }
 
   /**
@@ -56,7 +65,7 @@ export class Sdk {
    * @returns The avatar instance.
    * @throws If the given avatar address is not signed up at Circles.
    */
-  getAvatar = async (avatarAddress: string): Promise<AvatarInterface> => {
+  getAvatar = async (avatarAddress: string): Promise<Avatar> => {
     const avatar = new Avatar(this, avatarAddress);
     await avatar.initialize();
 
@@ -67,11 +76,19 @@ export class Sdk {
    * Registers the connected wallet as a human avatar.
    * @returns The avatar instance.
    */
-  registerHuman = async (): Promise<AvatarInterface> => {
+  registerHuman = async (): Promise<Person> => {
     const receipt = await this.v1Hub.signup();
-    if (!receipt) {
-      throw new Error('Signup failed (no receipt)');
-    }
+    await receipt.wait();
+
+    const signerAddress = await this.signer.getAddress();
+    await this.waitForAvatarInfo(signerAddress);
+
+    return this.getAvatar(signerAddress);
+  };
+
+  registerHumanV2 = async (metadataDigest: Uint8Array): Promise<Person> => {
+    const receipt = await this.v2Hub.registerHuman(metadataDigest);
+    await receipt.wait();
 
     const signerAddress = await this.signer.getAddress();
     await this.waitForAvatarInfo(signerAddress);
@@ -83,11 +100,29 @@ export class Sdk {
    * Registers the connected wallet as an organization avatar.
    * @returns The avatar instance.
    */
-  registerOrganization = async (): Promise<AvatarInterface> => {
+  registerOrganization = async (): Promise<Person> => {
     const receipt = await this.v1Hub.organizationSignup();
-    if (!receipt) {
-      throw new Error('Signup failed (no receipt)');
-    }
+    await receipt.wait();
+
+    const signerAddress = await this.signer.getAddress();
+    await this.waitForAvatarInfo(signerAddress);
+
+    return this.getAvatar(signerAddress);
+  };
+
+  registerOrganizationV2 = async (name: string, metadataDigest: Uint8Array): Promise<Person> => {
+    const receipt = await this.v2Hub.registerOrganization(name, metadataDigest);
+    await receipt.wait();
+
+    const signerAddress = await this.signer.getAddress();
+    await this.waitForAvatarInfo(signerAddress);
+
+    return this.getAvatar(signerAddress);
+  };
+
+  registerGroupV2 = async (mint: string, name: string, symbol: string, metatdataDigest: Uint8Array): Promise<Person> => {
+    const receipt = await this.v2Hub.registerGroup(mint, name, symbol, metatdataDigest);
+    await receipt.wait();
 
     const signerAddress = await this.signer.getAddress();
     await this.waitForAvatarInfo(signerAddress);
@@ -109,5 +144,46 @@ export class Sdk {
     } while (!avatarRow);
 
     return avatarRow;
+  };
+
+  migrateAvatar = async (avatar: string, cidV0: Uint8Array): Promise<void> => {
+    const avatarInfo = await this.data.getAvatarInfo(avatar);
+    if (!avatarInfo) {
+      throw new Error('Avatar not found');
+    }
+    if (avatarInfo.version != 1) {
+      throw new Error('Avatar is not a V1 avatar');
+    }
+
+    const v1Avatar = new V1Person(this, avatarInfo);
+    const result = await v1Avatar.stop();
+
+    await this.registerHumanV2(cidV0);
+    await this.migrateAllV1Tokens(avatar);
+  };
+
+  migrateAllV1Tokens = async (avatar: string): Promise<void> => {
+    const balances = await this.data.getTokenBalances(avatar, false);
+    const tokensToMigrate = balances
+      .filter(o => BigInt(o.balance) > 0);
+
+    // TODO: Send in one transaction if sent to Safe
+    await Promise.all(tokensToMigrate.map(async (t, i) => {
+      const balance = BigInt(t.balance);
+      const token = Token__factory.connect(t.token, this.signer);
+      const allowance = await token.allowance(avatar, this.chainConfig.migrationAddress);
+      if (allowance < balance) {
+        const increase = balance - allowance;
+        const tx = await token.increaseAllowance(this.chainConfig.migrationAddress, increase);
+        await tx.wait();
+      }
+    }));
+
+    const migrationContract = Migration__factory.connect(this.chainConfig.migrationAddress, this.signer);
+    const migrateTx = await migrationContract.migrate(
+      tokensToMigrate.map(o => o.tokenOwner)
+      , tokensToMigrate.map(o => BigInt(o.balance)));
+
+    await migrateTx.wait();
   };
 }

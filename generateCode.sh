@@ -1,25 +1,7 @@
 #!/bin/bash
-cd codegen
-npx tsc
+typechain --target ethers-v6 --out-dir ./packages/abi-v1/src/hub './contract-artifacts/v1/Hub.json'
+typechain --target ethers-v6 --out-dir ./packages/abi-v1/src/token './contract-artifacts/v1/Token.json'
 
-rm -rf ../packages/abi-v1/src/*
-node dist/main.js \
-  ../packages/circles-contracts/out/Hub.sol/Hub.json \
-  ../packages/abi-v1/src/ \
-  V1Hub
-
-node dist/main.js \
-  ../packages/circles-contracts/out/Token.sol/Token.json \
-  ../packages/abi-v1/src/ \
-  V1Token
-
-rm -rf ../packages/abi-v2/src/*
-node dist/main.js \
-  ../packages/circles-contracts-v2/out/Migration.sol/Migration.json \
-  ../packages/abi-v2/src/ \
-  Migration
-
-node dist/main.js \
-  ../packages/circles-contracts-v2/out/Hub.sol/Hub.json \
-  ../packages/abi-v2/src/ \
-  V2Hub
+typechain --target ethers-v6 --out-dir ./packages/abi-v2/src/hub './contract-artifacts/v2/Hub.json'
+typechain --target ethers-v6 --out-dir ./packages/abi-v2/src/migration './contract-artifacts/v2/Migration.json'
+typechain --target ethers-v6 --out-dir ./packages/abi-v2/src/nameRegistry './contract-artifacts/v2/NameRegistry.json'

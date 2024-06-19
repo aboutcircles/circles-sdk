@@ -6,6 +6,7 @@ import { CirclesRpc } from './circlesRpc';
 import { AvatarRow } from './rows/avatarRow';
 import { crcToTc } from '@circles-sdk/utils';
 import { ethers } from 'ethers';
+import { TrustRelation, TrustRelationRow } from './rows/trustRelationRow';
 
 export interface ICirclesData {
   /**
@@ -59,6 +60,12 @@ export interface ICirclesData {
    * @param pageSize The maximum number of trust relations per page.
    */
   getTrustRelations(avatar: string, pageSize: number): CirclesQuery<TrustListRow>;
+
+  /**
+   * Gets all trust relations of an avatar and groups mutual trust relations together.
+   * @param avatar The address to get the trust relations for.
+   */
+  getAggregatedTrustRelations(avatar: string): Promise<TrustRelationRow[]>
 }
 
 export class CirclesData implements ICirclesData {
@@ -212,6 +219,58 @@ export class CirclesData implements ICirclesData {
         }
       ]
     });
+  }
+
+  async getAggregatedTrustRelations(avatar: string): Promise<TrustRelationRow[]> {
+    const pageSize = 1000;
+    const trustsQuery = this.getTrustRelations(avatar, pageSize);
+    const trustListRows: TrustListRow[] = [];
+
+    // Fetch all trust relations
+    while (await trustsQuery.queryNextPage()) {
+      const resultRows = trustsQuery.currentPage?.results ?? [];
+      if (resultRows.length === 0) break;
+      trustListRows.push(...resultRows);
+      if (resultRows.length < pageSize) break;
+    }
+
+    // Group trust list rows by truster and trustee
+    const trustBucket: { [avatar: string]: TrustListRow[] } = {};
+    trustListRows.forEach(row => {
+      if (row.truster !== avatar) {
+        trustBucket[row.truster] = trustBucket[row.truster] || [];
+        trustBucket[row.truster].push(row);
+      }
+      if (row.trustee !== avatar) {
+        trustBucket[row.trustee] = trustBucket[row.trustee] || [];
+        trustBucket[row.trustee].push(row);
+      }
+    });
+
+    // Determine trust relations
+    return Object.entries(trustBucket)
+      .filter(([avatar]) => avatar !== avatar)
+      .map(([avatar, rows]) => {
+        const maxTimestamp = Math.max(...rows.map(o => o.timestamp));
+        let relation: TrustRelation;
+
+        if (rows.length === 2) {
+          relation = 'mutuallyTrusts';
+        } else if (rows[0].trustee === avatar) {
+          relation = 'trustedBy';
+        } else if (rows[0].truster === avatar) {
+          relation = 'trusts';
+        } else {
+          throw new Error(`Unexpected trust list row. Couldn't determine trust relation.`);
+        }
+
+        return {
+          subjectAvatar: avatar,
+          relation: relation,
+          objectAvatar: avatar,
+          timestamp: maxTimestamp
+        };
+      });
   }
 
   /**

@@ -20,3 +20,4 @@ export { TrustListRow } from './rows/trustListRow';
 export { TokenBalanceRow } from './rows/tokenBalanceRow';
 export { AvatarRow } from './rows/avatarRow';
 export { CirclesRpc } from './circlesRpc';
+export { TrustRelationRow } from './rows/trustRelationRow';
