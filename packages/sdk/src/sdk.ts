@@ -2,13 +2,13 @@ import { Avatar } from './avatar';
 import { ethers } from 'ethers';
 import { ChainConfig } from './chainConfig';
 import { Pathfinder } from './v1/pathfinder';
-import { AvatarInterface } from './AvatarInterface';
+import { Person } from './Person';
 import { Hub as HubV1, Token__factory } from '@circles-sdk/abi-v1';
 import { Hub__factory as HubV1Factory } from '@circles-sdk/abi-v1';
 import { Hub as HubV2, Migration__factory } from '@circles-sdk/abi-v2';
 import { Hub__factory as HubV2Factory } from '@circles-sdk/abi-v2';
 import { AvatarRow, CirclesData, CirclesRpc } from '@circles-sdk/data';
-import { V1Avatar } from './v1/v1Avatar';
+import { V1Person } from './v1/v1Person';
 
 /**
  * The SDK provides a high-level interface to interact with the Circles protocol.
@@ -65,7 +65,7 @@ export class Sdk {
    * @returns The avatar instance.
    * @throws If the given avatar address is not signed up at Circles.
    */
-  getAvatar = async (avatarAddress: string): Promise<AvatarInterface> => {
+  getAvatar = async (avatarAddress: string): Promise<Avatar> => {
     const avatar = new Avatar(this, avatarAddress);
     await avatar.initialize();
 
@@ -76,11 +76,9 @@ export class Sdk {
    * Registers the connected wallet as a human avatar.
    * @returns The avatar instance.
    */
-  registerHuman = async (): Promise<AvatarInterface> => {
+  registerHuman = async (): Promise<Person> => {
     const receipt = await this.v1Hub.signup();
-    if (!receipt) {
-      throw new Error('Signup failed (no receipt)');
-    }
+    await receipt.wait();
 
     const signerAddress = await this.signer.getAddress();
     await this.waitForAvatarInfo(signerAddress);
@@ -88,11 +86,9 @@ export class Sdk {
     return this.getAvatar(signerAddress);
   };
 
-  registerHumanV2 = async (metadataDigest: any): Promise<AvatarInterface> => {
+  registerHumanV2 = async (metadataDigest: Uint8Array): Promise<Person> => {
     const receipt = await this.v2Hub.registerHuman(metadataDigest);
-    if (!receipt) {
-      throw new Error('Signup failed (no receipt)');
-    }
+    await receipt.wait();
 
     const signerAddress = await this.signer.getAddress();
     await this.waitForAvatarInfo(signerAddress);
@@ -104,11 +100,29 @@ export class Sdk {
    * Registers the connected wallet as an organization avatar.
    * @returns The avatar instance.
    */
-  registerOrganization = async (): Promise<AvatarInterface> => {
+  registerOrganization = async (): Promise<Person> => {
     const receipt = await this.v1Hub.organizationSignup();
-    if (!receipt) {
-      throw new Error('Signup failed (no receipt)');
-    }
+    await receipt.wait();
+
+    const signerAddress = await this.signer.getAddress();
+    await this.waitForAvatarInfo(signerAddress);
+
+    return this.getAvatar(signerAddress);
+  };
+
+  registerOrganizationV2 = async (name: string, metadataDigest: Uint8Array): Promise<Person> => {
+    const receipt = await this.v2Hub.registerOrganization(name, metadataDigest);
+    await receipt.wait();
+
+    const signerAddress = await this.signer.getAddress();
+    await this.waitForAvatarInfo(signerAddress);
+
+    return this.getAvatar(signerAddress);
+  };
+
+  registerGroupV2 = async (mint: string, name: string, symbol: string, metatdataDigest: Uint8Array): Promise<Person> => {
+    const receipt = await this.v2Hub.registerGroup(mint, name, symbol, metatdataDigest);
+    await receipt.wait();
 
     const signerAddress = await this.signer.getAddress();
     await this.waitForAvatarInfo(signerAddress);
@@ -132,7 +146,7 @@ export class Sdk {
     return avatarRow;
   };
 
-  migrateAvatar = async (avatar: string, cidV0: string): Promise<void> => {
+  migrateAvatar = async (avatar: string, cidV0: Uint8Array): Promise<void> => {
     const avatarInfo = await this.data.getAvatarInfo(avatar);
     if (!avatarInfo) {
       throw new Error('Avatar not found');
@@ -141,9 +155,8 @@ export class Sdk {
       throw new Error('Avatar is not a V1 avatar');
     }
 
-    const v1Avatar = new V1Avatar(this, avatarInfo);
+    const v1Avatar = new V1Person(this, avatarInfo);
     const result = await v1Avatar.stop();
-    await result.wait();
 
     await this.registerHumanV2(cidV0);
     await this.migrateAllV1Tokens(avatar);

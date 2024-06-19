@@ -1,5 +1,5 @@
-import { AvatarInterfaceV2 } from '../AvatarInterface';
-import { ContractTransactionResponse } from 'ethers';
+import { PersonV2 } from '../Person';
+import { ContractTransactionReceipt, ContractTransactionResponse } from 'ethers';
 import { Sdk } from '../sdk';
 import {
   AvatarRow,
@@ -19,7 +19,7 @@ export type Stream = {
   data: Uint8Array
 }
 
-export class V2Avatar implements AvatarInterfaceV2 {
+export class V2Person implements PersonV2 {
   public readonly sdk: Sdk;
 
   get address(): string {
@@ -64,12 +64,24 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return this.sdk.data.getAggregatedTrustRelations(this.address);
   }
 
-  personalMint(): Promise<ContractTransactionResponse> {
-    return this.sdk.v2Hub.personalMint();
+  async personalMint(): Promise<ContractTransactionReceipt> {
+    const tx = await this.sdk.v2Hub.personalMint();
+    const receipt = await tx.wait();
+    if (!receipt) {
+      throw new Error('Personal mint failed');
+    }
+
+    return receipt;
   }
 
-  stop(): Promise<ContractTransactionResponse> {
-    return this.sdk.v2Hub.stop();
+  async stop(): Promise<ContractTransactionReceipt> {
+    const tx = await this.sdk.v2Hub.stop();
+    const receipt = await tx.wait();
+    if (!receipt) {
+      throw new Error('Stop failed');
+    }
+
+    return receipt;
   }
 
   private packCoordinates(coordinates: number[]): Uint8Array {
@@ -89,7 +101,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return { sortedAddresses, lookupMap };
   }
 
-  async transfer(to: string, amount: bigint): Promise<ContractTransactionResponse> {
+  async transfer(to: string, amount: bigint): Promise<ContractTransactionReceipt> {
     const addresses = [this.address, to];
     const N = addresses.length;
 
@@ -141,35 +153,50 @@ export class V2Avatar implements AvatarInterfaceV2 {
       await this.sdk.v2Hub.setApprovalForAll(this.address, true);
     }
 
-    const txReceipt = await this.sdk.v2Hub.operateFlowMatrix(flowVertices, flow, streams, packedCoordinates);
-    if (!txReceipt) {
+    const tx = await this.sdk.v2Hub.operateFlowMatrix(flowVertices, flow, streams, packedCoordinates);
+    const receipt = await tx.wait();
+    if (!receipt) {
       throw new Error('Transfer failed');
     }
 
-    return txReceipt;
+    return receipt;
   }
 
-  async trust(avatar: string): Promise<ContractTransactionResponse> {
-    return await this.sdk.v2Hub.trust(avatar, BigInt('79228162514264337593543950335'));
+  async trust(avatar: string): Promise<ContractTransactionReceipt> {
+    const tx = await this.sdk.v2Hub.trust(avatar, BigInt('79228162514264337593543950335'));
+    const receipt = await tx.wait();
+    if (!receipt) {
+      throw new Error('Trust failed');
+    }
+
+    return receipt;
   }
 
-  async untrust(avatar: string): Promise<ContractTransactionResponse> {
-    return await this.sdk.v2Hub.trust(avatar, BigInt('0'));
+  async untrust(avatar: string): Promise<ContractTransactionReceipt> {
+    const tx = await this.sdk.v2Hub.trust(avatar, BigInt('0'));
+    const receipt = await tx.wait();
+    if (!receipt) {
+      throw new Error('Untrust failed');
+    }
+
+    return receipt;
   }
 
-  async groupMint(group: string, collateral: string[], amounts: bigint[], data: Uint8Array): Promise<ContractTransactionResponse> {
-    const txReceipt = await this.sdk.v2Hub.groupMint(group, collateral, amounts, data);
-    if (!txReceipt) {
+  async groupMint(group: string, collateral: string[], amounts: bigint[], data: Uint8Array): Promise<ContractTransactionReceipt> {
+    const tx = await this.sdk.v2Hub.groupMint(group, collateral, amounts, data);
+    const receipt = await tx.wait();
+    if (!receipt) {
       throw new Error('Group mint failed');
     }
-    return txReceipt;
+
+    return receipt;
   }
 
-  wrapDemurrageErc20(amount: bigint): Promise<ContractTransactionResponse> {
-    throw new Error("Not implemented");
+  wrapDemurrageErc20(amount: bigint): Promise<ContractTransactionReceipt> {
+    throw new Error('Not implemented');
   }
 
-  wrapInflationErc20(amount: bigint): Promise<ContractTransactionResponse> {
-    throw new Error("Not implemented");
+  wrapInflationErc20(amount: bigint): Promise<ContractTransactionReceipt> {
+    throw new Error('Not implemented');
   }
 }

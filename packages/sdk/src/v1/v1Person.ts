@@ -1,8 +1,9 @@
-import { ContractTransactionResponse } from 'ethers';
+import {
+  ContractTransactionReceipt
+} from 'ethers';
 import { Sdk } from '../sdk';
-import { AvatarInterface } from '../AvatarInterface';
-import { Token } from '@circles-sdk/abi-v1';
-import { Token__factory } from '@circles-sdk/abi-v1';
+import { Person } from '../Person';
+import { Token, Token__factory } from '@circles-sdk/abi-v1';
 import {
   AvatarRow,
   CirclesQuery,
@@ -10,7 +11,7 @@ import {
   TrustRelationRow
 } from '@circles-sdk/data';
 
-export class V1Avatar implements AvatarInterface {
+export class V1Person implements Person {
   public readonly sdk: Sdk;
 
   get address(): string {
@@ -70,7 +71,7 @@ export class V1Avatar implements AvatarInterface {
    * @param to The recipient
    * @param amount The amount to send
    */
-  async transfer(to: string, amount: bigint): Promise<ContractTransactionResponse> {
+  async transfer(to: string, amount: bigint): Promise<ContractTransactionReceipt> {
     this.throwIfNotInitialized();
 
     const transferPath = await this.sdk.v1Pathfinder.getTransferPath(
@@ -87,7 +88,8 @@ export class V1Avatar implements AvatarInterface {
     const dests = transferPath.transferSteps.map(o => o.to);
     const wads = transferPath.transferSteps.map(o => BigInt(o.value));
 
-    const receipt = await this.sdk.v1Hub.transferThrough(tokenOwners, srcs, dests, wads);
+    const tx = await this.sdk.v1Hub.transferThrough(tokenOwners, srcs, dests, wads);
+    const receipt = await tx.wait();
     if (!receipt) {
       throw new Error(`The transferThrough call for '${this.address} -> ${to}: ${amount}' didn't yield a receipt.`);
     }
@@ -98,22 +100,22 @@ export class V1Avatar implements AvatarInterface {
   async trust(avatar: string) {
     this.throwIfNotInitialized();
 
-    const receipt = await this.sdk.v1Hub.trust(avatar, BigInt(100));
+    const tx = await this.sdk.v1Hub.trust(avatar, BigInt(100));
+    const receipt = await tx.wait();
     if (!receipt) {
-      throw new Error('The trust call didn\'t yield a receipt');
+      throw new Error(`The trust call for '${this.address} -> ${avatar}' didn't yield a receipt.`);
     }
-
     return receipt;
   }
 
   async untrust(avatar: string) {
     this.throwIfNotInitialized();
 
-    const receipt = await this.sdk.v1Hub.trust(avatar, BigInt(0));
+    const tx = await this.sdk.v1Hub.trust(avatar, BigInt(0));
+    const receipt = await tx.wait();
     if (!receipt) {
-      throw new Error('The untust call didn\'t yield a receipt');
+      throw new Error(`The untrust call for '${this.address} -> ${avatar}' didn't yield a receipt.`);
     }
-
     return receipt;
   }
 
@@ -125,7 +127,7 @@ export class V1Avatar implements AvatarInterface {
     return this.v1Token.look();
   }
 
-  async personalMint(): Promise<ContractTransactionResponse> {
+  async personalMint(): Promise<ContractTransactionReceipt> {
     this.throwIfNotInitialized();
 
     if (!this.v1Token) {
@@ -135,15 +137,16 @@ export class V1Avatar implements AvatarInterface {
       throw new Error('Avatar token is stopped');
     }
 
-    const receipt = await this.v1Token.update();
+    const tx = await this.v1Token.update();
+    const receipt = await tx.wait();
     if (!receipt) {
-      throw new Error('The update call for personalMint didn\'t yield a receipt');
+      throw new Error('The update call didn\'t yield a receipt');
     }
 
     return receipt;
   }
 
-  async stop(): Promise<ContractTransactionResponse> {
+  async stop(): Promise<ContractTransactionReceipt> {
     this.throwIfNotInitialized();
 
     if (!this.v1Token) {
@@ -153,7 +156,8 @@ export class V1Avatar implements AvatarInterface {
       throw new Error('Avatar token is already stopped');
     }
 
-    const receipt = await this.v1Token.stop();
+    const tx = await this.v1Token.stop();
+    const receipt = await tx.wait();
     if (!receipt) {
       throw new Error('The stop call didn\'t yield a receipt');
     }
