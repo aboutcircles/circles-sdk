@@ -12,7 +12,7 @@ export class CirclesRpc {
   private websocketConnected = false;
   private pendingResponses: Record<any, any> = {};
   private subscriptionListeners: {
-    [subscriptionId: string]: ((event: CirclesEvent) => void)[]
+    [subscriptionId: string]: ((event: { event: string, values: Record<string, any> }[]) => void)[]
   } = {};
 
   constructor(rpcUrl: string) {
@@ -54,7 +54,6 @@ export class CirclesRpc {
       this.websocket = new WebSocket(wsUrl);
 
       this.websocket.onopen = () => {
-        console.log('Connected');
         resolve();
       };
 
@@ -76,7 +75,6 @@ export class CirclesRpc {
       };
       this.websocket.onclose = () => {
         this.websocketConnected = false;
-        console.log('WebSocket closed');
       };
       this.websocket.onerror = (error) => {
         console.error('WebSocket error:', error);
@@ -116,10 +114,11 @@ export class CirclesRpc {
     if (!this.subscriptionListeners[subscriptionId]) {
       this.subscriptionListeners[subscriptionId] = [];
     }
-    this.subscriptionListeners[subscriptionId].push((event) => {
-      console.log('Received event:', event);
-      observable.emit(event);
+    this.subscriptionListeners[subscriptionId].push((events) => {
+      parseRpcSubscriptionMessage(events).forEach(event => observable.emit(event));
     });
+
+    // TODO: Add unsubscribe method to observable
     return observable.property;
   }
 }

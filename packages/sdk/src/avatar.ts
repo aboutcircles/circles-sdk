@@ -4,15 +4,12 @@ import { Sdk } from './sdk';
 import { AvatarInterface, AvatarInterfaceV2 } from './AvatarInterface';
 import {
   AvatarRow,
-  CirclesQuery,
+  CirclesQuery, Observable,
   TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
 import { V2Person } from './v2/v2Person';
-
-// export type AvatarEvent =
-//   ParsedV1HubEvent<V1HubEvent>
-//   | ParsedV1TokenEvent<V1TokenEvent>;
+import { CirclesEvent } from '@circles-sdk/data';
 
 /**
  * An Avatar represents a user registered at Circles.
@@ -30,9 +27,6 @@ export class Avatar implements AvatarInterfaceV2 {
   private _avatarInfo: AvatarRow | undefined;
   private _sdk: Sdk;
 
-  // public readonly events: Observable<AvatarEvent>;
-  // private readonly emitEvent: (event: AvatarEvent) => void;
-
   get avatarInfo(): AvatarRow | undefined {
     return this._avatarInfo;
   }
@@ -42,13 +36,16 @@ export class Avatar implements AvatarInterfaceV2 {
   constructor(sdk: Sdk, avatarAddress: string) {
     this.address = avatarAddress.toLowerCase();
     this._sdk = sdk;
-
-    // TODO: re-implement events
-    // const eventsProperty = Observable.create<AvatarEvent>();
-    // this.events = eventsProperty.property;
-    // this.emitEvent = eventsProperty.emit;
-    // sdk.v1Hub.events.subscribe(this.emitEvent);
   }
+
+  public get events(): Observable<CirclesEvent> {
+    if (!this._events) {
+      throw new Error('Not initialized');
+    }
+    return this._events;
+  }
+
+  private _events: Observable<CirclesEvent> | undefined;
 
   /**
    * Initializes the avatar.
@@ -70,6 +67,8 @@ export class Avatar implements AvatarInterfaceV2 {
     } else {
       throw new Error('Unsupported avatar');
     }
+
+    this._events = await this._sdk.data.subscribeToEvents(this._avatarInfo.avatar);
   };
 
   private onlyIfInitialized<T>(func: () => T) {

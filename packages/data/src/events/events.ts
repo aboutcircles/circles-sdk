@@ -1,5 +1,6 @@
 // Base event type
 export type CirclesBaseEvent = {
+  $event: CirclesEventType,
   blockNumber: number;
   timestamp?: number;
   transactionIndex: number;
@@ -26,7 +27,7 @@ export type CrcV1_OrganizationSignup = CirclesBaseEvent & {
 export type CrcV1_Trust = CirclesBaseEvent & {
   canSendTo?: string;
   user?: string;
-  limit?: number;
+  limit?: bigint;
 };
 
 export type CrcV1_Transfer = CirclesBaseEvent & {
@@ -111,8 +112,8 @@ export type CrcV2_DiscountCost = CirclesBaseEvent & {
 
 export type CrcV2_RegisterShortName = CirclesBaseEvent & {
   avatar?: string;
-  shortName?: number;
-  nonce?: number;
+  shortName?: bigint;
+  nonce?: bigint;
 };
 
 export type CrcV2_UpdateMetadataDigest = CirclesBaseEvent & {
@@ -146,3 +147,25 @@ export type CirclesEvent =
   | CrcV2_RegisterShortName
   | CrcV2_UpdateMetadataDigest
   | CrcV2_CidV0;
+
+export type CirclesEventType =
+  | 'CrcV1_HubTransfer'
+  | 'CrcV1_Signup'
+  | 'CrcV1_OrganizationSignup'
+  | 'CrcV1_Trust'
+  | 'CrcV1_Transfer'
+  | 'CrcV2_InviteHuman'
+  | 'CrcV2_PersonalMint'
+  | 'CrcV2_RegisterGroup'
+  | 'CrcV2_RegisterHuman'
+  | 'CrcV2_RegisterOrganization'
+  | 'CrcV2_Stopped'
+  | 'CrcV2_Trust'
+  | 'CrcV2_TransferSingle'
+  | 'CrcV2_URI'
+  | 'CrcV2_ApprovalForAll'
+  | 'CrcV2_TransferBatch'
+  | 'CrcV2_DiscountCost'
+  | 'CrcV2_RegisterShortName'
+  | 'CrcV2_UpdateMetadataDigest'
+  | 'CrcV2_CidV0';

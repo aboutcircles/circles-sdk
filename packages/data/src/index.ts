@@ -21,3 +21,28 @@ export { TokenBalanceRow } from './rows/tokenBalanceRow';
 export { AvatarRow } from './rows/avatarRow';
 export { CirclesRpc } from './circlesRpc';
 export { TrustRelationRow } from './rows/trustRelationRow';
+export {
+  CirclesEvent,
+  CirclesEventType,
+  CirclesBaseEvent,
+  CrcV1_HubTransfer,
+  CrcV2_CidV0,
+  CrcV1_Trust,
+  CrcV1_Transfer,
+  CrcV1_Signup,
+  CrcV1_OrganizationSignup,
+  CrcV2_ApprovalForAll,
+  CrcV2_RegisterOrganization,
+  CrcV2_RegisterShortName,
+  CrcV2_RegisterGroup,
+  CrcV2_RegisterHuman,
+  CrcV2_InviteHuman,
+  CrcV2_TransferBatch,
+  CrcV2_TransferSingle,
+  CrcV2_Trust,
+  CrcV2_DiscountCost,
+  CrcV2_Stopped,
+  CrcV2_URI,
+  CrcV2_PersonalMint,
+  CrcV2_UpdateMetadataDigest
+} from './events/events';

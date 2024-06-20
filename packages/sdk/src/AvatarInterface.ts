@@ -1,6 +1,6 @@
 import {
-  AvatarRow,
-  CirclesQuery,
+  AvatarRow, CirclesEvent,
+  CirclesQuery, Observable,
   TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
