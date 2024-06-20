@@ -1,7 +1,7 @@
 import { V1Person } from './v1/v1Person';
 import { ContractTransactionReceipt, ContractTransactionResponse } from 'ethers';
 import { Sdk } from './sdk';
-import { Person, PersonV2 } from './Person';
+import { AvatarInterface, AvatarInterfaceV2 } from './AvatarInterface';
 import {
   AvatarRow,
   CirclesQuery,
@@ -18,7 +18,7 @@ import { V2Person } from './v2/v2Person';
  * An Avatar represents a user registered at Circles.
  * It provides methods to interact with the Circles protocol, such as minting, transferring and trusting other avatars.
  */
-export class Avatar implements PersonV2 {
+export class Avatar implements AvatarInterfaceV2 {
 
   public readonly address: string;
 
@@ -26,7 +26,7 @@ export class Avatar implements PersonV2 {
    * The actual avatar implementation to use behind this facade.
    * @private
    */
-  private _avatar: Person | undefined;
+  private _avatar: AvatarInterface | undefined;
   private _avatarInfo: AvatarRow | undefined;
   private _sdk: Sdk;
 
@@ -79,11 +79,11 @@ export class Avatar implements PersonV2 {
     return func();
   }
 
-  private onlyIfV2<T>(func: (avatar: PersonV2) => T) {
+  private onlyIfV2<T>(func: (avatar: AvatarInterfaceV2) => T) {
     if (!this._avatar || this._avatarInfo?.version !== 2) {
       throw new Error('Avatar is not initialized or is not a v2 avatar');
     }
-    return func(<PersonV2>this._avatar);
+    return func(<AvatarInterfaceV2>this._avatar);
   }
 
   getMintableAmount = (): Promise<bigint> => this.onlyIfInitialized(() => this._avatar!.getMintableAmount());

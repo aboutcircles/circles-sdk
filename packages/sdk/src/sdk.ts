@@ -2,7 +2,7 @@ import { Avatar } from './avatar';
 import { ethers } from 'ethers';
 import { ChainConfig } from './chainConfig';
 import { Pathfinder } from './v1/pathfinder';
-import { Person } from './Person';
+import { AvatarInterface } from './AvatarInterface';
 import { Hub as HubV1, Token__factory } from '@circles-sdk/abi-v1';
 import { Hub__factory as HubV1Factory } from '@circles-sdk/abi-v1';
 import { Hub as HubV2, Migration__factory } from '@circles-sdk/abi-v2';
@@ -76,7 +76,7 @@ export class Sdk {
    * Registers the connected wallet as a human avatar.
    * @returns The avatar instance.
    */
-  registerHuman = async (): Promise<Person> => {
+  registerHuman = async (): Promise<AvatarInterface> => {
     const receipt = await this.v1Hub.signup();
     await receipt.wait();
 
@@ -86,7 +86,7 @@ export class Sdk {
     return this.getAvatar(signerAddress);
   };
 
-  registerHumanV2 = async (metadataDigest: Uint8Array): Promise<Person> => {
+  registerHumanV2 = async (metadataDigest: Uint8Array): Promise<AvatarInterface> => {
     const receipt = await this.v2Hub.registerHuman(metadataDigest);
     await receipt.wait();
 
@@ -100,7 +100,7 @@ export class Sdk {
    * Registers the connected wallet as an organization avatar.
    * @returns The avatar instance.
    */
-  registerOrganization = async (): Promise<Person> => {
+  registerOrganization = async (): Promise<AvatarInterface> => {
     const receipt = await this.v1Hub.organizationSignup();
     await receipt.wait();
 
@@ -110,7 +110,7 @@ export class Sdk {
     return this.getAvatar(signerAddress);
   };
 
-  registerOrganizationV2 = async (name: string, metadataDigest: Uint8Array): Promise<Person> => {
+  registerOrganizationV2 = async (name: string, metadataDigest: Uint8Array): Promise<AvatarInterface> => {
     const receipt = await this.v2Hub.registerOrganization(name, metadataDigest);
     await receipt.wait();
 
@@ -120,7 +120,7 @@ export class Sdk {
     return this.getAvatar(signerAddress);
   };
 
-  registerGroupV2 = async (mint: string, name: string, symbol: string, metatdataDigest: Uint8Array): Promise<Person> => {
+  registerGroupV2 = async (mint: string, name: string, symbol: string, metatdataDigest: Uint8Array): Promise<AvatarInterface> => {
     const receipt = await this.v2Hub.registerGroup(mint, name, symbol, metatdataDigest);
     await receipt.wait();
 

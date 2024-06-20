@@ -3,7 +3,7 @@ export { Cursor } from './pagedQuery/cursor';
 export { CirclesQuery } from './pagedQuery/circlesQuery';
 export { PagedQueryParams } from './pagedQuery/pagedQueryParams';
 export { Row } from './pagedQuery/row';
-
+export { Observable } from './observable';
 export { CirclesQueryParams } from './rpcSchema/circlesQueryParams';
 export { Conjunction } from './rpcSchema/conjunction';
 export { Filter } from './rpcSchema/filter';
@@ -13,8 +13,8 @@ export { JsonRpcResponse } from './rpcSchema/jsonRpcResponse';
 export { Order } from './rpcSchema/order';
 export { SortOrder } from './rpcSchema/sortOrder';
 export { Namespace, Table } from './rpcSchema/namespaces';
-
-export { ICirclesData, CirclesData } from './circlesData';
+export { CirclesData } from './circlesData';
+export { CirclesDataInterface } from './circlesDataInterface';
 export { TransactionHistoryRow } from './rows/transactionHistoryRow';
 export { TrustListRow } from './rows/trustListRow';
 export { TokenBalanceRow } from './rows/tokenBalanceRow';

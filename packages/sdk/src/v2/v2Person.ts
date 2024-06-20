@@ -1,4 +1,4 @@
-import { PersonV2 } from '../Person';
+import { AvatarInterfaceV2 } from '../AvatarInterface';
 import { ContractTransactionReceipt, ContractTransactionResponse } from 'ethers';
 import { Sdk } from '../sdk';
 import {
@@ -19,7 +19,7 @@ export type Stream = {
   data: Uint8Array
 }
 
-export class V2Person implements PersonV2 {
+export class V2Person implements AvatarInterfaceV2 {
   public readonly sdk: Sdk;
 
   get address(): string {

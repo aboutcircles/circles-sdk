@@ -9,7 +9,7 @@ import { ContractTransactionReceipt, TransactionReceipt } from 'ethers';
 /**
  * An Avatar represents a user registered at Circles.
  */
-export interface Person {
+export interface AvatarInterface {
   /**
    * The avatar's address.
    */
@@ -93,7 +93,7 @@ export interface Person {
   getTotalBalance(): Promise<number>;
 }
 
-export interface PersonV2 extends Person {
+export interface AvatarInterfaceV2 extends AvatarInterface {
   groupMint(group: string, collateral: string[], amounts: bigint[], data: Uint8Array): Promise<ContractTransactionReceipt>;
 
   wrapDemurrageErc20(amount: bigint): Promise<ContractTransactionReceipt>;

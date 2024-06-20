@@ -2,7 +2,7 @@ import {
   ContractTransactionReceipt
 } from 'ethers';
 import { Sdk } from '../sdk';
-import { Person } from '../Person';
+import { AvatarInterface } from '../AvatarInterface';
 import { Token, Token__factory } from '@circles-sdk/abi-v1';
 import {
   AvatarRow,
@@ -11,7 +11,7 @@ import {
   TrustRelationRow
 } from '@circles-sdk/data';
 
-export class V1Person implements Person {
+export class V1Person implements AvatarInterface {
   public readonly sdk: Sdk;
 
   get address(): string {
