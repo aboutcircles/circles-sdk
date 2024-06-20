@@ -10,6 +10,7 @@ import { TrustRelation, TrustRelationRow } from './rows/trustRelationRow';
 import { CirclesDataInterface } from './circlesDataInterface';
 import { Observable } from './observable';
 import { CirclesEvent } from './events/events';
+import { InvitationRow } from './rows/invitationRow';
 
 export class CirclesData implements CirclesDataInterface {
   readonly rpc: CirclesRpc;
@@ -244,15 +245,34 @@ export class CirclesData implements CirclesDataInterface {
           Value: avatar.toLowerCase()
         }
       ],
-      sortOrder: 'DESC',
-      limit: 1
+      sortOrder: 'ASC',
+      limit: 1000
     });
 
     if (!await circlesQuery.queryNextPage()) {
       return undefined;
     }
 
-    return circlesQuery.currentPage?.results[0];
+    const result = circlesQuery.currentPage?.results ?? [];
+    let returnValue: AvatarRow | undefined = undefined;
+
+    for (const avatarRow of result) {
+      if (returnValue === undefined) {
+        returnValue = avatarRow;
+      }
+
+      if (avatarRow.version === 1) {
+        returnValue.hasV1 = true;
+        returnValue.v1Token = avatarRow.tokenId;
+      } else {
+        returnValue = {
+          ...returnValue,
+          ...avatarRow
+        };
+      }
+    }
+
+    return returnValue;
   }
 
   /**
@@ -261,5 +281,69 @@ export class CirclesData implements CirclesDataInterface {
    */
   subscribeToEvents(avatar?: string): Promise<Observable<CirclesEvent>> {
     return this.rpc.subscribe(avatar);
+  }
+
+  /**
+   * Gets the invitations sent by an avatar.
+   * @param avatar The avatar to get the invitations for.
+   * @param pageSize The maximum number of invitations per page.
+   * @returns A CirclesQuery object to fetch the invitations.
+   */
+  getInvitations(avatar: string, pageSize: number): CirclesQuery<InvitationRow> {
+    return new CirclesQuery<InvitationRow>(this.rpc, {
+      namespace: 'CrcV2',
+      table: 'InviteHuman',
+      columns: [
+        'blockNumber',
+        'transactionIndex',
+        'logIndex',
+        'timestamp',
+        'transactionHash',
+        'inviter',
+        'invited'
+      ],
+      filter: [
+        {
+          Type: 'FilterPredicate',
+          FilterType: 'Equals',
+          Column: 'inviter',
+          Value: avatar.toLowerCase()
+        }
+      ],
+      sortOrder: 'DESC',
+      limit: pageSize
+    });
+  }
+
+  /**
+   * Gets the avatar that invited the given avatar.
+   * @param avatar The address of the invited avatar.
+   * @returns The address of the inviting avatar or undefined if not found.
+   */
+  async getInvitedBy(avatar: string): Promise<string | undefined> {
+    const circlesQuery = new CirclesQuery<InvitationRow>(this.rpc, {
+      namespace: 'CrcV2',
+      table: 'InviteHuman',
+      columns: [
+        'inviter'
+      ],
+      filter: [
+        {
+          Type: 'FilterPredicate',
+          FilterType: 'Equals',
+          Column: 'invited',
+          Value: avatar.toLowerCase()
+        }
+      ],
+      sortOrder: 'DESC',
+      limit: 1
+    });
+
+    const page = await circlesQuery.queryNextPage();
+    if (!page) {
+      return undefined;
+    }
+
+    return circlesQuery.currentPage?.results[0].inviter;
   }
 }

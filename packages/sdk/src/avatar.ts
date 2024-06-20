@@ -60,12 +60,31 @@ export class Avatar implements AvatarInterfaceV2 {
       throw new Error('Avatar is not signed up at Circles');
     }
 
-    if (this._avatarInfo.version === 1) {
-      this._avatar = new V1Person(this._sdk, this._avatarInfo);
-    } else if (this._avatarInfo.version === 2) {
-      this._avatar = new V2Person(this._sdk, this._avatarInfo);
-    } else {
-      throw new Error('Unsupported avatar');
+    const { version, hasV1 } = this._avatarInfo;
+    const v1Person = () => new V1Person(this._sdk, this._avatarInfo!);
+    const v2Person = () => new V2Person(this._sdk, this._avatarInfo!);
+
+    switch (version) {
+      case 1:
+        this._avatar = v1Person();
+        break;
+
+      case 2:
+        if (!hasV1) {
+          this._avatar = v2Person();
+        } else {
+          const v1Avatar = v1Person();
+          const isStopped = await v1Avatar.v1Token?.stopped();
+          this._avatar = isStopped ? v2Person() : v1Person();
+          const avatarInfo = this._avatar.avatarInfo;
+          if (avatarInfo) {
+            avatarInfo.v1Stopped = isStopped;
+          }
+        }
+        break;
+
+      default:
+        throw new Error('Unsupported avatar');
     }
 
     this._events = await this._sdk.data.subscribeToEvents(this._avatarInfo.avatar);
@@ -98,4 +117,5 @@ export class Avatar implements AvatarInterfaceV2 {
   groupMint = (group: string, collateral: string[], amounts: bigint[], data: Uint8Array): Promise<ContractTransactionReceipt> => this.onlyIfV2((avatar) => avatar.groupMint(group, collateral, amounts, data));
   wrapDemurrageErc20 = (amount: bigint): Promise<ContractTransactionReceipt> => this.onlyIfV2((avatar) => avatar.wrapDemurrageErc20(amount));
   wrapInflationErc20 = (amount: bigint): Promise<ContractTransactionReceipt> => this.onlyIfV2((avatar) => avatar.wrapInflationErc20(amount));
+  inviteHuman = (avatar: string): Promise<ContractTransactionReceipt> => this.onlyIfV2((_avatar) => _avatar.inviteHuman(avatar));
 }

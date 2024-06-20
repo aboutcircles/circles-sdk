@@ -8,6 +8,7 @@ import { Hub__factory as HubV1Factory } from '@circles-sdk/abi-v1';
 import { Hub as HubV2, Migration__factory } from '@circles-sdk/abi-v2';
 import { Hub__factory as HubV2Factory } from '@circles-sdk/abi-v2';
 import { AvatarRow, CirclesData, CirclesRpc } from '@circles-sdk/data';
+import multihashes from 'multihashes';
 import { V1Person } from './v1/v1Person';
 
 /**
@@ -86,9 +87,30 @@ export class Sdk {
     return this.getAvatar(signerAddress);
   };
 
-  registerHumanV2 = async (metadataDigest: Uint8Array): Promise<AvatarInterface> => {
-    const receipt = await this.v2Hub.registerHuman(metadataDigest);
-    await receipt.wait();
+  private cidV0Digest = (cidV0: string) => {
+    if (!cidV0.startsWith('Qm')) {
+      throw new Error('Invalid CID. Must be a CIDv0 with sha2-256 hash in base58 encoding');
+    }
+    const cidBytes = multihashes.fromB58String(cidV0);
+    const decodedCid = multihashes.decode(cidBytes);
+    return decodedCid.digest;
+  };
+
+  registerHumanV2 = async (cidV0: string): Promise<AvatarInterface> => {
+    const metadataDigest = this.cidV0Digest(cidV0);
+    // try {
+    const tx = await this.v2Hub.registerHuman(metadataDigest);
+    const receipt = await tx.wait();
+    if (!receipt) {
+      throw new Error('Transaction failed');
+    }
+    // } catch (e) {
+    // const revertData = (<Error>e).message.replace('Reverted ', '');
+    // parseError(revertData);
+    // console.log('Caught error:');
+    //   console.error(e);
+    //   throw e;
+    // }
 
     const signerAddress = await this.signer.getAddress();
     await this.waitForAvatarInfo(signerAddress);
@@ -110,7 +132,8 @@ export class Sdk {
     return this.getAvatar(signerAddress);
   };
 
-  registerOrganizationV2 = async (name: string, metadataDigest: Uint8Array): Promise<AvatarInterface> => {
+  registerOrganizationV2 = async (name: string, cidV0: string): Promise<AvatarInterface> => {
+    const metadataDigest = this.cidV0Digest(cidV0);
     const receipt = await this.v2Hub.registerOrganization(name, metadataDigest);
     await receipt.wait();
 
@@ -120,7 +143,8 @@ export class Sdk {
     return this.getAvatar(signerAddress);
   };
 
-  registerGroupV2 = async (mint: string, name: string, symbol: string, metatdataDigest: Uint8Array): Promise<AvatarInterface> => {
+  registerGroupV2 = async (mint: string, name: string, symbol: string, cidV0: string): Promise<AvatarInterface> => {
+    const metatdataDigest = this.cidV0Digest(cidV0);
     const receipt = await this.v2Hub.registerGroup(mint, name, symbol, metatdataDigest);
     await receipt.wait();
 
@@ -146,20 +170,42 @@ export class Sdk {
     return avatarRow;
   };
 
-  migrateAvatar = async (avatar: string, cidV0: Uint8Array): Promise<void> => {
+  migrateAvatar = async (avatar: string, cidV0: string): Promise<void> => {
     const avatarInfo = await this.data.getAvatarInfo(avatar);
     if (!avatarInfo) {
       throw new Error('Avatar not found');
     }
-    if (avatarInfo.version != 1) {
+
+    if (avatarInfo.hasV1) {
+      // 1. Stop V1 token if necessary
+      if (avatarInfo.v1Token) {
+        const v1Avatar = new V1Person(this, avatarInfo);
+        const isStopped = await v1Avatar.v1Token?.stopped();
+
+        if (!isStopped) {
+          await v1Avatar.personalMint();
+          const stopTx = await v1Avatar.v1Token?.stop();
+          const stopTxReceipt = await stopTx?.wait();
+          if (!stopTxReceipt) {
+            throw new Error('Failed to stop V1 avatar');
+          }
+        }
+      }
+
+      // 2. Signup V2 avatar if necessary
+      if (avatarInfo.version === 1) {
+        await this.registerHumanV2(cidV0);
+      }
+
+      // 3. Make sure the v1 token minting status is known to the v2 hub
+      const calculateIssuanceTx = await this.v2Hub.calculateIssuanceWithCheck(avatar);
+      await calculateIssuanceTx.wait();
+
+      // 4. Migrate V1 tokens
+      await this.migrateAllV1Tokens(avatar);
+    } else {
       throw new Error('Avatar is not a V1 avatar');
     }
-
-    const v1Avatar = new V1Person(this, avatarInfo);
-    const result = await v1Avatar.stop();
-
-    await this.registerHumanV2(cidV0);
-    await this.migrateAllV1Tokens(avatar);
   };
 
   migrateAllV1Tokens = async (avatar: string): Promise<void> => {

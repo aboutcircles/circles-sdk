@@ -99,4 +99,6 @@ export interface AvatarInterfaceV2 extends AvatarInterface {
   wrapDemurrageErc20(amount: bigint): Promise<ContractTransactionReceipt>;
 
   wrapInflationErc20(amount: bigint): Promise<ContractTransactionReceipt>;
+
+  inviteHuman(avatar: string): Promise<ContractTransactionReceipt>;
 }

@@ -1,6 +1,6 @@
-import { Row } from '../pagedQuery/row';
+import { EventRow } from '../pagedQuery/eventRow';
 
-export interface TrustListRow extends Row {
+export interface TrustListRow extends EventRow {
   timestamp: number;
   transactionHash: string;
   version: number;

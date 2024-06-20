@@ -36,12 +36,12 @@ export class V1Person implements AvatarInterface {
     this.sdk = sdk;
     this.avatarInfo = avatarInfo;
 
-    if (this.avatarInfo.version != 1) {
+    if (!this.avatarInfo.hasV1) {
       throw new Error('Avatar is not a v1 avatar');
     }
 
-    if (this.avatarInfo.tokenId) {
-      this._v1Token = Token__factory.connect(this.avatarInfo.tokenId, this.sdk.signer);
+    if (this.avatarInfo.v1Token) {
+      this._v1Token = Token__factory.connect(this.avatarInfo.v1Token, this.sdk.signer);
     }
   }
 

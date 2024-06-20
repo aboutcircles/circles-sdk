@@ -2,7 +2,7 @@ export { PagedQueryResult } from './pagedQuery/pagedQueryResult';
 export { Cursor } from './pagedQuery/cursor';
 export { CirclesQuery } from './pagedQuery/circlesQuery';
 export { PagedQueryParams } from './pagedQuery/pagedQueryParams';
-export { Row } from './pagedQuery/row';
+export { EventRow } from './pagedQuery/eventRow';
 export { Observable } from './observable';
 export { CirclesQueryParams } from './rpcSchema/circlesQueryParams';
 export { Conjunction } from './rpcSchema/conjunction';
@@ -21,6 +21,7 @@ export { TokenBalanceRow } from './rows/tokenBalanceRow';
 export { AvatarRow } from './rows/avatarRow';
 export { CirclesRpc } from './circlesRpc';
 export { TrustRelationRow } from './rows/trustRelationRow';
+export { InvitationRow } from './rows/invitationRow';
 export {
   CirclesEvent,
   CirclesEventType,

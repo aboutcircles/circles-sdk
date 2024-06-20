@@ -1,6 +1,4 @@
-import { Row } from '../pagedQuery/row';
-
-export interface TokenBalanceRow extends Row {
+export interface TokenBalanceRow {
   token: string;
   balance: string;
   tokenOwner: string;

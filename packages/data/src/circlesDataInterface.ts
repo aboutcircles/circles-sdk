@@ -6,6 +6,7 @@ import { TrustListRow } from './rows/trustListRow';
 import { TrustRelationRow } from './rows/trustRelationRow';
 import { Observable } from './observable';
 import { CirclesEvent } from './events/events';
+import { InvitationRow } from './rows/invitationRow';
 
 export interface CirclesDataInterface {
   /**
@@ -71,4 +72,17 @@ export interface CirclesDataInterface {
    * @param avatar The address to subscribe to events for. If not provided, subscribes to all events.
    */
   subscribeToEvents(avatar?: string): Promise<Observable<CirclesEvent>>;
+
+  /**
+   * Gets the list of avatars that have invited the given avatar.
+   * @param avatar The address to get the invitations for.
+   * @param pageSize The maximum number of invitations per page.
+   */
+  getInvitations(avatar: string, pageSize: number): CirclesQuery<InvitationRow>;
+
+  /**
+   * Gets the avatar that invited the given avatar.
+   * @param avatar The address to get the inviter for.
+   */
+  getInvitedBy(avatar: string): Promise<string|undefined>;
 }
