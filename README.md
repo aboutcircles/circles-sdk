@@ -17,6 +17,9 @@ with [Circles V2](https://github.com/aboutcircles/circles-contracts-v2).
     5. [Events](#events)
         1. [Event types](#event-types)
 4. [Building from source](#building-from-source)
+5. [Error handling & Troubleshooting](#error-handling--troubleshooting)
+   1. [Transaction reverted without a reason](#transaction-reverted-without-a-reason)
+   2. [The SDK is not working as expected](#the-sdk-is-not-working-as-expected)
 
 ## Installation
 
@@ -430,8 +433,9 @@ while (await query.queryNextPage()) {
 }
 ```
 
-The `CirclesData` class provides a decent selection of common queries already, 
-but you can also use the `CirclesQuery` class directly. See the [Circles RPC query API](https://github.com/CirclesUBI/circles-nethermind-plugin?tab=readme-ov-file#circles_query)
+The `CirclesData` class provides a decent selection of common queries already,
+but you can also use the `CirclesQuery` class directly. See
+the [Circles RPC query API](https://github.com/CirclesUBI/circles-nethermind-plugin?tab=readme-ov-file#circles_query)
 documentation for more information about the query capabilities.
 
 ```typescript
@@ -525,3 +529,52 @@ cd circles-sdk
 npm install
 npm run build
 ```
+
+## Error handling & Troubleshooting
+
+### Transaction reverted without a reason
+
+Due to contract size constraints, the circles v2 contracts don't use revert reasons. This means that
+most errors will be thrown as `Error: Transaction reverted without a reason string`.
+
+The error handling in the SDK is very rudimentary at the moment. So if you encounter such an error,
+check your browser console for a message in the format:
+
+```
+Revert: 0x071335d8000000000000000000000000b49a7bccd607ef482b71988a11f65fece980eca50000000000000000000000004f24c2cd960d44f76b79f963706602872205db8b
+```
+
+This message contains the encoded error message. You can decode it using the `parseError` function
+from the SDK:
+
+```typescript
+import { parseError } from '@circles-sdk/sdk';
+
+const error = "0x071335d8000000000000000000000000b49a7bccd607ef482b71988a11f65fece980eca50000000000000000000000004f24c2cd960d44f76b79f963706602872205db8b";
+parseError(error);
+```
+
+This will give you a human-readable error message:
+
+```
+ErrorDescription {
+  fragment: ErrorFragment {
+    type: 'error',
+    inputs: [ [ParamType], [ParamType] ],
+    name: 'CirclesERC1155MintBlocked'
+  },
+  name: 'CirclesERC1155MintBlocked',
+  args: Result(2) [
+    '0xb49a7bccD607Ef482B71988A11f65fEce980ecA5',
+    '0x4f24C2CD960d44f76B79F963706602872205DB8B'
+  ],
+  signature: 'CirclesERC1155MintBlocked(address,address)',
+  selector: '0x071335d8'
+}
+```
+
+### The SDK is not working as expected
+
+If you encounter any issues with the SDK, please open an issue on the GitHub repository.
+In the meantime, try to work around the issue e.g. by using the hub contracts directly (`sdk.v1Hub`
+or `sdk.v2Hub`).
