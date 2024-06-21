@@ -3,46 +3,120 @@ import { ethers } from 'ethers';
 import { ChainConfig } from './chainConfig';
 import { Pathfinder } from './v1/pathfinder';
 import { AvatarInterface } from './AvatarInterface';
-import { Hub as HubV1, Token__factory } from '@circles-sdk/abi-v1';
-import { Hub__factory as HubV1Factory } from '@circles-sdk/abi-v1';
-import { Hub as HubV2, Migration__factory } from '@circles-sdk/abi-v2';
-import { Hub__factory as HubV2Factory } from '@circles-sdk/abi-v2';
+import { Hub as HubV1, Hub__factory as HubV1Factory, Token__factory } from '@circles-sdk/abi-v1';
+import {
+  Hub as HubV2,
+  Hub__factory as HubV2Factory,
+  Migration__factory
+} from '@circles-sdk/abi-v2';
 import { AvatarRow, CirclesData, CirclesRpc } from '@circles-sdk/data';
 import multihashes from 'multihashes';
 import { V1Person } from './v1/v1Person';
 
 /**
+ * The SDK interface.
+ */
+interface SdkInterface {
+  /**
+   * The signer used to sign transactions (connected wallet e.g. MetaMask).
+   */
+  signer: ethers.AbstractSigner;
+  /**
+   * The chain specific Circles configuration (contract addresses and rpc endpoints).
+   */
+  chainConfig: ChainConfig;
+  /**
+   * A configured instance of the CirclesData class, an easy-to-use wrapper around
+   * the Circles RPC Query API.
+   */
+  data: CirclesData;
+  /**
+   * An instance of the typechain generated Circles V1 Hub contract wrapper.
+   */
+  v1Hub: HubV1;
+  /**
+   * An instance of the typechain generated Circles V2 Hub contract wrapper.
+   */
+  v2Hub: HubV2;
+  /**
+   * An instance of the v1 Pathfinder client (necessary for transfers; only available on gnosis chain with v1 Circles at the moment).
+   */
+  v1Pathfinder: Pathfinder;
+  /**
+   * Gets an Avatar instance by its address. Fails if the avatar is not signed up at Circles.
+   * @param avatarAddress The avatar's address.
+   * @returns The Avatar instance.
+   */
+  getAvatar: (avatarAddress: string) => Promise<Avatar>;
+  /**
+   * Registers the connected wallet as a human avatar in Circles v1.
+   * @returns The Avatar instance.
+   */
+  registerHuman: () => Promise<AvatarInterface>;
+  /**
+   * Registers the connected wallet as a human avatar in Circles v2.
+   * @param cidV0 The CIDv0 of the avatar's ERC1155 token metadata.
+   */
+  registerHumanV2: (cidV0: string) => Promise<AvatarInterface>;
+  /**
+   * Registers the connected wallet as an organization avatar in Circles v1.
+   */
+  registerOrganization: () => Promise<AvatarInterface>;
+  /**
+   * Registers the connected wallet as an organization avatar in Circles v2.
+   * @param name The organization's name.
+   * @param cidV0 The CIDv0 of the organization's metadata.
+   */
+  registerOrganizationV2: (name: string, cidV0: string) => Promise<AvatarInterface>;
+  /**
+   * Registers the connected wallet as a group avatar in Circles v2.
+   * @param mint The address of the minting policy contract to use.
+   * @param name The group's name.
+   * @param symbol The group token's symbol.
+   * @param cidV0 The CIDv0 of the group token's metadata.
+   */
+  registerGroupV2: (mint: string, name: string, symbol: string, cidV0: string) => Promise<AvatarInterface>;
+  /**
+   * Migrates a v1 avatar and all its Circles holdings to v2.
+   * [[ Currently only works for human avatars. ]]
+   * @param avatar The avatar's address.
+   * @param cidV0 The CIDv0 of the avatar's ERC1155 token metadata.
+   */
+  migrateAvatar: (avatar: string, cidV0: string) => Promise<void>;
+}
+
+/**
  * The SDK provides a high-level interface to interact with the Circles protocol.
  */
-export class Sdk {
+export class Sdk implements SdkInterface {
   /**
    * The signer used to sign transactions.
    */
-  public readonly signer: ethers.AbstractSigner;
+  readonly signer: ethers.AbstractSigner;
   /**
    * The chain specific Circles configuration.
    */
-  public readonly chainConfig: ChainConfig;
+  readonly chainConfig: ChainConfig;
   /**
    * The Circles RPC client.
    */
-  public readonly circlesRpc: CirclesRpc;
+  readonly circlesRpc: CirclesRpc;
   /**
    * The Circles data client.
    */
-  public readonly data: CirclesData;
+  readonly data: CirclesData;
   /**
    * The V1 hub contract wrapper.
    */
-  public readonly v1Hub: HubV1;
+  readonly v1Hub: HubV1;
   /**
    * The V2 hub contract wrapper.
    */
-  public readonly v2Hub: HubV2;
+  readonly v2Hub: HubV2;
   /**
    * The pathfinder client.
    */
-  public readonly v1Pathfinder: Pathfinder;
+  readonly v1Pathfinder: Pathfinder;
 
   /**
    * Creates a new SDK instance.
@@ -87,7 +161,7 @@ export class Sdk {
     return this.getAvatar(signerAddress);
   };
 
-  private cidV0Digest = (cidV0: string) => {
+  cidV0Digest = (cidV0: string) => {
     if (!cidV0.startsWith('Qm')) {
       throw new Error('Invalid CID. Must be a CIDv0 with sha2-256 hash in base58 encoding');
     }
