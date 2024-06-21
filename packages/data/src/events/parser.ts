@@ -11,6 +11,14 @@ type RpcSubscriptionMessage = Array<{
 
 const hexToBigInt = (hex: string): bigint => BigInt(hex);
 const hexToNumber = (hex: string): number => parseInt(hex, 16);
+const hexToUint8Array = (hex: string): Uint8Array => {
+  if (hex.length % 2 !== 0) throw new Error('Invalid hex string');
+  const array = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    array[i / 2] = parseInt(hex.substr(i, 2), 16);
+  }
+  return array;
+};
 
 const parseEventValues = (event: CirclesEventType, values: EventValues): CirclesEvent => {
   const baseEvent = {
@@ -152,13 +160,13 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
       return {
         ...baseEvent,
         avatar: values.avatar,
-        metadataDigest: values.metadataDigest ? Buffer.from(values.metadataDigest, 'hex') : undefined
+        metadataDigest: values.metadataDigest ? hexToUint8Array(values.metadataDigest) : undefined
       };
     case 'CrcV2_CidV0':
       return {
         ...baseEvent,
         avatar: values.avatar,
-        cidV0Digest: values.cidV0Digest ? Buffer.from(values.cidV0Digest, 'hex') : undefined
+        cidV0Digest: values.cidV0Digest ? hexToUint8Array(values.cidV0Digest) : undefined
       };
     default:
       throw new Error(`Unknown event type: ${event}`);

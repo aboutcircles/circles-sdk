@@ -118,12 +118,12 @@ export type CrcV2_RegisterShortName = CirclesBaseEvent & {
 
 export type CrcV2_UpdateMetadataDigest = CirclesBaseEvent & {
   avatar?: string;
-  metadataDigest?: Buffer;
+  metadataDigest?: Uint8Array;
 };
 
 export type CrcV2_CidV0 = CirclesBaseEvent & {
   avatar?: string;
-  cidV0Digest?: Buffer;
+  cidV0Digest?: Uint8Array;
 };
 
 export type CirclesEvent =
