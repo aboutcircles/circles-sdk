@@ -1,7 +1,7 @@
 import { Cursor } from './cursor';
-import { Row } from './row';
+import { EventRow } from './eventRow';
 
-export interface PagedQueryResult<TRow extends Row> {
+export interface PagedQueryResult<TRow extends EventRow> {
   /**
    * The number of results that were requested.
    */

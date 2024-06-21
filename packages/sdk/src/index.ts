@@ -1,7 +1,8 @@
 export { Avatar } from './avatar';
-export { Observable } from './observable';
+export { Observable } from '@circles-sdk/data';
 export { Sdk } from './sdk';
 export { V1Person } from './v1/v1Person';
 export { ChainConfig } from './chainConfig';
-export { AvatarRow, TrustListRow } from '@circles-sdk/data';
-export { Person } from './Person';
+export { AvatarRow, TrustListRow, TrustRelationRow } from '@circles-sdk/data';
+export { AvatarInterface } from './AvatarInterface';
+export { parseError } from './errors';

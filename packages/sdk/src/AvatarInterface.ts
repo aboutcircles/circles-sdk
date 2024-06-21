@@ -1,15 +1,13 @@
 import {
-  AvatarRow,
-  CirclesQuery,
-  TransactionHistoryRow,
+  AvatarRow, CirclesQuery, TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
-import { ContractTransactionReceipt, TransactionReceipt } from 'ethers';
+import { ContractTransactionReceipt } from 'ethers';
 
 /**
  * An Avatar represents a user registered at Circles.
  */
-export interface Person {
+export interface AvatarInterface {
   /**
    * The avatar's address.
    */
@@ -21,12 +19,6 @@ export interface Person {
    * If the avatar is initialized and this field is `undefined`, the avatar is not signed up at Circles.
    */
   readonly avatarInfo: AvatarRow | undefined;
-
-  /**
-   * A stream of events that have been caused by the avatar executing transactions.
-   */
-  // TODO: re-implement events
-  // readonly events: Observable<AvatarEvent>;
 
   /**
    * Calculates the maximum Circles amount that can be transferred to another avatar.
@@ -93,10 +85,34 @@ export interface Person {
   getTotalBalance(): Promise<number>;
 }
 
-export interface PersonV2 extends Person {
+/**
+ * V2 avatars have additional capabilities that are described in this interface.
+ */
+export interface AvatarInterfaceV2 extends AvatarInterface {
+  /**
+   * Uses holdings of the avatar as collateral to mint new group tokens.
+   * @param group The group which is minting the tokens.
+   * @param collateral The addresses of the tokens used as collateral.
+   * @param amounts The amounts of the collateral tokens to use.
+   * @param data Additional data for the minting operation.
+   */
   groupMint(group: string, collateral: string[], amounts: bigint[], data: Uint8Array): Promise<ContractTransactionReceipt>;
 
+  /**
+   * Wraps ERC115 Circles into demurraged ERC20 Circles.
+   * @param amount The amount of ERC115 Circles to wrap.
+   */
   wrapDemurrageErc20(amount: bigint): Promise<ContractTransactionReceipt>;
 
+  /**
+   * Wraps inflation ERC20 Circles into demurraged ERC20 Circles.
+   * @param amount The amount of inflation ERC20 Circles to wrap.
+   */
   wrapInflationErc20(amount: bigint): Promise<ContractTransactionReceipt>;
+
+  /**
+   * Invites an address as human to Circles v2.
+   * @param avatar The avatar's avatar.
+   */
+  inviteHuman(avatar: string): Promise<ContractTransactionReceipt>;
 }

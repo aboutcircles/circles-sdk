@@ -1,24 +1,21 @@
 import { V1Person } from './v1/v1Person';
 import { ContractTransactionReceipt, ContractTransactionResponse } from 'ethers';
 import { Sdk } from './sdk';
-import { Person, PersonV2 } from './Person';
+import { AvatarInterface, AvatarInterfaceV2 } from './AvatarInterface';
 import {
   AvatarRow,
-  CirclesQuery,
+  CirclesQuery, Observable,
   TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
 import { V2Person } from './v2/v2Person';
-
-// export type AvatarEvent =
-//   ParsedV1HubEvent<V1HubEvent>
-//   | ParsedV1TokenEvent<V1TokenEvent>;
+import { CirclesEvent } from '@circles-sdk/data';
 
 /**
  * An Avatar represents a user registered at Circles.
  * It provides methods to interact with the Circles protocol, such as minting, transferring and trusting other avatars.
  */
-export class Avatar implements PersonV2 {
+export class Avatar implements AvatarInterfaceV2 {
 
   public readonly address: string;
 
@@ -26,12 +23,9 @@ export class Avatar implements PersonV2 {
    * The actual avatar implementation to use behind this facade.
    * @private
    */
-  private _avatar: Person | undefined;
+  private _avatar: AvatarInterface | undefined;
   private _avatarInfo: AvatarRow | undefined;
   private _sdk: Sdk;
-
-  // public readonly events: Observable<AvatarEvent>;
-  // private readonly emitEvent: (event: AvatarEvent) => void;
 
   get avatarInfo(): AvatarRow | undefined {
     return this._avatarInfo;
@@ -42,13 +36,16 @@ export class Avatar implements PersonV2 {
   constructor(sdk: Sdk, avatarAddress: string) {
     this.address = avatarAddress.toLowerCase();
     this._sdk = sdk;
-
-    // TODO: re-implement events
-    // const eventsProperty = Observable.create<AvatarEvent>();
-    // this.events = eventsProperty.property;
-    // this.emitEvent = eventsProperty.emit;
-    // sdk.v1Hub.events.subscribe(this.emitEvent);
   }
+
+  public get events(): Observable<CirclesEvent> {
+    if (!this._events) {
+      throw new Error('Not initialized');
+    }
+    return this._events;
+  }
+
+  private _events: Observable<CirclesEvent> | undefined;
 
   /**
    * Initializes the avatar.
@@ -63,13 +60,34 @@ export class Avatar implements PersonV2 {
       throw new Error('Avatar is not signed up at Circles');
     }
 
-    if (this._avatarInfo.version === 1) {
-      this._avatar = new V1Person(this._sdk, this._avatarInfo);
-    } else if (this._avatarInfo.version === 2) {
-      this._avatar = new V2Person(this._sdk, this._avatarInfo);
-    } else {
-      throw new Error('Unsupported avatar');
+    const { version, hasV1 } = this._avatarInfo;
+    const v1Person = () => new V1Person(this._sdk, this._avatarInfo!);
+    const v2Person = () => new V2Person(this._sdk, this._avatarInfo!);
+
+    switch (version) {
+      case 1:
+        this._avatar = v1Person();
+        break;
+
+      case 2:
+        if (!hasV1) {
+          this._avatar = v2Person();
+        } else {
+          const v1Avatar = v1Person();
+          const isStopped = await v1Avatar.v1Token?.stopped();
+          this._avatar = isStopped ? v2Person() : v1Person();
+          const avatarInfo = this._avatar.avatarInfo;
+          if (avatarInfo) {
+            avatarInfo.v1Stopped = isStopped;
+          }
+        }
+        break;
+
+      default:
+        throw new Error('Unsupported avatar');
     }
+
+    this._events = await this._sdk.data.subscribeToEvents(this._avatarInfo.avatar);
   };
 
   private onlyIfInitialized<T>(func: () => T) {
@@ -79,11 +97,11 @@ export class Avatar implements PersonV2 {
     return func();
   }
 
-  private onlyIfV2<T>(func: (avatar: PersonV2) => T) {
+  private onlyIfV2<T>(func: (avatar: AvatarInterfaceV2) => T) {
     if (!this._avatar || this._avatarInfo?.version !== 2) {
       throw new Error('Avatar is not initialized or is not a v2 avatar');
     }
-    return func(<PersonV2>this._avatar);
+    return func(<AvatarInterfaceV2>this._avatar);
   }
 
   getMintableAmount = (): Promise<bigint> => this.onlyIfInitialized(() => this._avatar!.getMintableAmount());
@@ -99,4 +117,5 @@ export class Avatar implements PersonV2 {
   groupMint = (group: string, collateral: string[], amounts: bigint[], data: Uint8Array): Promise<ContractTransactionReceipt> => this.onlyIfV2((avatar) => avatar.groupMint(group, collateral, amounts, data));
   wrapDemurrageErc20 = (amount: bigint): Promise<ContractTransactionReceipt> => this.onlyIfV2((avatar) => avatar.wrapDemurrageErc20(amount));
   wrapInflationErc20 = (amount: bigint): Promise<ContractTransactionReceipt> => this.onlyIfV2((avatar) => avatar.wrapInflationErc20(amount));
+  inviteHuman = (avatar: string): Promise<ContractTransactionReceipt> => this.onlyIfV2((_avatar) => _avatar.inviteHuman(avatar));
 }

@@ -7,68 +7,12 @@ import { AvatarRow } from './rows/avatarRow';
 import { crcToTc } from '@circles-sdk/utils';
 import { ethers } from 'ethers';
 import { TrustRelation, TrustRelationRow } from './rows/trustRelationRow';
+import { CirclesDataInterface } from './circlesDataInterface';
+import { Observable } from './observable';
+import { CirclesEvent } from './events/events';
+import { InvitationRow } from './rows/invitationRow';
 
-export interface ICirclesData {
-  /**
-   * Gets basic information about an avatar.
-   * This includes the signup timestamp, circles version, avatar type and token address/id.
-   * @param avatar The address to check.
-   * @returns The avatar information or undefined if the address is not an avatar.
-   */
-  getAvatarInfo(avatar: string): Promise<AvatarRow | undefined>;
-
-  /**
-   * Gets the total CRC v1 balance of an address.
-   * @param avatar The address to get the CRC balance for.
-   * @param asTimeCircles Whether to return the balance as TimeCircles or not (default: true).
-   * @returns The total CRC balance (either as TC 'number' or as CRC in 'wei').
-   */
-  getTotalBalance(avatar: string, asTimeCircles: boolean): Promise<string>;
-
-  /**
-   * Gets the total CRC v2 balance of an address.
-   * @param avatar The address to get the CRC balance for.
-   * @param asTimeCircles Whether to return the balance as TimeCircles or not (default: true).
-   */
-  getTotalBalanceV2(avatar: string, asTimeCircles: boolean): Promise<string>;
-
-  /**
-   * Gets the detailed CRC v1 token balances of an address.
-   * @param avatar The address to get the token balances for.
-   * @param asTimeCircles Whether to return the balances as TimeCircles or not (default: true).
-   */
-  getTokenBalances(avatar: string, asTimeCircles: boolean): Promise<TokenBalanceRow[]>;
-
-  /**
-   * Gets the detailed CRC v2 token balances of an address.
-   * @param avatar The address to get the token balances for.
-   * @param asTimeCircles Whether to return the balances as TimeCircles or not (default: true).
-   */
-  getTokenBalancesV2(avatar: string, asTimeCircles: boolean): Promise<TokenBalanceRow[]>;
-
-  /**
-   * Gets the transaction history of an address.
-   * This contains incoming/outgoing transactions and minting of CRC (in v1 and v2).
-   * @param avatar The address to get the transaction history for.
-   * @param pageSize The maximum number of transactions per page.
-   */
-  getTransactionHistory(avatar: string, pageSize: number): CirclesQuery<TransactionHistoryRow>;
-
-  /**
-   * Gets the current incoming and outgoing trust relations of an address (in v1 and v2).
-   * @param avatar The address to get the trust list for.
-   * @param pageSize The maximum number of trust relations per page.
-   */
-  getTrustRelations(avatar: string, pageSize: number): CirclesQuery<TrustListRow>;
-
-  /**
-   * Gets all trust relations of an avatar and groups mutual trust relations together.
-   * @param avatar The address to get the trust relations for.
-   */
-  getAggregatedTrustRelations(avatar: string): Promise<TrustRelationRow[]>
-}
-
-export class CirclesData implements ICirclesData {
+export class CirclesData implements CirclesDataInterface {
   readonly rpc: CirclesRpc;
 
   constructor(rpc: CirclesRpc) {
@@ -221,9 +165,9 @@ export class CirclesData implements ICirclesData {
     });
   }
 
-  async getAggregatedTrustRelations(avatar: string): Promise<TrustRelationRow[]> {
+  async getAggregatedTrustRelations(avatarAddress: string): Promise<TrustRelationRow[]> {
     const pageSize = 1000;
-    const trustsQuery = this.getTrustRelations(avatar, pageSize);
+    const trustsQuery = this.getTrustRelations(avatarAddress, pageSize);
     const trustListRows: TrustListRow[] = [];
 
     // Fetch all trust relations
@@ -237,11 +181,11 @@ export class CirclesData implements ICirclesData {
     // Group trust list rows by truster and trustee
     const trustBucket: { [avatar: string]: TrustListRow[] } = {};
     trustListRows.forEach(row => {
-      if (row.truster !== avatar) {
+      if (row.truster !== avatarAddress) {
         trustBucket[row.truster] = trustBucket[row.truster] || [];
         trustBucket[row.truster].push(row);
       }
-      if (row.trustee !== avatar) {
+      if (row.trustee !== avatarAddress) {
         trustBucket[row.trustee] = trustBucket[row.trustee] || [];
         trustBucket[row.trustee].push(row);
       }
@@ -249,23 +193,23 @@ export class CirclesData implements ICirclesData {
 
     // Determine trust relations
     return Object.entries(trustBucket)
-      .filter(([avatar]) => avatar !== avatar)
+      .filter(([avatar]) => avatar !== avatarAddress)
       .map(([avatar, rows]) => {
         const maxTimestamp = Math.max(...rows.map(o => o.timestamp));
         let relation: TrustRelation;
 
         if (rows.length === 2) {
           relation = 'mutuallyTrusts';
-        } else if (rows[0].trustee === avatar) {
+        } else if (rows[0].trustee === avatarAddress) {
           relation = 'trustedBy';
-        } else if (rows[0].truster === avatar) {
+        } else if (rows[0].truster === avatarAddress) {
           relation = 'trusts';
         } else {
           throw new Error(`Unexpected trust list row. Couldn't determine trust relation.`);
         }
 
         return {
-          subjectAvatar: avatar,
+          subjectAvatar: avatarAddress,
           relation: relation,
           objectAvatar: avatar,
           timestamp: maxTimestamp
@@ -301,14 +245,105 @@ export class CirclesData implements ICirclesData {
           Value: avatar.toLowerCase()
         }
       ],
-      sortOrder: 'DESC',
-      limit: 1
+      sortOrder: 'ASC',
+      limit: 1000
     });
 
     if (!await circlesQuery.queryNextPage()) {
       return undefined;
     }
 
-    return circlesQuery.currentPage?.results[0];
+    const result = circlesQuery.currentPage?.results ?? [];
+    let returnValue: AvatarRow | undefined = undefined;
+
+    for (const avatarRow of result) {
+      if (returnValue === undefined) {
+        returnValue = avatarRow;
+      }
+
+      if (avatarRow.version === 1) {
+        returnValue.hasV1 = true;
+        returnValue.v1Token = avatarRow.tokenId;
+      } else {
+        returnValue = {
+          ...returnValue,
+          ...avatarRow
+        };
+      }
+    }
+
+    return returnValue;
+  }
+
+  /**
+   * Subscribes to Circles events.
+   * @param avatar The avatar to subscribe to. If not provided, all events are subscribed to.
+   */
+  subscribeToEvents(avatar?: string): Promise<Observable<CirclesEvent>> {
+    return this.rpc.subscribe(avatar);
+  }
+
+  /**
+   * Gets the invitations sent by an avatar.
+   * @param avatar The avatar to get the invitations for.
+   * @param pageSize The maximum number of invitations per page.
+   * @returns A CirclesQuery object to fetch the invitations.
+   */
+  getInvitations(avatar: string, pageSize: number): CirclesQuery<InvitationRow> {
+    return new CirclesQuery<InvitationRow>(this.rpc, {
+      namespace: 'CrcV2',
+      table: 'InviteHuman',
+      columns: [
+        'blockNumber',
+        'transactionIndex',
+        'logIndex',
+        'timestamp',
+        'transactionHash',
+        'inviter',
+        'invited'
+      ],
+      filter: [
+        {
+          Type: 'FilterPredicate',
+          FilterType: 'Equals',
+          Column: 'inviter',
+          Value: avatar.toLowerCase()
+        }
+      ],
+      sortOrder: 'DESC',
+      limit: pageSize
+    });
+  }
+
+  /**
+   * Gets the avatar that invited the given avatar.
+   * @param avatar The address of the invited avatar.
+   * @returns The address of the inviting avatar or undefined if not found.
+   */
+  async getInvitedBy(avatar: string): Promise<string | undefined> {
+    const circlesQuery = new CirclesQuery<InvitationRow>(this.rpc, {
+      namespace: 'CrcV2',
+      table: 'InviteHuman',
+      columns: [
+        'inviter'
+      ],
+      filter: [
+        {
+          Type: 'FilterPredicate',
+          FilterType: 'Equals',
+          Column: 'invited',
+          Value: avatar.toLowerCase()
+        }
+      ],
+      sortOrder: 'DESC',
+      limit: 1
+    });
+
+    const page = await circlesQuery.queryNextPage();
+    if (!page) {
+      return undefined;
+    }
+
+    return circlesQuery.currentPage?.results[0].inviter;
   }
 }

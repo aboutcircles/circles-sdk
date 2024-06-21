@@ -1,4 +1,4 @@
-import { PersonV2 } from '../Person';
+import { AvatarInterfaceV2 } from '../AvatarInterface';
 import { ContractTransactionReceipt, ContractTransactionResponse } from 'ethers';
 import { Sdk } from '../sdk';
 import {
@@ -19,7 +19,7 @@ export type Stream = {
   data: Uint8Array
 }
 
-export class V2Person implements PersonV2 {
+export class V2Person implements AvatarInterfaceV2 {
   public readonly sdk: Sdk;
 
   get address(): string {
@@ -198,5 +198,19 @@ export class V2Person implements PersonV2 {
 
   wrapInflationErc20(amount: bigint): Promise<ContractTransactionReceipt> {
     throw new Error('Not implemented');
+  }
+
+  /**
+   * Invite a user to Circles (TODO: May cost you invite fees).
+   * @param avatar The address of the avatar to invite. Can be either a v1 address or an address that's not signed up yet.
+   */
+  async inviteHuman(avatar: string): Promise<ContractTransactionReceipt> {
+    const tx = await this.sdk.v2Hub.inviteHuman(avatar);
+    const receipt = await tx.wait();
+    if (!receipt) {
+      throw new Error('Invite failed');
+    }
+
+    return receipt;
   }
 }

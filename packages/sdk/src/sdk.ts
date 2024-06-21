@@ -2,46 +2,121 @@ import { Avatar } from './avatar';
 import { ethers } from 'ethers';
 import { ChainConfig } from './chainConfig';
 import { Pathfinder } from './v1/pathfinder';
-import { Person } from './Person';
-import { Hub as HubV1, Token__factory } from '@circles-sdk/abi-v1';
-import { Hub__factory as HubV1Factory } from '@circles-sdk/abi-v1';
-import { Hub as HubV2, Migration__factory } from '@circles-sdk/abi-v2';
-import { Hub__factory as HubV2Factory } from '@circles-sdk/abi-v2';
+import { AvatarInterface } from './AvatarInterface';
+import { Hub as HubV1, Hub__factory as HubV1Factory, Token__factory } from '@circles-sdk/abi-v1';
+import {
+  Hub as HubV2,
+  Hub__factory as HubV2Factory,
+  Migration__factory
+} from '@circles-sdk/abi-v2';
 import { AvatarRow, CirclesData, CirclesRpc } from '@circles-sdk/data';
+import multihashes from 'multihashes';
 import { V1Person } from './v1/v1Person';
+
+/**
+ * The SDK interface.
+ */
+interface SdkInterface {
+  /**
+   * The signer used to sign transactions (connected wallet e.g. MetaMask).
+   */
+  signer: ethers.AbstractSigner;
+  /**
+   * The chain specific Circles configuration (contract addresses and rpc endpoints).
+   */
+  chainConfig: ChainConfig;
+  /**
+   * A configured instance of the CirclesData class, an easy-to-use wrapper around
+   * the Circles RPC Query API.
+   */
+  data: CirclesData;
+  /**
+   * An instance of the typechain generated Circles V1 Hub contract wrapper.
+   */
+  v1Hub: HubV1;
+  /**
+   * An instance of the typechain generated Circles V2 Hub contract wrapper.
+   */
+  v2Hub: HubV2;
+  /**
+   * An instance of the v1 Pathfinder client (necessary for transfers; only available on gnosis chain with v1 Circles at the moment).
+   */
+  v1Pathfinder: Pathfinder;
+  /**
+   * Gets an Avatar instance by its address. Fails if the avatar is not signed up at Circles.
+   * @param avatarAddress The avatar's address.
+   * @returns The Avatar instance.
+   */
+  getAvatar: (avatarAddress: string) => Promise<Avatar>;
+  /**
+   * Registers the connected wallet as a human avatar in Circles v1.
+   * @returns The Avatar instance.
+   */
+  registerHuman: () => Promise<AvatarInterface>;
+  /**
+   * Registers the connected wallet as a human avatar in Circles v2.
+   * @param cidV0 The CIDv0 of the avatar's ERC1155 token metadata.
+   */
+  registerHumanV2: (cidV0: string) => Promise<AvatarInterface>;
+  /**
+   * Registers the connected wallet as an organization avatar in Circles v1.
+   */
+  registerOrganization: () => Promise<AvatarInterface>;
+  /**
+   * Registers the connected wallet as an organization avatar in Circles v2.
+   * @param name The organization's name.
+   * @param cidV0 The CIDv0 of the organization's metadata.
+   */
+  registerOrganizationV2: (name: string, cidV0: string) => Promise<AvatarInterface>;
+  /**
+   * Registers the connected wallet as a group avatar in Circles v2.
+   * @param mint The address of the minting policy contract to use.
+   * @param name The group's name.
+   * @param symbol The group token's symbol.
+   * @param cidV0 The CIDv0 of the group token's metadata.
+   */
+  registerGroupV2: (mint: string, name: string, symbol: string, cidV0: string) => Promise<AvatarInterface>;
+  /**
+   * Migrates a v1 avatar and all its Circles holdings to v2.
+   * [[ Currently only works for human avatars. ]]
+   * @param avatar The avatar's address.
+   * @param cidV0 The CIDv0 of the avatar's ERC1155 token metadata.
+   */
+  migrateAvatar: (avatar: string, cidV0: string) => Promise<void>;
+}
 
 /**
  * The SDK provides a high-level interface to interact with the Circles protocol.
  */
-export class Sdk {
+export class Sdk implements SdkInterface {
   /**
    * The signer used to sign transactions.
    */
-  public readonly signer: ethers.AbstractSigner;
+  readonly signer: ethers.AbstractSigner;
   /**
    * The chain specific Circles configuration.
    */
-  public readonly chainConfig: ChainConfig;
+  readonly chainConfig: ChainConfig;
   /**
    * The Circles RPC client.
    */
-  public readonly circlesRpc: CirclesRpc;
+  readonly circlesRpc: CirclesRpc;
   /**
    * The Circles data client.
    */
-  public readonly data: CirclesData;
+  readonly data: CirclesData;
   /**
    * The V1 hub contract wrapper.
    */
-  public readonly v1Hub: HubV1;
+  readonly v1Hub: HubV1;
   /**
    * The V2 hub contract wrapper.
    */
-  public readonly v2Hub: HubV2;
+  readonly v2Hub: HubV2;
   /**
    * The pathfinder client.
    */
-  public readonly v1Pathfinder: Pathfinder;
+  readonly v1Pathfinder: Pathfinder;
 
   /**
    * Creates a new SDK instance.
@@ -76,7 +151,7 @@ export class Sdk {
    * Registers the connected wallet as a human avatar.
    * @returns The avatar instance.
    */
-  registerHuman = async (): Promise<Person> => {
+  registerHuman = async (): Promise<AvatarInterface> => {
     const receipt = await this.v1Hub.signup();
     await receipt.wait();
 
@@ -86,9 +161,30 @@ export class Sdk {
     return this.getAvatar(signerAddress);
   };
 
-  registerHumanV2 = async (metadataDigest: Uint8Array): Promise<Person> => {
-    const receipt = await this.v2Hub.registerHuman(metadataDigest);
-    await receipt.wait();
+  cidV0Digest = (cidV0: string) => {
+    if (!cidV0.startsWith('Qm')) {
+      throw new Error('Invalid CID. Must be a CIDv0 with sha2-256 hash in base58 encoding');
+    }
+    const cidBytes = multihashes.fromB58String(cidV0);
+    const decodedCid = multihashes.decode(cidBytes);
+    return decodedCid.digest;
+  };
+
+  registerHumanV2 = async (cidV0: string): Promise<AvatarInterface> => {
+    const metadataDigest = this.cidV0Digest(cidV0);
+    // try {
+    const tx = await this.v2Hub.registerHuman(metadataDigest);
+    const receipt = await tx.wait();
+    if (!receipt) {
+      throw new Error('Transaction failed');
+    }
+    // } catch (e) {
+    // const revertData = (<Error>e).message.replace('Reverted ', '');
+    // parseError(revertData);
+    // console.log('Caught error:');
+    //   console.error(e);
+    //   throw e;
+    // }
 
     const signerAddress = await this.signer.getAddress();
     await this.waitForAvatarInfo(signerAddress);
@@ -100,7 +196,7 @@ export class Sdk {
    * Registers the connected wallet as an organization avatar.
    * @returns The avatar instance.
    */
-  registerOrganization = async (): Promise<Person> => {
+  registerOrganization = async (): Promise<AvatarInterface> => {
     const receipt = await this.v1Hub.organizationSignup();
     await receipt.wait();
 
@@ -110,7 +206,8 @@ export class Sdk {
     return this.getAvatar(signerAddress);
   };
 
-  registerOrganizationV2 = async (name: string, metadataDigest: Uint8Array): Promise<Person> => {
+  registerOrganizationV2 = async (name: string, cidV0: string): Promise<AvatarInterface> => {
+    const metadataDigest = this.cidV0Digest(cidV0);
     const receipt = await this.v2Hub.registerOrganization(name, metadataDigest);
     await receipt.wait();
 
@@ -120,7 +217,8 @@ export class Sdk {
     return this.getAvatar(signerAddress);
   };
 
-  registerGroupV2 = async (mint: string, name: string, symbol: string, metatdataDigest: Uint8Array): Promise<Person> => {
+  registerGroupV2 = async (mint: string, name: string, symbol: string, cidV0: string): Promise<AvatarInterface> => {
+    const metatdataDigest = this.cidV0Digest(cidV0);
     const receipt = await this.v2Hub.registerGroup(mint, name, symbol, metatdataDigest);
     await receipt.wait();
 
@@ -146,20 +244,42 @@ export class Sdk {
     return avatarRow;
   };
 
-  migrateAvatar = async (avatar: string, cidV0: Uint8Array): Promise<void> => {
+  migrateAvatar = async (avatar: string, cidV0: string): Promise<void> => {
     const avatarInfo = await this.data.getAvatarInfo(avatar);
     if (!avatarInfo) {
       throw new Error('Avatar not found');
     }
-    if (avatarInfo.version != 1) {
+
+    if (avatarInfo.hasV1) {
+      // 1. Stop V1 token if necessary
+      if (avatarInfo.v1Token) {
+        const v1Avatar = new V1Person(this, avatarInfo);
+        const isStopped = await v1Avatar.v1Token?.stopped();
+
+        if (!isStopped) {
+          await v1Avatar.personalMint();
+          const stopTx = await v1Avatar.v1Token?.stop();
+          const stopTxReceipt = await stopTx?.wait();
+          if (!stopTxReceipt) {
+            throw new Error('Failed to stop V1 avatar');
+          }
+        }
+      }
+
+      // 2. Signup V2 avatar if necessary
+      if (avatarInfo.version === 1) {
+        await this.registerHumanV2(cidV0);
+      }
+
+      // 3. Make sure the v1 token minting status is known to the v2 hub
+      const calculateIssuanceTx = await this.v2Hub.calculateIssuanceWithCheck(avatar);
+      await calculateIssuanceTx.wait();
+
+      // 4. Migrate V1 tokens
+      await this.migrateAllV1Tokens(avatar);
+    } else {
       throw new Error('Avatar is not a V1 avatar');
     }
-
-    const v1Avatar = new V1Person(this, avatarInfo);
-    const result = await v1Avatar.stop();
-
-    await this.registerHumanV2(cidV0);
-    await this.migrateAllV1Tokens(avatar);
   };
 
   migrateAllV1Tokens = async (avatar: string): Promise<void> => {

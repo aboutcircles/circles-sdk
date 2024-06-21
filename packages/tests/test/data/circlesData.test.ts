@@ -5,7 +5,7 @@ import { CirclesRpc } from '@circles-sdk/data';
 // - V1_HUB_ADDRESS=0xdbf22d4e8962db3b2f1d9ff55be728a887e47710
 // - V2_HUB_ADDRESS=0xFFfbD3E62203B888bb8E09c1fcAcE58242674964
 // - V2_NAME_REGISTRY_ADDRESS=0x0A1D308a39A6dF8972A972E586E4b4b3Dc73520f
-const circlesRpc = `http://localhost:8545`;
+const circlesRpc = `https://rpc.falkenstein.aboutcircles.com`;
 const rpc = new CirclesRpc(circlesRpc);
 
 describe('CirclesData', () => {
@@ -119,5 +119,26 @@ describe('CirclesData', () => {
     expect(hasRows).toBe(true);
 
     console.log(JSON.stringify(trustRelationsQuery.currentPage?.results, null, 2));
+  });
+
+  it('should get the aggregate trust relations of an address', async () => {
+    const circlesData = new CirclesData(rpc);
+
+    const trustRelations = await circlesData.getAggregatedTrustRelations('0xed31ba919d6b836a6efe3f8225f6f79e71fb3b38');
+    expect(trustRelations).toBeDefined();
+  });
+
+  it('should subscribe to Circles events', async () => {
+    const circlesData = new CirclesData(rpc);
+
+    const eventsObservable = await circlesData.subscribeToEvents('0xed31ba919d6b836a6efe3f8225f6f79e71fb3b38');
+    expect(eventsObservable).toBeDefined();
+
+    eventsObservable.subscribe(event => {
+      console.log(event);
+    });
+
+    // Wait for events
+    await new Promise(resolve => setTimeout(resolve, 60000));
   });
 });

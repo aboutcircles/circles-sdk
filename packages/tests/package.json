@@ -11,16 +11,14 @@
     "@circles-sdk/abi-v2": "../abi-v2",
     "@circles-sdk/sdk": "../sdk",
     "@circles-sdk/data": "../data",
-    "@circles/circles-contracts": "../circles-contracts",
-    "@circles/circles-contracts-v2": "../circles-contracts-v2",
-    "ethers": "^6.11.1"
+    "ethers": "^6.11.1",
+    "multihashes": "^4.0.3"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.24.1",
     "@babel/preset-typescript": "^7.24.1",
     "@types/jest": "^29.5.11",
     "jest": "^29.7.0",
-    "multihashes": "^4.0.3",
     "ts-jest": "^29.1.2",
     "typescript": "^5.3.3"
   }

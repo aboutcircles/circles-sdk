@@ -5,7 +5,7 @@ import { JsonRpcResponse } from '../rpcSchema/jsonRpcResponse';
 import { Filter } from '../rpcSchema/filter';
 import { Order } from '../rpcSchema/order';
 import { PagedQueryResult } from './pagedQueryResult';
-import { Row } from './row';
+import { EventRow } from './eventRow';
 import { CirclesQueryRpcResult, CirclesRpc } from '../circlesRpc';
 
 export class CalculatedColumn {
@@ -26,7 +26,7 @@ export class CalculatedColumn {
  *
  * @typeParam TRow The type of the rows returned by the query.
  */
-export class CirclesQuery<TRow extends Row> {
+export class CirclesQuery<TRow extends EventRow> {
   private readonly params: PagedQueryParams;
   private readonly rpc: CirclesRpc;
 
