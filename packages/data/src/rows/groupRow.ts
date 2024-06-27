@@ -6,4 +6,5 @@ export interface GroupRow extends EventRow {
   treasury: string;
   name: string;
   symbol: string;
+  isMember?: boolean;
 }

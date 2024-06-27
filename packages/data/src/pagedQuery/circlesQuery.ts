@@ -341,4 +341,25 @@ export class CirclesQuery<TRow extends EventRow> {
 
     return result.length > 0;
   }
+
+/**
+ * Queries a single row from the Circles RPC node.
+ */
+  public async getSingleRow(): Promise<TRow | undefined> {
+    const orderBy = this.buildOrderBy(this.params);
+    const filter = this.buildCursorFilter(this.params, this._currentPage?.lastCursor);
+    const combinedFilter = this.combineFilters(this.params.filter, filter);
+
+    const queryParams: CirclesQueryParams = {
+      Namespace: this.params.namespace,
+      Table: this.params.table,
+      Columns: this.params.columns,
+      Filter: combinedFilter,
+      Order: orderBy,
+      Limit: 1
+    };
+
+    const result = await this.request('circles_query', queryParams);
+    return result.length > 0 ? result[0] : undefined;
+  }
 }

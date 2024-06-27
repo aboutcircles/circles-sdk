@@ -1,6 +1,6 @@
 {
   "name": "@circles-sdk/data",
-  "version": "0.0.45-preview-29",
+  "version": "0.1.2-add-group-search-2",
   "description": "",
   "type": "module",
   "main": "./dist/index.js",
@@ -17,7 +17,7 @@
     "build": "rollup -c"
   },
   "dependencies": {
-    "@circles-sdk/utils": "0.0.45-preview-29"
+    "@circles-sdk/utils": "0.1.2-add-group-search-2"
   },
   "keywords": [],
   "author": "",

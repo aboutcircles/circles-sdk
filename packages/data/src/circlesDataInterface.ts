@@ -8,10 +8,12 @@ import { Observable } from './observable';
 import { CirclesEvent } from './events/events';
 import { InvitationRow } from './rows/invitationRow';
 import { GroupRow } from './rows/groupRow';
+import { GroupMembershipRow } from './rows/groupMembershipRow';
 
 export interface GroupQueryParams {
   nameStartsWith?: string;
   symbolStartsWith?: string;
+  groupAddressIn?: string[];
   sortBy?: 'age_asc' | 'age_desc' | 'name_asc' | 'name_desc' | 'symbol_asc' | 'symbol_desc';
 }
 
@@ -99,4 +101,11 @@ export interface CirclesDataInterface {
    * @param params The query parameters to filter the groups.
    */
   findGroups(pageSize: number, params?: GroupQueryParams): CirclesQuery<GroupRow>;
+
+  /**
+   * Gets the list of groups that the given avatar is a member of.
+   * @param avatar The address to get the group memberships for.
+   * @param pageSize The maximum number of group memberships per page.
+   */
+  getGroupMemberships(avatar: string, pageSize: number): CirclesQuery<GroupMembershipRow>;
 }
