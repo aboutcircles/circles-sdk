@@ -22,6 +22,8 @@ export { AvatarRow } from './rows/avatarRow';
 export { CirclesRpc } from './circlesRpc';
 export { TrustRelationRow } from './rows/trustRelationRow';
 export { InvitationRow } from './rows/invitationRow';
+export { GroupRow } from './rows/groupRow';
+export { GroupQueryParams } from './circlesDataInterface';
 export {
   CirclesEvent,
   CirclesEventType,

@@ -7,10 +7,14 @@ import { AvatarRow } from './rows/avatarRow';
 import { crcToTc } from '@circles-sdk/utils';
 import { ethers } from 'ethers';
 import { TrustRelation, TrustRelationRow } from './rows/trustRelationRow';
-import { CirclesDataInterface } from './circlesDataInterface';
+import { CirclesDataInterface, GroupQueryParams } from './circlesDataInterface';
 import { Observable } from './observable';
 import { CirclesEvent } from './events/events';
 import { InvitationRow } from './rows/invitationRow';
+import { PagedQueryParams } from './pagedQuery/pagedQueryParams';
+import { Filter } from './rpcSchema/filter';
+import { GroupMembershipRow } from './rows/groupMembershipRow';
+import { GroupRow } from './rows/groupRow';
 
 export class CirclesData implements CirclesDataInterface {
   readonly rpc: CirclesRpc;
@@ -345,5 +349,108 @@ export class CirclesData implements CirclesDataInterface {
     }
 
     return circlesQuery.currentPage?.results[0].inviter;
+  }
+
+  /**
+   * Gets the list of groups.
+   * @param pageSize The maximum number of groups per page.
+   * @param params The query parameters to filter the groups.
+   */
+  findGroups(pageSize: number, params?: GroupQueryParams): CirclesQuery<GroupRow> {
+    const queryDefintion: PagedQueryParams = {
+      namespace: 'CrcV2',
+      table: 'RegisterGroup',
+      columns: [
+        'blockNumber',
+        'timestamp',
+        'transactionIndex',
+        'logIndex',
+        'transactionHash',
+        'group',
+        'mint',
+        'treasury',
+        'name',
+        'symbol'
+      ],
+      sortOrder: 'DESC',
+      limit: pageSize
+    };
+
+    if (!params) {
+      return new CirclesQuery<GroupRow>(this.rpc, queryDefintion);
+    }
+
+    let filter: Filter[] = [];
+
+    if (params.nameStartsWith) {
+      filter.push({
+        Type: 'FilterPredicate',
+        FilterType: 'Like',
+        Column: 'name',
+        Value: params.symbolStartsWith + '%'
+      });
+    }
+
+    if (params.symbolStartsWith) {
+      filter.push({
+        Type: 'FilterPredicate',
+        FilterType: 'Like',
+        Column: 'symbol',
+        Value: params.symbolStartsWith + '%'
+      });
+    }
+
+    if (params.groupAddressIn) {
+      filter.push({
+        Type: 'FilterPredicate',
+        FilterType: 'In',
+        Column: 'group',
+        Value: params.groupAddressIn
+      });
+    }
+
+    if (filter.length > 1) {
+      filter = [{
+        Type: 'Conjunction',
+        Predicates: filter,
+        ConjunctionType: 'And'
+      }];
+    }
+
+    queryDefintion.filter = filter;
+
+    return new CirclesQuery<any>(this.rpc, queryDefintion);
+  }
+
+  /**
+   * Gets the group memberships of an avatar.
+   * @param avatar The avatar to get the group memberships for.
+   * @param pageSize The maximum number of group memberships per page.
+   */
+  getGroupMemberships(avatar: string, pageSize: number): CirclesQuery<GroupMembershipRow> {
+    return new CirclesQuery<GroupMembershipRow>(this.rpc, {
+      namespace: 'V_CrcV2',
+      table: 'GroupMemberships',
+      columns: [
+        'blockNumber',
+        'timestamp',
+        'transactionIndex',
+        'logIndex',
+        'transactionHash',
+        'group',
+        'member',
+        'expiryTime'
+      ],
+      filter: [
+        {
+          Type: 'FilterPredicate',
+          FilterType: 'Equals',
+          Column: 'member',
+          Value: avatar.toLowerCase()
+        }
+      ],
+      sortOrder: 'DESC',
+      limit: pageSize
+    });
   }
 }
