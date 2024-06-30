@@ -13,11 +13,11 @@ with [Circles V2](https://github.com/aboutcircles/circles-contracts-v2).
         2. [Circles V2](#circles-v2)
     3. [Avatar](#avatar)
     4. [Circles Data](#data)
-        1. [CirclesQuery<T>](#circlequeryt)
+        1. [CirclesQuery&lt;T&gt;](#circlequery)
     5. [Events](#events)
         1. [Event types](#event-types)
 4. [Building from source](#building-from-source)
-5. [Error handling & Troubleshooting](#error-handling--troubleshooting)
+5. [Error handling & Troubleshooting](#error-handling-troubleshooting)
    1. [Transaction reverted without a reason](#transaction-reverted-without-a-reason)
    2. [The SDK is not working as expected](#the-sdk-is-not-working-as-expected)
 
@@ -416,7 +416,7 @@ If you need more control about the queried data, you can query the RPC directly.
 [circles-nethermind-plugin](https://github.com/CirclesUBI/circles-nethermind-plugin?tab=readme-ov-file#quickstart)
 docs for more information.
 
-#### CircleQuery<T>
+#### CircleQuery
 
 The `CirclesQuery` class is a wrapper around
 the [Circles RPC query API](https://github.com/CirclesUBI/circles-nethermind-plugin?tab=readme-ov-file#circles_query).
