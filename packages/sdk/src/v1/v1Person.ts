@@ -41,7 +41,7 @@ export class V1Person implements AvatarInterface {
     }
 
     if (this.avatarInfo.v1Token) {
-      this._v1Token = Token__factory.connect(this.avatarInfo.v1Token, this.sdk.providerWithMetadata.provider);
+      this._v1Token = Token__factory.connect(this.avatarInfo.v1Token, this.sdk.providerWithMetadata.contractRunner);
     }
   }
 

@@ -20,7 +20,7 @@ interface SdkInterface {
   /**
    * The signer used to sign transactions (connected wallet e.g. MetaMask).
    */
-  providerWithMetadata: ProviderWithMetadata;
+  providerWithMetadata: ContractRunnerWithMetadata;
   /**
    * The chain specific Circles configuration (contract addresses and rpc endpoints).
    */
@@ -85,8 +85,17 @@ interface SdkInterface {
   migrateAvatar: (avatar: string, cidV0: string) => Promise<void>;
 }
 
-export type ProviderWithMetadata = {
-  provider: ethers.ContractRunner,
+/**
+ * Wraps a contract runner with its address.
+ */
+export type ContractRunnerWithMetadata = {
+  /**
+   * Used to interact with contracts.
+   */
+  contractRunner: ethers.ContractRunner,
+  /**
+   * The address of the account that signs transactions.
+   */
   address: string
 };
 
@@ -97,7 +106,7 @@ export class Sdk implements SdkInterface {
   /**
    * The signer used to sign transactions.
    */
-  readonly providerWithMetadata: ProviderWithMetadata;
+  readonly providerWithMetadata: ContractRunnerWithMetadata;
   /**
    * The chain specific Circles configuration.
    */
@@ -126,16 +135,16 @@ export class Sdk implements SdkInterface {
   /**
    * Creates a new SDK instance.
    * @param chainConfig The chain specific Circles configuration.
-   * @param provider The ethers provider to use for signing transactions.
+   * @param contractRunner A contract runner instance and its address.
    */
-  constructor(chainConfig: ChainConfig, provider: ProviderWithMetadata) {
+  constructor(chainConfig: ChainConfig, contractRunner: ContractRunnerWithMetadata) {
     this.chainConfig = chainConfig;
-    this.providerWithMetadata = provider;
+    this.providerWithMetadata = contractRunner;
 
     this.circlesRpc = new CirclesRpc(chainConfig.circlesRpcUrl);
     this.data = new CirclesData(this.circlesRpc);
-    this.v1Hub = HubV1Factory.connect(chainConfig.v1HubAddress ?? '0x29b9a7fBb8995b2423a71cC17cf9810798F6C543', this.providerWithMetadata.provider);
-    this.v2Hub = HubV2Factory.connect(chainConfig.v2HubAddress, this.providerWithMetadata.provider);
+    this.v1Hub = HubV1Factory.connect(chainConfig.v1HubAddress ?? '0x29b9a7fBb8995b2423a71cC17cf9810798F6C543', this.providerWithMetadata.contractRunner);
+    this.v2Hub = HubV2Factory.connect(chainConfig.v2HubAddress, this.providerWithMetadata.contractRunner);
     this.v1Pathfinder = new Pathfinder(chainConfig.pathfinderUrl);
   }
 
@@ -295,7 +304,7 @@ export class Sdk implements SdkInterface {
     // TODO: Send in one transaction if sent to Safe
     await Promise.all(tokensToMigrate.map(async (t, i) => {
       const balance = BigInt(t.balance);
-      const token = Token__factory.connect(t.token, this.providerWithMetadata.provider);
+      const token = Token__factory.connect(t.token, this.providerWithMetadata.contractRunner);
       const allowance = await token.allowance(avatar, this.chainConfig.migrationAddress);
       if (allowance < balance) {
         const increase = balance - allowance;
@@ -304,7 +313,7 @@ export class Sdk implements SdkInterface {
       }
     }));
 
-    const migrationContract = Migration__factory.connect(this.chainConfig.migrationAddress, this.providerWithMetadata.provider);
+    const migrationContract = Migration__factory.connect(this.chainConfig.migrationAddress, this.providerWithMetadata.contractRunner);
     const migrateTx = await migrationContract.migrate(
       tokensToMigrate.map(o => o.tokenOwner)
       , tokensToMigrate.map(o => BigInt(o.balance)));
