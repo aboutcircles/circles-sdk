@@ -119,6 +119,20 @@ export class CirclesData implements CirclesDataInterface {
           return parseFloat(ethers.formatEther(row.value)).toFixed(2);
         }
       }
+    }, {
+      name: 'tokenAddress',
+      generator: (row: TransactionHistoryRow) => {
+        // If the id isset, doesn't start with 0x and only consists of digits, it's a BigInt that
+        // needs to be converted to a ethereum address. The BigInt is actually an encoded byte[20]
+        // that represents the address.
+        if (row.id && !row.id.startsWith('0x') && /^\d+$/.test(row.id)) {
+          // UInt256 to ethereum address (use native BigInt)
+          const hexString = BigInt(row.id).toString(16).padStart(40, '0');
+          return ethers.getAddress('0x' + hexString).toLowerCase();
+        } else if (row.id && row.id.startsWith('0x')) {
+          return row.id.toLowerCase();
+        }
+      }
     }]);
   }
 

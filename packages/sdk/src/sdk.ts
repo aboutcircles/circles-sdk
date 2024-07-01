@@ -1,5 +1,5 @@
 import { Avatar } from './avatar';
-import { ethers } from 'ethers';
+import { ContractRunner } from 'ethers';
 import { ChainConfig } from './chainConfig';
 import { Pathfinder } from './v1/pathfinder';
 import { AvatarInterface } from './AvatarInterface';
@@ -20,7 +20,7 @@ interface SdkInterface {
   /**
    * The signer used to sign transactions (connected wallet e.g. MetaMask).
    */
-  signer: ethers.AbstractSigner;
+  contractRunner: SdkContractRunner;
   /**
    * The chain specific Circles configuration (contract addresses and rpc endpoints).
    */
@@ -37,11 +37,11 @@ interface SdkInterface {
   /**
    * An instance of the typechain generated Circles V2 Hub contract wrapper.
    */
-  v2Hub: HubV2;
+  v2Hub?: HubV2;
   /**
    * An instance of the v1 Pathfinder client (necessary for transfers; only available on gnosis chain with v1 Circles at the moment).
    */
-  v1Pathfinder: Pathfinder;
+  v1Pathfinder?: Pathfinder;
   /**
    * Gets an Avatar instance by its address. Fails if the avatar is not signed up at Circles.
    * @param avatarAddress The avatar's address.
@@ -86,13 +86,27 @@ interface SdkInterface {
 }
 
 /**
+ * Wraps a contract runner with its address.
+ */
+export type SdkContractRunner = {
+  /**
+   * Used to interact with contracts. Must be a signer in order to change state.
+   */
+  runner: ContractRunner,
+  /**
+   * The address of the account that signs transactions.
+   */
+  address: string
+};
+
+/**
  * The SDK provides a high-level interface to interact with the Circles protocol.
  */
 export class Sdk implements SdkInterface {
   /**
    * The signer used to sign transactions.
    */
-  readonly signer: ethers.AbstractSigner;
+  readonly contractRunner: SdkContractRunner;
   /**
    * The chain specific Circles configuration.
    */
@@ -112,26 +126,30 @@ export class Sdk implements SdkInterface {
   /**
    * The V2 hub contract wrapper.
    */
-  readonly v2Hub: HubV2;
+  readonly v2Hub?: HubV2;
   /**
    * The pathfinder client.
    */
-  readonly v1Pathfinder: Pathfinder;
+  readonly v1Pathfinder?: Pathfinder;
 
   /**
    * Creates a new SDK instance.
    * @param chainConfig The chain specific Circles configuration.
-   * @param signer The ethers provider to use for signing transactions.
+   * @param contractRunner A contract runner instance and its address.
    */
-  constructor(chainConfig: ChainConfig, signer: ethers.AbstractSigner) {
+  constructor(chainConfig: ChainConfig, contractRunner: SdkContractRunner) {
     this.chainConfig = chainConfig;
-    this.signer = signer;
+    this.contractRunner = contractRunner;
 
     this.circlesRpc = new CirclesRpc(chainConfig.circlesRpcUrl);
     this.data = new CirclesData(this.circlesRpc);
-    this.v1Hub = HubV1Factory.connect(chainConfig.v1HubAddress ?? '0x29b9a7fBb8995b2423a71cC17cf9810798F6C543', signer);
-    this.v2Hub = HubV2Factory.connect(chainConfig.v2HubAddress, signer);
-    this.v1Pathfinder = new Pathfinder(chainConfig.pathfinderUrl);
+    this.v1Hub = HubV1Factory.connect(chainConfig.v1HubAddress ?? '0x29b9a7fBb8995b2423a71cC17cf9810798F6C543', this.contractRunner.runner);
+    if (chainConfig.v2HubAddress) {
+      this.v2Hub = HubV2Factory.connect(chainConfig.v2HubAddress, this.contractRunner.runner);
+    }
+    if (chainConfig.pathfinderUrl) {
+      this.v1Pathfinder = new Pathfinder(chainConfig.pathfinderUrl);
+    }
   }
 
   /**
@@ -155,7 +173,7 @@ export class Sdk implements SdkInterface {
     const receipt = await this.v1Hub.signup();
     await receipt.wait();
 
-    const signerAddress = await this.signer.getAddress();
+    const signerAddress = this.contractRunner.address;
     await this.waitForAvatarInfo(signerAddress);
 
     return this.getAvatar(signerAddress);
@@ -171,6 +189,9 @@ export class Sdk implements SdkInterface {
   };
 
   registerHumanV2 = async (cidV0: string): Promise<AvatarInterface> => {
+    if (!this.v2Hub) {
+      throw new Error('V2 hub not available');
+    }
     const metadataDigest = this.cidV0Digest(cidV0);
     // try {
     const tx = await this.v2Hub.registerHuman(metadataDigest);
@@ -186,7 +207,7 @@ export class Sdk implements SdkInterface {
     //   throw e;
     // }
 
-    const signerAddress = await this.signer.getAddress();
+    const signerAddress = this.contractRunner.address;
     await this.waitForAvatarInfo(signerAddress);
 
     return this.getAvatar(signerAddress);
@@ -200,29 +221,35 @@ export class Sdk implements SdkInterface {
     const receipt = await this.v1Hub.organizationSignup();
     await receipt.wait();
 
-    const signerAddress = await this.signer.getAddress();
+    const signerAddress = this.contractRunner.address;
     await this.waitForAvatarInfo(signerAddress);
 
     return this.getAvatar(signerAddress);
   };
 
   registerOrganizationV2 = async (name: string, cidV0: string): Promise<AvatarInterface> => {
+    if (!this.v2Hub) {
+      throw new Error('V2 hub not available');
+    }
     const metadataDigest = this.cidV0Digest(cidV0);
     const receipt = await this.v2Hub.registerOrganization(name, metadataDigest);
     await receipt.wait();
 
-    const signerAddress = await this.signer.getAddress();
+    const signerAddress = this.contractRunner.address;
     await this.waitForAvatarInfo(signerAddress);
 
     return this.getAvatar(signerAddress);
   };
 
   registerGroupV2 = async (mint: string, name: string, symbol: string, cidV0: string): Promise<AvatarInterface> => {
+    if (!this.v2Hub) {
+      throw new Error('V2 hub not available');
+    }
     const metatdataDigest = this.cidV0Digest(cidV0);
     const receipt = await this.v2Hub.registerGroup(mint, name, symbol, metatdataDigest);
     await receipt.wait();
 
-    const signerAddress = await this.signer.getAddress();
+    const signerAddress = this.contractRunner.address;
     await this.waitForAvatarInfo(signerAddress);
 
     return this.getAvatar(signerAddress);
@@ -245,6 +272,9 @@ export class Sdk implements SdkInterface {
   };
 
   migrateAvatar = async (avatar: string, cidV0: string): Promise<void> => {
+    if (!this.v2Hub) {
+      throw new Error('V2 hub not available');
+    }
     const avatarInfo = await this.data.getAvatarInfo(avatar);
     if (!avatarInfo) {
       throw new Error('Avatar not found');
@@ -283,6 +313,9 @@ export class Sdk implements SdkInterface {
   };
 
   migrateAllV1Tokens = async (avatar: string): Promise<void> => {
+    if (!this.chainConfig.migrationAddress) {
+      throw new Error('Migration address not set');
+    }
     const balances = await this.data.getTokenBalances(avatar, false);
     const tokensToMigrate = balances
       .filter(o => BigInt(o.balance) > 0);
@@ -290,16 +323,16 @@ export class Sdk implements SdkInterface {
     // TODO: Send in one transaction if sent to Safe
     await Promise.all(tokensToMigrate.map(async (t, i) => {
       const balance = BigInt(t.balance);
-      const token = Token__factory.connect(t.token, this.signer);
-      const allowance = await token.allowance(avatar, this.chainConfig.migrationAddress);
+      const token = Token__factory.connect(t.token, this.contractRunner.runner);
+      const allowance = await token.allowance(avatar, this.chainConfig.migrationAddress!);
       if (allowance < balance) {
         const increase = balance - allowance;
-        const tx = await token.increaseAllowance(this.chainConfig.migrationAddress, increase);
+        const tx = await token.increaseAllowance(this.chainConfig.migrationAddress!, increase);
         await tx.wait();
       }
     }));
 
-    const migrationContract = Migration__factory.connect(this.chainConfig.migrationAddress, this.signer);
+    const migrationContract = Migration__factory.connect(this.chainConfig.migrationAddress, this.contractRunner.runner);
     const migrateTx = await migrationContract.migrate(
       tokensToMigrate.map(o => o.tokenOwner)
       , tokensToMigrate.map(o => BigInt(o.balance)));

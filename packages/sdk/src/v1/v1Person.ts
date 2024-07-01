@@ -41,7 +41,7 @@ export class V1Person implements AvatarInterface {
     }
 
     if (this.avatarInfo.v1Token) {
-      this._v1Token = Token__factory.connect(this.avatarInfo.v1Token, this.sdk.signer);
+      this._v1Token = Token__factory.connect(this.avatarInfo.v1Token, this.sdk.contractRunner.runner);
     }
   }
 
@@ -52,9 +52,10 @@ export class V1Person implements AvatarInterface {
    */
   async getMaxTransferableAmount(to: string): Promise<bigint> {
     this.throwIfNotInitialized();
+    this.throwIfPathfinderIsNotAvailable();
 
     const largeAmount = BigInt('999999999999999999999999999999');
-    const transferPath = await this.sdk.v1Pathfinder.getTransferPath(
+    const transferPath = await this.sdk.v1Pathfinder!.getTransferPath(
       this.address,
       to,
       largeAmount);
@@ -73,8 +74,9 @@ export class V1Person implements AvatarInterface {
    */
   async transfer(to: string, amount: bigint): Promise<ContractTransactionReceipt> {
     this.throwIfNotInitialized();
+    this.throwIfPathfinderIsNotAvailable();
 
-    const transferPath = await this.sdk.v1Pathfinder.getTransferPath(
+    const transferPath = await this.sdk.v1Pathfinder!.getTransferPath(
       this.address,
       to,
       amount);
@@ -185,5 +187,11 @@ export class V1Person implements AvatarInterface {
 
   async getTotalBalance(): Promise<number> {
     return parseFloat(await this.sdk.data.getTotalBalance(this.address, true));
+  }
+
+  private throwIfPathfinderIsNotAvailable() {
+    if (!this.sdk.v1Pathfinder) {
+      throw new Error('Pathfinder is not available');
+    }
   }
 }
