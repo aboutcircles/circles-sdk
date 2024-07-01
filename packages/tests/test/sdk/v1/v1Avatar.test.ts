@@ -14,11 +14,15 @@ describe('V1Avatar', () => {
   describe('initialize', () => {
     it('should initialize the avatar', async () => {
 
-      const error = "0x071335d8000000000000000000000000b49a7bccd607ef482b71988a11f65fece980eca50000000000000000000000004f24c2cd960d44f76b79f963706602872205db8b";
-      parseError(error);
+      const error = '0x03dee4c500000000000000000000000062f1e5d9d635cda3b61d1397f41f465e2fe37a67000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005f2d30a88a3347400000000000000000000000062f1e5d9d635cda3b61d1397f41f465e2fe37a67';
+      const decoded = parseError(error);
+      console.log(decoded);
 
       const wallet = ethers.Wallet.createRandom();
-      const sdk = new Sdk(chainConfig, wallet);
+      const sdk = new Sdk(chainConfig, {
+        runner: wallet,
+        address: wallet.address
+      });
       const avatar = await sdk.getAvatar('0xD68193591d47740E51dFBc410da607A351b56586');
       const trustRelations = await avatar.getTrustRelations();
       console.log(trustRelations);

@@ -10,4 +10,5 @@ export interface TransactionHistoryRow extends EventRow {
   id: string;
   value: string;
   timeCircles: number;
+  tokenAddress?: string;
 }

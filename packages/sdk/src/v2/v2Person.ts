@@ -45,7 +45,8 @@ export class V2Person implements AvatarInterfaceV2 {
   }
 
   async getMintableAmount(): Promise<bigint> {
-    const [a, b, c] = await this.sdk.v2Hub.calculateIssuance(this.address);
+    this.throwIfV2IsNotAvailable();
+    const [a, b, c] = await this.sdk.v2Hub!.calculateIssuance(this.address);
     return a;
   }
 
@@ -65,7 +66,8 @@ export class V2Person implements AvatarInterfaceV2 {
   }
 
   async personalMint(): Promise<ContractTransactionReceipt> {
-    const tx = await this.sdk.v2Hub.personalMint();
+    this.throwIfV2IsNotAvailable();
+    const tx = await this.sdk.v2Hub!.personalMint();
     const receipt = await tx.wait();
     if (!receipt) {
       throw new Error('Personal mint failed');
@@ -75,7 +77,8 @@ export class V2Person implements AvatarInterfaceV2 {
   }
 
   async stop(): Promise<ContractTransactionReceipt> {
-    const tx = await this.sdk.v2Hub.stop();
+    this.throwIfV2IsNotAvailable();
+    const tx = await this.sdk.v2Hub!.stop();
     const receipt = await tx.wait();
     if (!receipt) {
       throw new Error('Stop failed');
@@ -101,7 +104,8 @@ export class V2Person implements AvatarInterfaceV2 {
     return { sortedAddresses, lookupMap };
   }
 
-  async transfer(to: string, amount: bigint): Promise<ContractTransactionReceipt> {
+  async transfer(to: string, amount: bigint, token?: string): Promise<ContractTransactionReceipt> {
+    this.throwIfV2IsNotAvailable();
     const addresses = [this.address, to];
     const N = addresses.length;
 
@@ -148,12 +152,12 @@ export class V2Person implements AvatarInterfaceV2 {
       data: new Uint8Array(0)
     };
 
-    const approvalStatus = await this.sdk.v2Hub.isApprovedForAll(this.address, to);
+    const approvalStatus = await this.sdk.v2Hub!.isApprovedForAll(this.address, to);
     if (!approvalStatus) {
-      await this.sdk.v2Hub.setApprovalForAll(this.address, true);
+      await this.sdk.v2Hub!.setApprovalForAll(this.address, true);
     }
 
-    const tx = await this.sdk.v2Hub.operateFlowMatrix(flowVertices, flow, streams, packedCoordinates);
+    const tx = await this.sdk.v2Hub!.operateFlowMatrix(flowVertices, flow, streams, packedCoordinates);
     const receipt = await tx.wait();
     if (!receipt) {
       throw new Error('Transfer failed');
@@ -163,7 +167,8 @@ export class V2Person implements AvatarInterfaceV2 {
   }
 
   async trust(avatar: string): Promise<ContractTransactionReceipt> {
-    const tx = await this.sdk.v2Hub.trust(avatar, BigInt('79228162514264337593543950335'));
+    this.throwIfV2IsNotAvailable();
+    const tx = await this.sdk.v2Hub!.trust(avatar, BigInt('79228162514264337593543950335'));
     const receipt = await tx.wait();
     if (!receipt) {
       throw new Error('Trust failed');
@@ -173,7 +178,8 @@ export class V2Person implements AvatarInterfaceV2 {
   }
 
   async untrust(avatar: string): Promise<ContractTransactionReceipt> {
-    const tx = await this.sdk.v2Hub.trust(avatar, BigInt('0'));
+    this.throwIfV2IsNotAvailable();
+    const tx = await this.sdk.v2Hub!.trust(avatar, BigInt('0'));
     const receipt = await tx.wait();
     if (!receipt) {
       throw new Error('Untrust failed');
@@ -183,7 +189,8 @@ export class V2Person implements AvatarInterfaceV2 {
   }
 
   async groupMint(group: string, collateral: string[], amounts: bigint[], data: Uint8Array): Promise<ContractTransactionReceipt> {
-    const tx = await this.sdk.v2Hub.groupMint(group, collateral, amounts, data);
+    this.throwIfV2IsNotAvailable();
+    const tx = await this.sdk.v2Hub!.groupMint(group, collateral, amounts, data);
     const receipt = await tx.wait();
     if (!receipt) {
       throw new Error('Group mint failed');
@@ -205,12 +212,19 @@ export class V2Person implements AvatarInterfaceV2 {
    * @param avatar The address of the avatar to invite. Can be either a v1 address or an address that's not signed up yet.
    */
   async inviteHuman(avatar: string): Promise<ContractTransactionReceipt> {
-    const tx = await this.sdk.v2Hub.inviteHuman(avatar);
+    this.throwIfV2IsNotAvailable();
+    const tx = await this.sdk.v2Hub!.inviteHuman(avatar);
     const receipt = await tx.wait();
     if (!receipt) {
       throw new Error('Invite failed');
     }
 
     return receipt;
+  }
+
+  private throwIfV2IsNotAvailable() {
+    if (!this.sdk.chainConfig.v2HubAddress) {
+      throw new Error('V2 is not available');
+    }
   }
 }

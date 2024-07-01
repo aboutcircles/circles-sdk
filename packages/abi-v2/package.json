@@ -1,6 +1,6 @@
 {
   "name": "@circles-sdk/abi-v2",
-  "version": "0.1.2-add-group-search-2",
+  "version": "0.2.0-safe-support-2",
   "description": "",
   "type": "module",
   "main": "./dist/index.js",

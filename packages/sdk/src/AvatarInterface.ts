@@ -37,8 +37,9 @@ export interface AvatarInterface {
    *
    * @param to The address of the avatar to transfer to.
    * @param amount The amount to transfer.
+   * @param token The token to transfer (address). Leave empty to allow transitive transfers.
    */
-  transfer(to: string, amount: bigint): Promise<ContractTransactionReceipt>;
+  transfer(to: string, amount: bigint, token?: string): Promise<ContractTransactionReceipt>;
 
   /**
    * Trusts another avatar. Trusting an avatar means you're willing to accept Circles that have been issued by this avatar.
@@ -92,7 +93,7 @@ export interface AvatarInterfaceV2 extends AvatarInterface {
   /**
    * Uses holdings of the avatar as collateral to mint new group tokens.
    * @param group The group which is minting the tokens.
-   * @param collateral The addresses of the tokens used as collateral.
+   * @param collateral The owners of the token used as collateral.
    * @param amounts The amounts of the collateral tokens to use.
    * @param data Additional data for the minting operation.
    */
