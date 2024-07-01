@@ -1,6 +1,6 @@
 {
   "name": "@circles-sdk/data",
-  "version": "0.2.0-safe-support-2",
+  "version": "0.3.0",
   "description": "",
   "type": "module",
   "main": "./dist/index.js",
@@ -17,7 +17,7 @@
     "build": "rollup -c"
   },
   "dependencies": {
-    "@circles-sdk/utils": "0.2.0-safe-support-2"
+    "@circles-sdk/utils": "0.3.0"
   },
   "keywords": [],
   "author": "",
