@@ -116,4 +116,10 @@ export interface AvatarInterfaceV2 extends AvatarInterface {
    * @param avatar The avatar's avatar.
    */
   inviteHuman(avatar: string): Promise<ContractTransactionReceipt>;
+
+  /**
+   * Updates the avatar's metadata (profile).
+   * @param cid The IPFS CID of the metadata.
+   */
+  updateMetadata(cid: string): Promise<ContractTransactionReceipt>;
 }

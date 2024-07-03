@@ -6,3 +6,4 @@ export { ChainConfig } from './chainConfig';
 export { AvatarRow, TrustListRow, TrustRelationRow } from '@circles-sdk/data';
 export { AvatarInterface } from './AvatarInterface';
 export { parseError } from './errors';
+export { Pathfinder, TransferPath, TransferStep } from './v1/pathfinder';

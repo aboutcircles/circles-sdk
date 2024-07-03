@@ -15,6 +15,7 @@ import { PagedQueryParams } from './pagedQuery/pagedQueryParams';
 import { Filter } from './rpcSchema/filter';
 import { GroupMembershipRow } from './rows/groupMembershipRow';
 import { GroupRow } from './rows/groupRow';
+import { TokenInfoRow } from './rows/tokenInfoRow';
 
 export class CirclesData implements CirclesDataInterface {
   readonly rpc: CirclesRpc;
@@ -183,6 +184,10 @@ export class CirclesData implements CirclesDataInterface {
     });
   }
 
+  /**
+   * Gets all trust relations of an avatar and groups mutual trust relations together.
+   * @param avatarAddress The address to get the trust relations for.
+   */
   async getAggregatedTrustRelations(avatarAddress: string): Promise<TrustRelationRow[]> {
     const pageSize = 1000;
     const trustsQuery = this.getTrustRelations(avatarAddress, pageSize);
@@ -253,7 +258,8 @@ export class CirclesData implements CirclesDataInterface {
         'version',
         'type',
         'avatar',
-        'tokenId'
+        'tokenId',
+        'cidV0Digest'
       ],
       filter: [
         {
@@ -291,6 +297,41 @@ export class CirclesData implements CirclesDataInterface {
     }
 
     return returnValue;
+  }
+
+  /**
+   * Gets the token info for a given token address.
+   * @param address The address of the token.
+   * @returns The token info or undefined if the token is not found.
+   */
+  async getTokenInfo(address: string): Promise<TokenInfoRow | undefined> {
+    const circlesQuery = new CirclesQuery<TokenInfoRow>(this.rpc, {
+      namespace: 'V_Crc',
+      table: 'Avatars',
+      columns: [
+        'blockNumber',
+        'timestamp',
+        'transactionIndex',
+        'logIndex',
+        'transactionHash',
+        'version',
+        'type',
+        'avatar',
+        'tokenId'
+      ],
+      filter: [
+        {
+          Type: 'FilterPredicate',
+          FilterType: 'Equals',
+          Column: 'tokenId',
+          Value: address.toLowerCase()
+        }
+      ],
+      sortOrder: 'ASC',
+      limit: 1
+    });
+
+    return await circlesQuery.getSingleRow();
   }
 
   /**

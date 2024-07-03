@@ -7,7 +7,7 @@ import { Hub as HubV1, Hub__factory as HubV1Factory, Token__factory } from '@cir
 import {
   Hub as HubV2,
   Hub__factory as HubV2Factory,
-  Migration__factory
+  Migration__factory, NameRegistry, NameRegistry__factory
 } from '@circles-sdk/abi-v2';
 import { AvatarRow, CirclesData, CirclesRpc } from '@circles-sdk/data';
 import multihashes from 'multihashes';
@@ -120,13 +120,17 @@ export class Sdk implements SdkInterface {
    */
   readonly data: CirclesData;
   /**
-   * The V1 hub contract wrapper.
+   * The typechain generated V1 hub contract wrapper.
    */
   readonly v1Hub: HubV1;
   /**
-   * The V2 hub contract wrapper.
+   * The typechain generated V2 hub contract wrapper.
    */
   readonly v2Hub?: HubV2;
+  /**
+   * The typechain generated NameRegistry contract wrapper.
+   */
+  readonly nameRegistry?: NameRegistry;
   /**
    * The pathfinder client.
    */
@@ -149,6 +153,9 @@ export class Sdk implements SdkInterface {
     }
     if (chainConfig.pathfinderUrl) {
       this.v1Pathfinder = new Pathfinder(chainConfig.pathfinderUrl);
+    }
+    if (chainConfig.nameRegistryAddress) {
+      this.nameRegistry = NameRegistry__factory.connect(chainConfig.nameRegistryAddress, this.contractRunner.runner);
     }
   }
 
@@ -193,19 +200,11 @@ export class Sdk implements SdkInterface {
       throw new Error('V2 hub not available');
     }
     const metadataDigest = this.cidV0Digest(cidV0);
-    // try {
     const tx = await this.v2Hub.registerHuman(metadataDigest);
     const receipt = await tx.wait();
     if (!receipt) {
       throw new Error('Transaction failed');
     }
-    // } catch (e) {
-    // const revertData = (<Error>e).message.replace('Reverted ', '');
-    // parseError(revertData);
-    // console.log('Caught error:');
-    //   console.error(e);
-    //   throw e;
-    // }
 
     const signerAddress = this.contractRunner.address;
     await this.waitForAvatarInfo(signerAddress);

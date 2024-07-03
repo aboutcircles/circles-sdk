@@ -9,6 +9,7 @@ import { CirclesEvent } from './events/events';
 import { InvitationRow } from './rows/invitationRow';
 import { GroupRow } from './rows/groupRow';
 import { GroupMembershipRow } from './rows/groupMembershipRow';
+import { TokenInfoRow } from './rows/tokenInfoRow';
 
 export interface GroupQueryParams {
   nameStartsWith?: string;
@@ -25,6 +26,13 @@ export interface CirclesDataInterface {
    * @returns The avatar information or undefined if the address is not an avatar.
    */
   getAvatarInfo(avatar: string): Promise<AvatarRow | undefined>;
+
+  /**
+   * Gets the token info for a given token address.
+   * @param address The address of the token.
+   * @returns The token info or undefined if the token is not found.
+   */
+  getTokenInfo(address: string): Promise<TokenInfoRow | undefined>;
 
   /**
    * Gets the total CRC v1 balance of an address.

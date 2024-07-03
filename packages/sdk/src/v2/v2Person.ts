@@ -26,8 +26,6 @@ export class V2Person implements AvatarInterfaceV2 {
     return this.avatarInfo.avatar;
   }
 
-  // TODO: Empty stream makes no sense
-  // readonly events: Observable<AvatarEvent> = Observable.create<AvatarEvent>().property;
   public readonly avatarInfo: AvatarRow;
 
   constructor(sdk: Sdk, avatarInfo: AvatarRow) {
@@ -37,6 +35,19 @@ export class V2Person implements AvatarInterfaceV2 {
     if (this.avatarInfo.version != 2) {
       throw new Error('Avatar is not a v2 avatar');
     }
+  }
+
+  async updateMetadata(cid: string): Promise<ContractTransactionReceipt> {
+    this.throwIfNameRegistryIsNotAvailable();
+    
+    const digest = this.sdk.cidV0Digest(cid);
+    const tx = await this.sdk.nameRegistry?.updateMetadataDigest(digest);
+    const receipt = await tx?.wait();
+    if (!receipt) {
+      throw new Error('Transfer failed');
+    }
+
+    return receipt;
   }
 
   getMaxTransferableAmount(to: string): Promise<bigint> {
@@ -225,6 +236,12 @@ export class V2Person implements AvatarInterfaceV2 {
   private throwIfV2IsNotAvailable() {
     if (!this.sdk.chainConfig.v2HubAddress) {
       throw new Error('V2 is not available');
+    }
+  }
+
+  private throwIfNameRegistryIsNotAvailable() {
+    if (!this.sdk.nameRegistry) {
+      throw new Error('Name registry is not available');
     }
   }
 }
