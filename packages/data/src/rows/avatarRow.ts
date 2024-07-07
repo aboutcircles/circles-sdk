@@ -42,9 +42,14 @@ export interface AvatarRow extends EventRow {
    */
   v1Token?: string;
   /**
-   * The CIDv0 of the avatar's metadata (profile).
+   * The bytes of the avatar's metadata cidv0.
    */
   cidV0Digest?: string;
+
+  /**
+   * The CIDv0 of the avatar's metadata (profile
+   */
+  cidV0?: string;
 
   /**
    * If the avatar is stopped in v1.

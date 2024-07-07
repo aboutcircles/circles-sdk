@@ -4,10 +4,12 @@ type EventValues = {
   [key: string]: string;
 };
 
-type RpcSubscriptionMessage = Array<{
+export type RcpSubscriptionEvent = {
   event: string;
   values: EventValues;
-}>;
+};
+
+type RpcSubscriptionMessage = RcpSubscriptionEvent[];
 
 const hexToBigInt = (hex: string): bigint => BigInt(hex);
 const hexToNumber = (hex: string): number => parseInt(hex, 16);

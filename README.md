@@ -42,12 +42,13 @@ _NOTE_: The node at `circlesRpcUrl` must have
 the [circles-nethermind-plugin](https://github.com/CirclesUBI/circles-nethermind-plugin) installed.
 
 ```typescript 
-import { ChainConfig } from '@circles-sdk/sdk';
+import { CirclesConfig } from '@circles-sdk/sdk';
 
 // Chiado testnet:
-export const chainConfig: ChainConfig = {
+export const chainConfig: CirclesConfig = {
   pathfinderUrl: 'https://pathfinder.aboutcircles.com',
   circlesRpcUrl: 'https://chiado-rpc.aboutcircles.com',
+  profileServiceUrl: '',
   v1HubAddress: '0xdbf22d4e8962db3b2f1d9ff55be728a887e47710',
   v2HubAddress: '0x2066CDA98F98397185483aaB26A89445addD6740',
   migrationAddress: '0x2A545B54bb456A0189EbC53ed7090BfFc4a6Af94'
@@ -97,7 +98,7 @@ interface SdkInterface {
   /**
    * The chain specific Circles configuration (contract addresses and rpc endpoints).
    */
-  chainConfig: ChainConfig;
+  chainConfig: CirclesConfig;
   /**
    * A configured instance of the CirclesData class, an easy-to-use wrapper around
    * the Circles RPC Query API.

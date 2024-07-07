@@ -4,7 +4,7 @@ import { TrustListRow } from './rows/trustListRow';
 import { TokenBalanceRow } from './rows/tokenBalanceRow';
 import { CirclesRpc } from './circlesRpc';
 import { AvatarRow } from './rows/avatarRow';
-import { crcToTc } from '@circles-sdk/utils';
+import { crcToTc, hexStringToUint8Array, uint8ArrayToCidV0 } from '@circles-sdk/utils';
 import { ethers } from 'ethers';
 import { TrustRelation, TrustRelationRow } from './rows/trustRelationRow';
 import { CirclesDataInterface, GroupQueryParams } from './circlesDataInterface';
@@ -16,6 +16,7 @@ import { Filter } from './rpcSchema/filter';
 import { GroupMembershipRow } from './rows/groupMembershipRow';
 import { GroupRow } from './rows/groupRow';
 import { TokenInfoRow } from './rows/tokenInfoRow';
+import { parseRpcSubscriptionMessage, RcpSubscriptionEvent } from './events/parser';
 
 export class CirclesData implements CirclesDataInterface {
   readonly rpc: CirclesRpc;
@@ -112,7 +113,7 @@ export class CirclesData implements CirclesDataInterface {
       ]
     }, [{
       name: 'timeCircles',
-      generator: (row: TransactionHistoryRow) => {
+      generator: async (row: TransactionHistoryRow) => {
         if (row.version === 1) {
           const timestamp = new Date(row.timestamp * 1000);
           return crcToTc(timestamp, BigInt(row.value)).toFixed(2);
@@ -122,7 +123,7 @@ export class CirclesData implements CirclesDataInterface {
       }
     }, {
       name: 'tokenAddress',
-      generator: (row: TransactionHistoryRow) => {
+      generator: async (row: TransactionHistoryRow) => {
         // If the id isset, doesn't start with 0x and only consists of digits, it's a BigInt that
         // needs to be converted to a ethereum address. The BigInt is actually an encoded byte[20]
         // that represents the address.
@@ -271,7 +272,22 @@ export class CirclesData implements CirclesDataInterface {
       ],
       sortOrder: 'ASC',
       limit: 1000
-    });
+    }, [{
+      name: 'cidV0',
+      generator: async (row: AvatarRow) => {
+        try {
+          if (!row.cidV0Digest) {
+            return undefined;
+          }
+
+          const dataFromHexString = hexStringToUint8Array(row.cidV0Digest.substring(2));
+          return uint8ArrayToCidV0(dataFromHexString);
+        } catch (error) {
+          console.error('Failed to convert cidV0Digest to CIDv0 string:', error);
+          return undefined;
+        }
+      }
+    }]);
 
     if (!await circlesQuery.queryNextPage()) {
       return undefined;
@@ -340,6 +356,20 @@ export class CirclesData implements CirclesDataInterface {
    */
   subscribeToEvents(avatar?: string): Promise<Observable<CirclesEvent>> {
     return this.rpc.subscribe(avatar);
+  }
+
+  /**
+   * Gets the events for a given avatar in a block range.
+   * @param avatar The avatar to get the events for.
+   * @param fromBlock The block number to start from.
+   * @param toBlock The block number to end at. If not provided, the latest block is used.
+   */
+  async getEvents(avatar: string, fromBlock: number, toBlock?: number): Promise<CirclesEvent[]> {
+    const response = await this.rpc.call<RcpSubscriptionEvent[]>(
+      'circles_events',
+      [avatar, fromBlock, toBlock]
+    );
+    return parseRpcSubscriptionMessage(response.result);
   }
 
   /**

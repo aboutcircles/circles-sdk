@@ -16,5 +16,5 @@ export default {
       tsconfig: './tsconfig.json'
     })
   ],
-  external: ['bignumber.js', 'ethers', 'multihashes']
+  external: ['@circles-sdk/utils']
 };

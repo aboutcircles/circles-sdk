@@ -6,11 +6,12 @@ import { Filter } from '../rpcSchema/filter';
 import { Order } from '../rpcSchema/order';
 import { PagedQueryResult } from './pagedQueryResult';
 import { EventRow } from './eventRow';
-import { CirclesQueryRpcResult, CirclesRpc } from '../circlesRpc';
+import { CirclesRpc } from '../circlesRpc';
+import { CirclesQueryRpcResult } from '../circlesQueryRpcResult';
 
 export class CalculatedColumn {
   constructor(public readonly name: string
-    , public readonly generator: (row: any) => any) {
+    , public readonly generator: (row: any) => Promise<any>) {
   }
 }
 
@@ -244,7 +245,7 @@ export class CirclesQuery<TRow extends EventRow> {
    */
   private async request(method: string, param: CirclesQueryParams): Promise<TRow[]> {
     const jsonResponse = await this.rpc.call<CirclesQueryRpcResult>(method, [param]);
-    return this.rowsToObjects(jsonResponse);
+    return await this.rowsToObjects(jsonResponse);
   }
 
   /**
@@ -252,7 +253,7 @@ export class CirclesQuery<TRow extends EventRow> {
    * @param jsonResponse The JSON-RPC response.
    * @private
    */
-  private rowsToObjects(jsonResponse: JsonRpcResponse<CirclesQueryRpcResult>): TRow[] {
+  private async rowsToObjects(jsonResponse: JsonRpcResponse<CirclesQueryRpcResult>): Promise<TRow[]> {
     const { columns, rows } = jsonResponse.result;
 
     const calculatedColumns = Object.entries(this._calculatedColumns);
@@ -260,18 +261,20 @@ export class CirclesQuery<TRow extends EventRow> {
       calculatedColumns.forEach(col => columns.push(col[0]));
     }
 
-    return <TRow[]>rows.map(row => {
+    const rowObjects = await Promise.all(rows.map(async row => {
       const rowObj: Record<string, any> = {};
       row.forEach((value, index) => {
         rowObj[columns[index]] = value;
       });
 
       for (const [name, column] of calculatedColumns) {
-        rowObj[name] = column.generator(rowObj);
+        rowObj[name] = await column.generator(rowObj);
       }
 
       return rowObj;
-    });
+    }));
+
+    return rowObjects as TRow[];
   }
 
   /**
@@ -342,9 +345,9 @@ export class CirclesQuery<TRow extends EventRow> {
     return result.length > 0;
   }
 
-/**
- * Queries a single row from the Circles RPC node.
- */
+  /**
+   * Queries a single row from the Circles RPC node.
+   */
   public async getSingleRow(): Promise<TRow | undefined> {
     const orderBy = this.buildOrderBy(this.params);
     const filter = this.buildCursorFilter(this.params, this._currentPage?.lastCursor);

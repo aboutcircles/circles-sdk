@@ -7,6 +7,7 @@ import {
   TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
+import { cidV0ToUint8Array } from '@circles-sdk/utils';
 
 export type FlowEdge = {
   streamSinkId: bigint;
@@ -39,8 +40,8 @@ export class V2Person implements AvatarInterfaceV2 {
 
   async updateMetadata(cid: string): Promise<ContractTransactionReceipt> {
     this.throwIfNameRegistryIsNotAvailable();
-    
-    const digest = this.sdk.cidV0Digest(cid);
+
+    const digest = cidV0ToUint8Array(cid);
     const tx = await this.sdk.nameRegistry?.updateMetadataDigest(digest);
     const receipt = await tx?.wait();
     if (!receipt) {
@@ -234,7 +235,7 @@ export class V2Person implements AvatarInterfaceV2 {
   }
 
   private throwIfV2IsNotAvailable() {
-    if (!this.sdk.chainConfig.v2HubAddress) {
+    if (!this.sdk.circlesConfig.v2HubAddress) {
       throw new Error('V2 is not available');
     }
   }

@@ -5,13 +5,14 @@
     "packages/abi-v2",
     "packages/sdk",
     "packages/data",
-    "packages/utils"
+    "packages/utils",
+    "packages/profiles"
   ],
   "scripts": {
     "test": "jest",
-    "build": "./generateCode.sh && npm run build -w @circles-sdk/abi-v1 -w @circles-sdk/abi-v2 -w @circles-sdk/utils -w @circles-sdk/data -w @circles-sdk/sdk",
-    "publish": "npm run build && npm publish -w @circles-sdk/abi-v1 -w @circles-sdk/abi-v2 -w @circles-sdk/data -w @circles-sdk/utils -w @circles-sdk/sdk",
-    "publish:dry-run": "npm run build && npm publish --dry-run -w @circles-sdk/abi-v1 -w @circles-sdk/abi-v2 -w @circles-sdk/data -w @circles-sdk/sdk -w @circles-sdk/utils"
+    "build": "./generateCode.sh && npm run build -w @circles-sdk/abi-v1 -w @circles-sdk/abi-v2 -w @circles-sdk/utils -w @circles-sdk/data -w @circles-sdk/sdk -w @circles-sdk/profiles",
+    "publish": "npm run build && npm publish -w @circles-sdk/abi-v1 -w @circles-sdk/abi-v2 -w @circles-sdk/data -w @circles-sdk/utils -w @circles-sdk/profiles -w @circles-sdk/sdk",
+    "publish:dry-run": "npm run build && npm publish --dry-run -w @circles-sdk/abi-v1 -w @circles-sdk/abi-v2 -w @circles-sdk/data -w @circles-sdk/sdk -w @circles-sdk/utils -w @circles-sdk/profiles"
   },
   "devDependencies": {
     "@rollup/plugin-json": "^6.1.0",
@@ -32,6 +33,7 @@
   "version": "",
   "dependencies": {
     "@openzeppelin/contracts": "^3.4.2",
-    "bignumber.js": "^9.1.2"
+    "bignumber.js": "^9.1.2",
+    "bs58": "^6.0.0"
   }
 }

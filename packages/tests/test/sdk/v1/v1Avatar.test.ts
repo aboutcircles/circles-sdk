@@ -1,9 +1,9 @@
-import { ChainConfig, Sdk } from '@circles-sdk/sdk';
+import { CirclesConfig, Sdk, SdkContractRunner } from '@circles-sdk/sdk';
 import { ethers } from 'ethers';
 import { parseError } from '@circles-sdk/sdk';
 
 describe('V1Avatar', () => {
-  const chainConfig: ChainConfig = {
+  const chainConfig: CirclesConfig = {
     migrationAddress: '0x0A1D308a39A6dF8972A972E586E4b4b3Dc73520f',
     circlesRpcUrl: 'https://chiado-rpc.aboutcircles.com',
     pathfinderUrl: 'https://pathfinder.aboutcircles.com',
