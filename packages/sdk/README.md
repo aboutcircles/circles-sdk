@@ -223,7 +223,7 @@ export interface AvatarInterface {
   /**
    * Calculates the maximum Circles amount that can be transferred to another avatar.
    *
-   * NOTE: This operation can be long-running (minutes).
+   * NOTE: This operation can be long-running.
    *
    * @param to The address of the avatar to transfer to.
    * @returns The maximum amount that can be transferred.
@@ -233,7 +233,7 @@ export interface AvatarInterface {
   /**
    * Transfers Circles to another avatar.
    *
-   * NOTE: This operation can be long-running (minutes).
+   * NOTE: This operation can be long-running.
    *
    * @param to The address of the avatar to transfer to.
    * @param amount The amount to transfer.

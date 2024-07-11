@@ -52,7 +52,10 @@ export function crcToTc(timestamp: Date, amount: bigint): number {
   const amountFloat = parseFloat(ethers.formatEther(amount ?? '0'));
   const ts = timestamp.getTime();
   const payoutAtTimestamp = getCrcPayoutAt(ts);
-  return amountFloat / payoutAtTimestamp * 24;
+  const value = amountFloat / payoutAtTimestamp * 24;
+
+  return value;
+  // return Math.floor(value * 100) / 100;
 }
 
 /**

@@ -1,5 +1,5 @@
 import { AvatarInterfaceV2 } from '../AvatarInterface';
-import { ContractTransactionReceipt, ContractTransactionResponse, formatEther } from 'ethers';
+import { ContractTransactionReceipt, formatEther } from 'ethers';
 import { Sdk } from '../sdk';
 import {
   AvatarRow,
@@ -39,7 +39,7 @@ export class V2Person implements AvatarInterfaceV2 {
 
   async updateMetadata(cid: string): Promise<ContractTransactionReceipt> {
     this.throwIfNameRegistryIsNotAvailable();
-    
+
     const digest = this.sdk.cidV0Digest(cid);
     const tx = await this.sdk.nameRegistry?.updateMetadataDigest(digest);
     const receipt = await tx?.wait();
