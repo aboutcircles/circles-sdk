@@ -57,7 +57,7 @@ export interface AvatarInterface {
    * Gets the amount available to mint via `personalMint()`.
    * @returns The amount available to mint or '0'.
    */
-  getMintableAmount(): Promise<bigint>;
+  getMintableAmount(): Promise<number>;
 
   /**
    * Mints the available CRC for the avatar.

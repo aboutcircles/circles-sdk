@@ -122,7 +122,7 @@ export class Avatar implements AvatarInterfaceV2 {
    *       v1 avatars on the other hand will stop minting after 90 days without minting.
    * @returns The amount of Circles that can be minted.
    */
-  getMintableAmount = (): Promise<bigint> => this.onlyIfInitialized(() => this._avatar!.getMintableAmount());
+  getMintableAmount = (): Promise<number> => this.onlyIfInitialized(() => this._avatar!.getMintableAmount());
   /**
    * Mints the available personal Circles for the avatar. Check `getMintableAmount()` to see how many Circles can be minted.
    * @returns The transaction receipt.

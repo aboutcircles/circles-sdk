@@ -1,6 +1,6 @@
 {
   "name": "@circles-sdk/data",
-  "version": "0.3.3",
+  "version": "0.4.0",
   "description": "",
   "type": "module",
   "main": "./dist/index.js",
@@ -17,9 +17,9 @@
     "build": "rollup -c"
   },
   "dependencies": {
-    "@circles-sdk/utils": "0.3.3"
+    "@circles-sdk/utils": "0.4.0"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "MIT"
 }

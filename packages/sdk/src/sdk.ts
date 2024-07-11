@@ -195,6 +195,10 @@ export class Sdk implements SdkInterface {
     return decodedCid.digest;
   };
 
+  /**
+   * Registers the connected wallet as a human avatar in Circles v2.
+   * @param cidV0 The CIDv0 of the avatar's ERC1155 token metadata.
+   */
   registerHumanV2 = async (cidV0: string): Promise<AvatarInterface> => {
     if (!this.v2Hub) {
       throw new Error('V2 hub not available');
@@ -226,6 +230,11 @@ export class Sdk implements SdkInterface {
     return this.getAvatar(signerAddress);
   };
 
+  /**
+   * Registers the connected wallet as an organization avatar in Circles v2.
+   * @param name The organization's name.
+   * @param cidV0 The CIDv0 of the organization's metadata.
+   */
   registerOrganizationV2 = async (name: string, cidV0: string): Promise<AvatarInterface> => {
     if (!this.v2Hub) {
       throw new Error('V2 hub not available');
@@ -240,6 +249,13 @@ export class Sdk implements SdkInterface {
     return this.getAvatar(signerAddress);
   };
 
+  /**
+   * Registers the connected wallet as a group avatar in Circles v2.
+   * @param mint The address of the minting policy contract to use
+   * @param name The group's name
+   * @param symbol The group token's symbol
+   * @param cidV0 The CIDv0 of the group token's metadata
+   */
   registerGroupV2 = async (mint: string, name: string, symbol: string, cidV0: string): Promise<AvatarInterface> => {
     if (!this.v2Hub) {
       throw new Error('V2 hub not available');
@@ -270,6 +286,11 @@ export class Sdk implements SdkInterface {
     return avatarRow;
   };
 
+  /**
+   * Migrates a v1 avatar and all its Circles holdings to v2.
+   * @param avatar The avatar's address.
+   * @param cidV0 The CIDv0 of the avatar's ERC1155 token metadata.
+   */
   migrateAvatar = async (avatar: string, cidV0: string): Promise<void> => {
     if (!this.v2Hub) {
       throw new Error('V2 hub not available');
@@ -311,6 +332,10 @@ export class Sdk implements SdkInterface {
     }
   };
 
+  /**
+   * Migrates all V1 token holdings of an avatar to V2.
+   * @param avatar The avatar whose tokens to migrate.
+   */
   migrateAllV1Tokens = async (avatar: string): Promise<void> => {
     if (!this.chainConfig.migrationAddress) {
       throw new Error('Migration address not set');
