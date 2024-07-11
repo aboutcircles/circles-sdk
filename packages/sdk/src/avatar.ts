@@ -1,5 +1,5 @@
 import { V1Person } from './v1/v1Person';
-import { ContractTransactionReceipt, ContractTransactionResponse } from 'ethers';
+import { ContractTransactionReceipt, parseEther } from 'ethers';
 import { Sdk } from './sdk';
 import { AvatarInterface, AvatarInterfaceV2 } from './AvatarInterface';
 import {
@@ -10,6 +10,7 @@ import {
 } from '@circles-sdk/data';
 import { V2Person } from './v2/v2Person';
 import { CirclesEvent } from '@circles-sdk/data';
+import { tcToCrc } from '@circles-sdk/utils';
 
 /**
  * An Avatar represents a user registered at Circles.
@@ -122,7 +123,7 @@ export class Avatar implements AvatarInterfaceV2 {
    *       v1 avatars on the other hand will stop minting after 90 days without minting.
    * @returns The amount of Circles that can be minted.
    */
-  getMintableAmount = (): Promise<bigint> => this.onlyIfInitialized(() => this._avatar!.getMintableAmount());
+  getMintableAmount = (): Promise<number> => this.onlyIfInitialized(() => this._avatar!.getMintableAmount());
   /**
    * Mints the available personal Circles for the avatar. Check `getMintableAmount()` to see how many Circles can be minted.
    * @returns The transaction receipt.
@@ -146,7 +147,18 @@ export class Avatar implements AvatarInterfaceV2 {
    * @param to The address of the avatar to transfer to.
    * @param amount The amount to transfer.
    */
-  transfer = (to: string, amount: bigint): Promise<ContractTransactionReceipt> => this.onlyIfInitialized(() => this._avatar!.transfer(to, amount));
+  transfer(to: string, amount: number, token?: string): Promise<ContractTransactionReceipt>;
+  transfer(to: string, amount: bigint, token?: string): Promise<ContractTransactionReceipt>;
+  transfer(to: string, amount: number | bigint, token?: string): Promise<ContractTransactionReceipt> {
+    if (typeof amount === 'number') {
+      const sendValue = this?.avatarInfo?.version === 1
+        ? tcToCrc(new Date(), amount)
+        : parseEther(amount.toString());
+
+      return this.onlyIfInitialized(() => this._avatar!.transfer(to, sendValue))
+    }
+    return this.onlyIfInitialized(() => this._avatar!.transfer(to, amount))
+  }
   /**
    * Trusts another avatar. Trusting an avatar means you're willing to accept Circles that have been issued by this avatar.
    * @param avatar The address of the avatar to trust.

@@ -1,5 +1,5 @@
 import { AvatarInterfaceV2 } from '../AvatarInterface';
-import { ContractTransactionReceipt, ContractTransactionResponse } from 'ethers';
+import { ContractTransactionReceipt, formatEther } from 'ethers';
 import { Sdk } from '../sdk';
 import {
   AvatarRow,
@@ -39,7 +39,7 @@ export class V2Person implements AvatarInterfaceV2 {
 
   async updateMetadata(cid: string): Promise<ContractTransactionReceipt> {
     this.throwIfNameRegistryIsNotAvailable();
-    
+
     const digest = this.sdk.cidV0Digest(cid);
     const tx = await this.sdk.nameRegistry?.updateMetadataDigest(digest);
     const receipt = await tx?.wait();
@@ -55,10 +55,10 @@ export class V2Person implements AvatarInterfaceV2 {
     return Promise.resolve(0n);
   }
 
-  async getMintableAmount(): Promise<bigint> {
+  async getMintableAmount(): Promise<number> {
     this.throwIfV2IsNotAvailable();
     const [a, b, c] = await this.sdk.v2Hub!.calculateIssuance(this.address);
-    return a;
+    return parseFloat(formatEther(a));
   }
 
   async getTotalBalance(): Promise<number> {
