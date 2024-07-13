@@ -1,6 +1,6 @@
 {
   "name": "@circles-sdk/sdk",
-  "version": "0.4.0-profiles-preview-1",
+  "version": "0.4.0",
   "description": "",
   "type": "module",
   "main": "./dist/index.js",
@@ -15,13 +15,11 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
-    "@circles-sdk/abi-v1": "0.4.0-profiles-preview-1",
-    "@circles-sdk/abi-v2": "0.4.0-profiles-preview-1",
-    "@circles-sdk/data": "0.4.0-profiles-preview-1",
-    "@circles-sdk/utils": "0.4.0-profiles-preview-1",
-    "@circles-sdk/profiles": "0.4.0-profiles-preview-1",
+    "@circles-sdk/abi-v1": "0.4.0",
+    "@circles-sdk/abi-v2": "0.4.0",
+    "@circles-sdk/data": "0.4.0",
     "ethers": "^6.11.1",
     "multihashes": "^4.0.3"
   },

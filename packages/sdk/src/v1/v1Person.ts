@@ -10,6 +10,7 @@ import {
   TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
+import { crcToTc } from '@circles-sdk/utils';
 
 export class V1Person implements AvatarInterface {
   public readonly sdk: Sdk;
@@ -121,12 +122,13 @@ export class V1Person implements AvatarInterface {
     return receipt;
   }
 
-  getMintableAmount(): Promise<bigint> {
+  async getMintableAmount(): Promise<number> {
     if (!this.v1Token) {
-      return Promise.resolve(BigInt(0));
+      return 0;
     }
 
-    return this.v1Token.look();
+    const availableCrcToMint = await this.v1Token.look();
+    return crcToTc(new Date(), availableCrcToMint);
   }
 
   async personalMint(): Promise<ContractTransactionReceipt> {

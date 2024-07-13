@@ -359,6 +359,10 @@ export class Sdk implements SdkInterface {
    * Migrates all V1 tokens of an avatar to V2.
    * @param avatar The avatar's address.
    */
+  /**
+   * Migrates all V1 token holdings of an avatar to V2.
+   * @param avatar The avatar whose tokens to migrate.
+   */
   migrateAllV1Tokens = async (avatar: string): Promise<void> => {
     if (!this.circlesConfig.migrationAddress) {
       throw new Error('Migration address not set');
