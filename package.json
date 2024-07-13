@@ -5,7 +5,8 @@
     "packages/abi-v2",
     "packages/sdk",
     "packages/data",
-    "packages/utils"
+    "packages/utils",
+    "packages/profiles"
   ],
   "scripts": {
     "test": "jest",
@@ -30,5 +31,5 @@
   },
   "name": "@cirlces-sdk/root",
   "license": "MIT",
-  "version": "0.4.0"
+  "version": "0.5.0"
 }
