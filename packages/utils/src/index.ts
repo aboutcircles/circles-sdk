@@ -126,3 +126,32 @@ export function hexStringToUint8Array(hexString: string) {
   }
   return new Uint8Array(bytes);
 }
+
+export function addressToUInt256(address: string): bigint {
+  // Remove the '0x' prefix if it exists
+  if (address.startsWith('0x')) {
+    address = address.slice(2);
+  }
+
+  // Convert the address to a BigInt
+  const addressBigInt = BigInt('0x' + address);
+
+  // Shift the address left by 96 bits (256 - 160 bits)
+  const uint256BigInt = addressBigInt << BigInt(96);
+
+  return uint256BigInt;
+}
+
+export function uint256ToAddress(uint256: bigint): string {
+  // Right shift by 96 bits to remove the padding
+  const addressBigInt = uint256 >> BigInt(96);
+
+  // Convert the BigInt to a hexadecimal string
+  let addressHex = addressBigInt.toString(16);
+
+  // Ensure the address is 40 characters long (160 bits / 4 bits per hex digit)
+  addressHex = addressHex.padStart(40, '0');
+
+  // Add the '0x' prefix
+  return '0x' + addressHex;
+}

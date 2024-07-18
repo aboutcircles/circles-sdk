@@ -10,7 +10,7 @@ import {
   Migration__factory, NameRegistry, NameRegistry__factory
 } from '@circles-sdk/abi-v2';
 import { AvatarRow, CirclesData, CirclesRpc } from '@circles-sdk/data';
-import { V1Person } from './v1/v1Person';
+import { V1Avatar } from './v1/v1Avatar';
 import { cidV0ToUint8Array } from '@circles-sdk/utils';
 import { GroupProfile, Profile, Profiles } from '@circles-sdk/profiles';
 
@@ -326,7 +326,7 @@ export class Sdk implements SdkInterface {
     if (avatarInfo.hasV1) {
       // 1. Stop V1 token if necessary
       if (avatarInfo.v1Token) {
-        const v1Avatar = new V1Person(this, avatarInfo);
+        const v1Avatar = new V1Avatar(this, avatarInfo);
         const isStopped = await v1Avatar.v1Token?.stopped();
 
         if (!isStopped) {

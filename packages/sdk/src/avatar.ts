@@ -1,4 +1,4 @@
-import { V1Person } from './v1/v1Person';
+import { V1Avatar } from './v1/v1Avatar';
 import { ContractTransactionReceipt, parseEther } from 'ethers';
 import { Sdk } from './sdk';
 import { AvatarInterface, AvatarInterfaceV2 } from './AvatarInterface';
@@ -8,7 +8,7 @@ import {
   TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
-import { V2Person } from './v2/v2Person';
+import { V2Avatar } from './v2/v2Avatar';
 import { CirclesEvent } from '@circles-sdk/data';
 import { tcToCrc } from '@circles-sdk/utils';
 
@@ -73,8 +73,8 @@ export class Avatar implements AvatarInterfaceV2 {
     }
 
     const { version, hasV1 } = this._avatarInfo;
-    const v1Person = () => new V1Person(this._sdk, this._avatarInfo!);
-    const v2Person = () => new V2Person(this._sdk, this._avatarInfo!);
+    const v1Person = () => new V1Avatar(this._sdk, this._avatarInfo!);
+    const v2Person = () => new V2Avatar(this._sdk, this._avatarInfo!);
 
     switch (version) {
       case 1:
