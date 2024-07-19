@@ -7,4 +7,5 @@ export interface GroupRow extends EventRow {
   name: string;
   symbol: string;
   isMember?: boolean;
+  cidV0Digest?: string;
 }

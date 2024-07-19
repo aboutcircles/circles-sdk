@@ -245,8 +245,23 @@ export class CirclesData implements CirclesDataInterface {
    * Gets basic information about an avatar.
    * This includes the signup timestamp, circles version, avatar type and token address/id.
    * @param avatar The address to check.
+   * @returns The avatar info or undefined if the avatar is not found.
    */
   async getAvatarInfo(avatar: string): Promise<AvatarRow | undefined> {
+      const avatarInfos = await this.getAvatarInfos([avatar]);
+      return avatarInfos.length > 0 ? avatarInfos[0] : undefined;
+  }
+
+  /**
+   * Gets basic information about multiple avatars.
+   * @param avatars The addresses to check.
+   * @returns An array of avatar info objects.
+   */
+  async getAvatarInfos(avatars: string[]): Promise<AvatarRow[]> {
+    if (avatars.length === 0) {
+        return [];
+    }
+
     const circlesQuery = new CirclesQuery<AvatarRow>(this.rpc, {
       namespace: 'V_Crc',
       table: 'Avatars',
@@ -265,14 +280,14 @@ export class CirclesData implements CirclesDataInterface {
       filter: [
         {
           Type: 'FilterPredicate',
-          FilterType: 'Equals',
+          FilterType: 'In',
           Column: 'avatar',
-          Value: avatar.toLowerCase()
+          Value: avatars.map(a => a.toLowerCase())
         }
       ],
       sortOrder: 'ASC',
       limit: 1000
-    }, [{
+  }, [{
       name: 'cidV0',
       generator: async (row: AvatarRow) => {
         try {
@@ -289,30 +304,34 @@ export class CirclesData implements CirclesDataInterface {
       }
     }]);
 
-    if (!await circlesQuery.queryNextPage()) {
-      return undefined;
+    const results: AvatarRow[] = [];
+
+    while (await circlesQuery.queryNextPage()) {
+        const resultRows = circlesQuery.currentPage?.results ?? [];
+        if (resultRows.length === 0) break;
+        results.push(...resultRows);
+        if (resultRows.length < 1000) break;
     }
 
-    const result = circlesQuery.currentPage?.results ?? [];
-    let returnValue: AvatarRow | undefined = undefined;
+    const avatarMap: { [key: string]: AvatarRow } = {};
 
-    for (const avatarRow of result) {
-      if (returnValue === undefined) {
-        returnValue = avatarRow;
+    results.forEach(avatarRow => {
+      if (!avatarMap[avatarRow.avatar]) {
+            avatarMap[avatarRow.avatar] = avatarRow;
       }
 
       if (avatarRow.version === 1) {
-        returnValue.hasV1 = true;
-        returnValue.v1Token = avatarRow.tokenId;
+            avatarMap[avatarRow.avatar].hasV1 = true;
+            avatarMap[avatarRow.avatar].v1Token = avatarRow.tokenId;
       } else {
-        returnValue = {
-          ...returnValue,
+            avatarMap[avatarRow.avatar] = {
+          ...avatarMap[avatarRow.avatar],
           ...avatarRow
         };
       }
-    }
+    });
 
-    return returnValue;
+    return avatars.map(avatar => avatarMap[avatar.toLowerCase()]).filter(row => row !== undefined);
   }
 
   /**
@@ -443,8 +462,8 @@ export class CirclesData implements CirclesDataInterface {
    */
   findGroups(pageSize: number, params?: GroupQueryParams): CirclesQuery<GroupRow> {
     const queryDefintion: PagedQueryParams = {
-      namespace: 'CrcV2',
-      table: 'RegisterGroup',
+      namespace: 'V_CrcV2',
+      table: 'Groups',
       columns: [
         'blockNumber',
         'timestamp',
@@ -455,7 +474,8 @@ export class CirclesData implements CirclesDataInterface {
         'mint',
         'treasury',
         'name',
-        'symbol'
+        'symbol',
+        'cidV0Digest',
       ],
       sortOrder: 'DESC',
       limit: pageSize
