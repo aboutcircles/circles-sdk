@@ -134,9 +134,13 @@ export class Sdk implements SdkInterface {
    */
   readonly nameRegistry?: NameRegistry;
   /**
-   * The pathfinder client.
+   * The pathfinder client (v1).
    */
   readonly v1Pathfinder?: Pathfinder;
+  /**
+   * The pathfinder client (v2).
+   */
+  readonly v2Pathfinder?: Pathfinder;
   /**
    * The profiles service client.
    */
@@ -159,6 +163,9 @@ export class Sdk implements SdkInterface {
     }
     if (circlesConfig.pathfinderUrl) {
       this.v1Pathfinder = new Pathfinder(circlesConfig.pathfinderUrl);
+    }
+    if (circlesConfig.v2PathfinderUrl) {
+      this.v2Pathfinder = new Pathfinder(circlesConfig.v2PathfinderUrl);
     }
     if (circlesConfig.nameRegistryAddress) {
       this.nameRegistry = NameRegistry__factory.connect(circlesConfig.nameRegistryAddress, this.contractRunner.runner);

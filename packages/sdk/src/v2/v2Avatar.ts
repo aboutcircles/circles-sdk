@@ -54,9 +54,20 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  getMaxTransferableAmount(to: string): Promise<bigint> {
-    // TODO: Add v2 pathfinder
-    return Promise.resolve(0n);
+  async getMaxTransferableAmount(to: string): Promise<bigint> {
+    this.throwIfV2IsNotAvailable();
+
+    const largeAmount = BigInt('999999999999999999999999999999');
+    const transferPath = await this.sdk.v2Pathfinder!.getTransferPath(
+      this.address,
+      to,
+      largeAmount);
+
+    if (!transferPath.isValid) {
+      return Promise.resolve(BigInt(0));
+    }
+
+    return transferPath.maxFlow;
   }
 
   async getMintableAmount(): Promise<number> {

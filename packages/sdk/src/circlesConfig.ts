@@ -1,4 +1,5 @@
 export interface CirclesConfig {
+  readonly v2PathfinderUrl?: string;
   readonly pathfinderUrl?: string;
   readonly circlesRpcUrl: string;
   readonly profileServiceUrl?: string;
