@@ -1,6 +1,6 @@
 import { Avatar } from './avatar';
 import { ContractRunner } from 'ethers';
-import { ChainConfig } from './chainConfig';
+import { CirclesConfig } from './circlesConfig';
 import { Pathfinder } from './v1/pathfinder';
 import { AvatarInterface } from './AvatarInterface';
 import { Hub as HubV1, Hub__factory as HubV1Factory, Token__factory } from '@circles-sdk/abi-v1';
@@ -10,8 +10,9 @@ import {
   Migration__factory, NameRegistry, NameRegistry__factory
 } from '@circles-sdk/abi-v2';
 import { AvatarRow, CirclesData, CirclesRpc } from '@circles-sdk/data';
-import multihashes from 'multihashes';
-import { V1Person } from './v1/v1Person';
+import { V1Avatar } from './v1/v1Avatar';
+import { cidV0ToUint8Array } from '@circles-sdk/utils';
+import { GroupProfile, Profile, Profiles } from '@circles-sdk/profiles';
 
 /**
  * The SDK interface.
@@ -24,7 +25,7 @@ interface SdkInterface {
   /**
    * The chain specific Circles configuration (contract addresses and rpc endpoints).
    */
-  chainConfig: ChainConfig;
+  circlesConfig: CirclesConfig;
   /**
    * A configured instance of the CirclesData class, an easy-to-use wrapper around
    * the Circles RPC Query API.
@@ -43,6 +44,10 @@ interface SdkInterface {
    */
   v1Pathfinder?: Pathfinder;
   /**
+   * Stores and retrieves profiles from the Circles profile service.
+   */
+  profiles?: Profiles;
+  /**
    * Gets an Avatar instance by its address. Fails if the avatar is not signed up at Circles.
    * @param avatarAddress The avatar's address.
    * @returns The Avatar instance.
@@ -57,32 +62,29 @@ interface SdkInterface {
    * Registers the connected wallet as a human avatar in Circles v2.
    * @param cidV0 The CIDv0 of the avatar's ERC1155 token metadata.
    */
-  registerHumanV2: (cidV0: string) => Promise<AvatarInterface>;
+  registerHumanV2: (profile: Profile) => Promise<AvatarInterface>;
   /**
    * Registers the connected wallet as an organization avatar in Circles v1.
    */
   registerOrganization: () => Promise<AvatarInterface>;
   /**
    * Registers the connected wallet as an organization avatar in Circles v2.
-   * @param name The organization's name.
-   * @param cidV0 The CIDv0 of the organization's metadata.
+   * @param profile The profile data of the organization.
    */
-  registerOrganizationV2: (name: string, cidV0: string) => Promise<AvatarInterface>;
+  registerOrganizationV2: (profile: Profile) => Promise<AvatarInterface>;
   /**
    * Registers the connected wallet as a group avatar in Circles v2.
    * @param mint The address of the minting policy contract to use.
-   * @param name The group's name.
-   * @param symbol The group token's symbol.
-   * @param cidV0 The CIDv0 of the group token's metadata.
+   * @param profile The profile data of the group.
    */
-  registerGroupV2: (mint: string, name: string, symbol: string, cidV0: string) => Promise<AvatarInterface>;
+  registerGroupV2: (mint: string, profile: GroupProfile) => Promise<AvatarInterface>;
   /**
    * Migrates a v1 avatar and all its Circles holdings to v2.
    * [[ Currently only works for human avatars. ]]
    * @param avatar The avatar's address.
    * @param cidV0 The CIDv0 of the avatar's ERC1155 token metadata.
    */
-  migrateAvatar: (avatar: string, cidV0: string) => Promise<void>;
+  migrateAvatar: (avatar: string, profile: Profile) => Promise<void>;
 }
 
 /**
@@ -110,7 +112,7 @@ export class Sdk implements SdkInterface {
   /**
    * The chain specific Circles configuration.
    */
-  readonly chainConfig: ChainConfig;
+  readonly circlesConfig: CirclesConfig;
   /**
    * The Circles RPC client.
    */
@@ -132,30 +134,44 @@ export class Sdk implements SdkInterface {
    */
   readonly nameRegistry?: NameRegistry;
   /**
-   * The pathfinder client.
+   * The pathfinder client (v1).
    */
   readonly v1Pathfinder?: Pathfinder;
+  /**
+   * The pathfinder client (v2).
+   */
+  readonly v2Pathfinder?: Pathfinder;
+  /**
+   * The profiles service client.
+   */
+  readonly profiles?: Profiles;
 
   /**
    * Creates a new SDK instance.
-   * @param chainConfig The chain specific Circles configuration.
+   * @param circlesConfig The chain specific Circles configuration.
    * @param contractRunner A contract runner instance and its address.
    */
-  constructor(chainConfig: ChainConfig, contractRunner: SdkContractRunner) {
-    this.chainConfig = chainConfig;
+  constructor(circlesConfig: CirclesConfig, contractRunner: SdkContractRunner) {
+    this.circlesConfig = circlesConfig;
     this.contractRunner = contractRunner;
 
-    this.circlesRpc = new CirclesRpc(chainConfig.circlesRpcUrl);
+    this.circlesRpc = new CirclesRpc(circlesConfig.circlesRpcUrl);
     this.data = new CirclesData(this.circlesRpc);
-    this.v1Hub = HubV1Factory.connect(chainConfig.v1HubAddress ?? '0x29b9a7fBb8995b2423a71cC17cf9810798F6C543', this.contractRunner.runner);
-    if (chainConfig.v2HubAddress) {
-      this.v2Hub = HubV2Factory.connect(chainConfig.v2HubAddress, this.contractRunner.runner);
+    this.v1Hub = HubV1Factory.connect(circlesConfig.v1HubAddress ?? '0x29b9a7fBb8995b2423a71cC17cf9810798F6C543', this.contractRunner.runner);
+    if (circlesConfig.v2HubAddress) {
+      this.v2Hub = HubV2Factory.connect(circlesConfig.v2HubAddress, this.contractRunner.runner);
     }
-    if (chainConfig.pathfinderUrl) {
-      this.v1Pathfinder = new Pathfinder(chainConfig.pathfinderUrl);
+    if (circlesConfig.pathfinderUrl) {
+      this.v1Pathfinder = new Pathfinder(circlesConfig.pathfinderUrl);
     }
-    if (chainConfig.nameRegistryAddress) {
-      this.nameRegistry = NameRegistry__factory.connect(chainConfig.nameRegistryAddress, this.contractRunner.runner);
+    if (circlesConfig.v2PathfinderUrl) {
+      this.v2Pathfinder = new Pathfinder(circlesConfig.v2PathfinderUrl);
+    }
+    if (circlesConfig.nameRegistryAddress) {
+      this.nameRegistry = NameRegistry__factory.connect(circlesConfig.nameRegistryAddress, this.contractRunner.runner);
+    }
+    if (circlesConfig.profileServiceUrl) {
+      this.profiles = new Profiles(circlesConfig.profileServiceUrl);
     }
   }
 
@@ -186,24 +202,19 @@ export class Sdk implements SdkInterface {
     return this.getAvatar(signerAddress);
   };
 
-  cidV0Digest = (cidV0: string) => {
-    if (!cidV0.startsWith('Qm')) {
-      throw new Error('Invalid CID. Must be a CIDv0 with sha2-256 hash in base58 encoding');
-    }
-    const cidBytes = multihashes.fromB58String(cidV0);
-    const decodedCid = multihashes.decode(cidBytes);
-    return decodedCid.digest;
-  };
-
   /**
    * Registers the connected wallet as a human avatar in Circles v2.
-   * @param cidV0 The CIDv0 of the avatar's ERC1155 token metadata.
+   * Note: This will only work if you already have a v1 avatar and only during the migration period.
+   *       The only way to join after the migration period is to be invited by an existing member.
+   * @param profile The profile data of the avatar.
    */
-  registerHumanV2 = async (cidV0: string): Promise<AvatarInterface> => {
+  registerHumanV2 = async (profile: Profile | string): Promise<AvatarInterface> => {
     if (!this.v2Hub) {
       throw new Error('V2 hub not available');
     }
-    const metadataDigest = this.cidV0Digest(cidV0);
+
+    let metadataDigest: Uint8Array = await this.createProfileIfNecessary(profile);
+
     const tx = await this.v2Hub.registerHuman(metadataDigest);
     const receipt = await tx.wait();
     if (!receipt) {
@@ -215,6 +226,26 @@ export class Sdk implements SdkInterface {
 
     return this.getAvatar(signerAddress);
   };
+
+  /**
+   * Checks if the profile argument is a string or a Profile object and creates the profile if necessary.
+   * If the profile is a string, it must be a CIDv0 string (Qm...).
+   * @param profile The profile data or CIDv0 of the avatar.
+   * @private
+   */
+  private async createProfileIfNecessary(profile: Profile | string) {
+    if (typeof profile === 'string') {
+      if (!profile.startsWith('Qm')) {
+        throw new Error('Invalid profile CID. Must be a CIDv0 string (Qm...).');
+      }
+      return cidV0ToUint8Array(profile);
+    } else if (this.profiles) {
+      const profileCid = await this.profiles?.create(profile);
+      return cidV0ToUint8Array(profileCid);
+    } else {
+      throw new Error('Profiles service is not configured');
+    }
+  }
 
   /**
    * Registers the connected wallet as an organization avatar.
@@ -232,15 +263,15 @@ export class Sdk implements SdkInterface {
 
   /**
    * Registers the connected wallet as an organization avatar in Circles v2.
-   * @param name The organization's name.
-   * @param cidV0 The CIDv0 of the organization's metadata.
+   * @param profile The profile data of the organization.
    */
-  registerOrganizationV2 = async (name: string, cidV0: string): Promise<AvatarInterface> => {
+  registerOrganizationV2 = async (profile: Profile): Promise<AvatarInterface> => {
     if (!this.v2Hub) {
       throw new Error('V2 hub not available');
     }
-    const metadataDigest = this.cidV0Digest(cidV0);
-    const receipt = await this.v2Hub.registerOrganization(name, metadataDigest);
+
+    const metadataDigest = await this.createProfileIfNecessary(profile);
+    const receipt = await this.v2Hub.registerOrganization(profile.name, metadataDigest);
     await receipt.wait();
 
     const signerAddress = this.contractRunner.address;
@@ -251,17 +282,16 @@ export class Sdk implements SdkInterface {
 
   /**
    * Registers the connected wallet as a group avatar in Circles v2.
-   * @param mint The address of the minting policy contract to use
-   * @param name The group's name
-   * @param symbol The group token's symbol
-   * @param cidV0 The CIDv0 of the group token's metadata
+   * @param mint The address of the minting policy contract to use.
+   * @param profile The profile data of the group.
    */
-  registerGroupV2 = async (mint: string, name: string, symbol: string, cidV0: string): Promise<AvatarInterface> => {
+  registerGroupV2 = async (mint: string, profile: GroupProfile): Promise<AvatarInterface> => {
     if (!this.v2Hub) {
       throw new Error('V2 hub not available');
     }
-    const metatdataDigest = this.cidV0Digest(cidV0);
-    const receipt = await this.v2Hub.registerGroup(mint, name, symbol, metatdataDigest);
+
+    const metadataDigest = await this.createProfileIfNecessary(profile);
+    const receipt = await this.v2Hub.registerGroup(mint, profile.name, profile.symbol, metadataDigest);
     await receipt.wait();
 
     const signerAddress = this.contractRunner.address;
@@ -289,9 +319,9 @@ export class Sdk implements SdkInterface {
   /**
    * Migrates a v1 avatar and all its Circles holdings to v2.
    * @param avatar The avatar's address.
-   * @param cidV0 The CIDv0 of the avatar's ERC1155 token metadata.
+   * @param profile The profile data of the avatar.
    */
-  migrateAvatar = async (avatar: string, cidV0: string): Promise<void> => {
+  migrateAvatar = async (avatar: string, profile: Profile): Promise<void> => {
     if (!this.v2Hub) {
       throw new Error('V2 hub not available');
     }
@@ -303,7 +333,7 @@ export class Sdk implements SdkInterface {
     if (avatarInfo.hasV1) {
       // 1. Stop V1 token if necessary
       if (avatarInfo.v1Token) {
-        const v1Avatar = new V1Person(this, avatarInfo);
+        const v1Avatar = new V1Avatar(this, avatarInfo);
         const isStopped = await v1Avatar.v1Token?.stopped();
 
         if (!isStopped) {
@@ -318,7 +348,7 @@ export class Sdk implements SdkInterface {
 
       // 2. Signup V2 avatar if necessary
       if (avatarInfo.version === 1) {
-        await this.registerHumanV2(cidV0);
+        await this.registerHumanV2(profile);
       }
 
       // 3. Make sure the v1 token minting status is known to the v2 hub
@@ -333,11 +363,15 @@ export class Sdk implements SdkInterface {
   };
 
   /**
+   * Migrates all V1 tokens of an avatar to V2.
+   * @param avatar The avatar's address.
+   */
+  /**
    * Migrates all V1 token holdings of an avatar to V2.
    * @param avatar The avatar whose tokens to migrate.
    */
   migrateAllV1Tokens = async (avatar: string): Promise<void> => {
-    if (!this.chainConfig.migrationAddress) {
+    if (!this.circlesConfig.migrationAddress) {
       throw new Error('Migration address not set');
     }
     const balances = await this.data.getTokenBalances(avatar, false);
@@ -348,15 +382,15 @@ export class Sdk implements SdkInterface {
     await Promise.all(tokensToMigrate.map(async (t, i) => {
       const balance = BigInt(t.balance);
       const token = Token__factory.connect(t.token, this.contractRunner.runner);
-      const allowance = await token.allowance(avatar, this.chainConfig.migrationAddress!);
+      const allowance = await token.allowance(avatar, this.circlesConfig.migrationAddress!);
       if (allowance < balance) {
         const increase = balance - allowance;
-        const tx = await token.increaseAllowance(this.chainConfig.migrationAddress!, increase);
+        const tx = await token.increaseAllowance(this.circlesConfig.migrationAddress!, increase);
         await tx.wait();
       }
     }));
 
-    const migrationContract = Migration__factory.connect(this.chainConfig.migrationAddress, this.contractRunner.runner);
+    const migrationContract = Migration__factory.connect(this.circlesConfig.migrationAddress, this.contractRunner.runner);
     const migrateTx = await migrationContract.migrate(
       tokensToMigrate.map(o => o.tokenOwner)
       , tokensToMigrate.map(o => BigInt(o.balance)));

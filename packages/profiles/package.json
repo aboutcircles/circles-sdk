@@ -1,5 +1,5 @@
 {
-  "name": "@circles-sdk/abi-v2",
+  "name": "@circles-sdk/profiles",
   "version": "0.5.0-preview-2",
   "description": "",
   "type": "module",
@@ -17,9 +17,9 @@
     "build": "rollup -c"
   },
   "dependencies": {
-    "ethers": "^6.11.1"
+    "@circles-sdk/utils": "0.5.0-preview-2"
   },
   "keywords": [],
   "author": "",
-  "license": "MIT"
+  "license": "ISC"
 }

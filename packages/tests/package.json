@@ -11,6 +11,7 @@
     "@circles-sdk/abi-v2": "../abi-v2",
     "@circles-sdk/sdk": "../sdk",
     "@circles-sdk/data": "../data",
+    "@circles-sdk/utils": "../utils",
     "ethers": "^6.11.1",
     "multihashes": "^4.0.3"
   },

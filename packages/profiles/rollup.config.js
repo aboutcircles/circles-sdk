@@ -16,5 +16,5 @@ export default {
       tsconfig: './tsconfig.json'
     })
   ],
-  external: ['ethers', 'multihashes', '@circles-sdk/abi-v1', '@circles-sdk/abi-v2', '@circles-sdk/data', '@circles-sdk/utils', '@circles-sdk/profiles']
+  external: ['@circles-sdk/utils']
 };

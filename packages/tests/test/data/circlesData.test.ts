@@ -5,7 +5,7 @@ import { CirclesRpc } from '@circles-sdk/data';
 // - V1_HUB_ADDRESS=0xdbf22d4e8962db3b2f1d9ff55be728a887e47710
 // - V2_HUB_ADDRESS=0xFFfbD3E62203B888bb8E09c1fcAcE58242674964
 // - V2_NAME_REGISTRY_ADDRESS=0x0A1D308a39A6dF8972A972E586E4b4b3Dc73520f
-const circlesRpc = `https://rpc.falkenstein.aboutcircles.com`;
+const circlesRpc = `https://chiado-rpc.aboutcircles.com`;
 const rpc = new CirclesRpc(circlesRpc);
 
 describe('CirclesData', () => {
@@ -140,5 +140,12 @@ describe('CirclesData', () => {
 
     // Wait for events
     await new Promise(resolve => setTimeout(resolve, 60000));
+  });
+
+  it('should get events for a given avatar in a block range', async () => {
+    const circlesData = new CirclesData(rpc);
+
+    const events = await circlesData.getEvents('0x389522f8f44cd5cd835d510a17b5f65f74a46468', 9500000);
+    expect(events).toBeDefined();
   });
 });

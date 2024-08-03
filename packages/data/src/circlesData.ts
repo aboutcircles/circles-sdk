@@ -4,7 +4,7 @@ import { TrustListRow } from './rows/trustListRow';
 import { TokenBalanceRow } from './rows/tokenBalanceRow';
 import { CirclesRpc } from './circlesRpc';
 import { AvatarRow } from './rows/avatarRow';
-import { crcToTc } from '@circles-sdk/utils';
+import { crcToTc, hexStringToUint8Array, uint8ArrayToCidV0 } from '@circles-sdk/utils';
 import { ethers } from 'ethers';
 import { TrustRelation, TrustRelationRow } from './rows/trustRelationRow';
 import { CirclesDataInterface, GroupQueryParams } from './circlesDataInterface';
@@ -16,6 +16,7 @@ import { Filter } from './rpcSchema/filter';
 import { GroupMembershipRow } from './rows/groupMembershipRow';
 import { GroupRow } from './rows/groupRow';
 import { TokenInfoRow } from './rows/tokenInfoRow';
+import { parseRpcSubscriptionMessage, RcpSubscriptionEvent } from './events/parser';
 
 export class CirclesData implements CirclesDataInterface {
   readonly rpc: CirclesRpc;
@@ -112,7 +113,7 @@ export class CirclesData implements CirclesDataInterface {
       ]
     }, [{
       name: 'timeCircles',
-      generator: (row: TransactionHistoryRow) => {
+      generator: async (row: TransactionHistoryRow) => {
         if (row.version === 1) {
           const timestamp = new Date(row.timestamp * 1000);
           return crcToTc(timestamp, BigInt(row.value)).toFixed(2);
@@ -122,7 +123,7 @@ export class CirclesData implements CirclesDataInterface {
       }
     }, {
       name: 'tokenAddress',
-      generator: (row: TransactionHistoryRow) => {
+      generator: async (row: TransactionHistoryRow) => {
         // If the id isset, doesn't start with 0x and only consists of digits, it's a BigInt that
         // needs to be converted to a ethereum address. The BigInt is actually an encoded byte[20]
         // that represents the address.
@@ -244,8 +245,23 @@ export class CirclesData implements CirclesDataInterface {
    * Gets basic information about an avatar.
    * This includes the signup timestamp, circles version, avatar type and token address/id.
    * @param avatar The address to check.
+   * @returns The avatar info or undefined if the avatar is not found.
    */
   async getAvatarInfo(avatar: string): Promise<AvatarRow | undefined> {
+      const avatarInfos = await this.getAvatarInfos([avatar]);
+      return avatarInfos.length > 0 ? avatarInfos[0] : undefined;
+  }
+
+  /**
+   * Gets basic information about multiple avatars.
+   * @param avatars The addresses to check.
+   * @returns An array of avatar info objects.
+   */
+  async getAvatarInfos(avatars: string[]): Promise<AvatarRow[]> {
+    if (avatars.length === 0) {
+        return [];
+    }
+
     const circlesQuery = new CirclesQuery<AvatarRow>(this.rpc, {
       namespace: 'V_Crc',
       table: 'Avatars',
@@ -264,39 +280,58 @@ export class CirclesData implements CirclesDataInterface {
       filter: [
         {
           Type: 'FilterPredicate',
-          FilterType: 'Equals',
+          FilterType: 'In',
           Column: 'avatar',
-          Value: avatar.toLowerCase()
+          Value: avatars.map(a => a.toLowerCase())
         }
       ],
       sortOrder: 'ASC',
       limit: 1000
-    });
+  }, [{
+      name: 'cidV0',
+      generator: async (row: AvatarRow) => {
+        try {
+          if (!row.cidV0Digest) {
+            return undefined;
+          }
 
-    if (!await circlesQuery.queryNextPage()) {
-      return undefined;
+          const dataFromHexString = hexStringToUint8Array(row.cidV0Digest.substring(2));
+          return uint8ArrayToCidV0(dataFromHexString);
+        } catch (error) {
+          console.error('Failed to convert cidV0Digest to CIDv0 string:', error);
+          return undefined;
+        }
+      }
+    }]);
+
+    const results: AvatarRow[] = [];
+
+    while (await circlesQuery.queryNextPage()) {
+        const resultRows = circlesQuery.currentPage?.results ?? [];
+        if (resultRows.length === 0) break;
+        results.push(...resultRows);
+        if (resultRows.length < 1000) break;
     }
 
-    const result = circlesQuery.currentPage?.results ?? [];
-    let returnValue: AvatarRow | undefined = undefined;
+    const avatarMap: { [key: string]: AvatarRow } = {};
 
-    for (const avatarRow of result) {
-      if (returnValue === undefined) {
-        returnValue = avatarRow;
+    results.forEach(avatarRow => {
+      if (!avatarMap[avatarRow.avatar]) {
+            avatarMap[avatarRow.avatar] = avatarRow;
       }
 
       if (avatarRow.version === 1) {
-        returnValue.hasV1 = true;
-        returnValue.v1Token = avatarRow.tokenId;
+            avatarMap[avatarRow.avatar].hasV1 = true;
+            avatarMap[avatarRow.avatar].v1Token = avatarRow.tokenId;
       } else {
-        returnValue = {
-          ...returnValue,
+            avatarMap[avatarRow.avatar] = {
+          ...avatarMap[avatarRow.avatar],
           ...avatarRow
         };
       }
-    }
+    });
 
-    return returnValue;
+    return avatars.map(avatar => avatarMap[avatar.toLowerCase()]).filter(row => row !== undefined);
   }
 
   /**
@@ -340,6 +375,20 @@ export class CirclesData implements CirclesDataInterface {
    */
   subscribeToEvents(avatar?: string): Promise<Observable<CirclesEvent>> {
     return this.rpc.subscribe(avatar);
+  }
+
+  /**
+   * Gets the events for a given avatar in a block range.
+   * @param avatar The avatar to get the events for.
+   * @param fromBlock The block number to start from.
+   * @param toBlock The block number to end at. If not provided, the latest block is used.
+   */
+  async getEvents(avatar: string, fromBlock: number, toBlock?: number): Promise<CirclesEvent[]> {
+    const response = await this.rpc.call<RcpSubscriptionEvent[]>(
+      'circles_events',
+      [avatar, fromBlock, toBlock]
+    );
+    return parseRpcSubscriptionMessage(response.result);
   }
 
   /**
@@ -413,8 +462,8 @@ export class CirclesData implements CirclesDataInterface {
    */
   findGroups(pageSize: number, params?: GroupQueryParams): CirclesQuery<GroupRow> {
     const queryDefintion: PagedQueryParams = {
-      namespace: 'CrcV2',
-      table: 'RegisterGroup',
+      namespace: 'V_CrcV2',
+      table: 'Groups',
       columns: [
         'blockNumber',
         'timestamp',
@@ -425,7 +474,8 @@ export class CirclesData implements CirclesDataInterface {
         'mint',
         'treasury',
         'name',
-        'symbol'
+        'symbol',
+        'cidV0Digest',
       ],
       sortOrder: 'DESC',
       limit: pageSize

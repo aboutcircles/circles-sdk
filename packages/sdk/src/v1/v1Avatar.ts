@@ -12,7 +12,7 @@ import {
 } from '@circles-sdk/data';
 import { crcToTc } from '@circles-sdk/utils';
 
-export class V1Person implements AvatarInterface {
+export class V1Avatar implements AvatarInterface {
   public readonly sdk: Sdk;
 
   get address(): string {

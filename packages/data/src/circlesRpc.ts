@@ -122,13 +122,3 @@ export class CirclesRpc {
     return observable.property;
   }
 }
-
-export type CirclesQueryRpcResult = {
-  columns: string[];
-  rows: any[][];
-};
-
-export type RawWebsocketEvent = {
-  event: string;
-  values: Record<string, any>;
-}

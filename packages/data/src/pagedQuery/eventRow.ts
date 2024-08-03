@@ -6,5 +6,5 @@ export interface EventRow {
   blockNumber: number;
   transactionIndex: number;
   logIndex: number;
-  batchIndex: number | undefined;
+  batchIndex?: number;
 }

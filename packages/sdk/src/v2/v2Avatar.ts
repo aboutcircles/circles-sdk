@@ -1,5 +1,8 @@
 import { AvatarInterfaceV2 } from '../AvatarInterface';
-import { ContractTransactionReceipt, formatEther } from 'ethers';
+import {
+  ContractTransactionReceipt,
+  formatEther
+} from 'ethers';
 import { Sdk } from '../sdk';
 import {
   AvatarRow,
@@ -7,6 +10,7 @@ import {
   TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
+import { addressToUInt256, cidV0ToUint8Array } from '@circles-sdk/utils';
 
 export type FlowEdge = {
   streamSinkId: bigint;
@@ -19,7 +23,7 @@ export type Stream = {
   data: Uint8Array
 }
 
-export class V2Person implements AvatarInterfaceV2 {
+export class V2Avatar implements AvatarInterfaceV2 {
   public readonly sdk: Sdk;
 
   get address(): string {
@@ -40,7 +44,7 @@ export class V2Person implements AvatarInterfaceV2 {
   async updateMetadata(cid: string): Promise<ContractTransactionReceipt> {
     this.throwIfNameRegistryIsNotAvailable();
 
-    const digest = this.sdk.cidV0Digest(cid);
+    const digest = cidV0ToUint8Array(cid);
     const tx = await this.sdk.nameRegistry?.updateMetadataDigest(digest);
     const receipt = await tx?.wait();
     if (!receipt) {
@@ -50,9 +54,20 @@ export class V2Person implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  getMaxTransferableAmount(to: string): Promise<bigint> {
-    // TODO: Add v2 pathfinder
-    return Promise.resolve(0n);
+  async getMaxTransferableAmount(to: string): Promise<bigint> {
+    this.throwIfV2IsNotAvailable();
+
+    const largeAmount = BigInt('999999999999999999999999999999');
+    const transferPath = await this.sdk.v2Pathfinder!.getTransferPath(
+      this.address,
+      to,
+      largeAmount);
+
+    if (!transferPath.isValid) {
+      return Promise.resolve(BigInt(0));
+    }
+
+    return transferPath.maxFlow;
   }
 
   async getMintableAmount(): Promise<number> {
@@ -115,8 +130,10 @@ export class V2Person implements AvatarInterfaceV2 {
     return { sortedAddresses, lookupMap };
   }
 
-  async transfer(to: string, amount: bigint, token?: string): Promise<ContractTransactionReceipt> {
+  private async transitiveTransfer(to: string, amount: bigint): Promise<ContractTransactionReceipt> {
     this.throwIfV2IsNotAvailable();
+
+
     const addresses = [this.address, to];
     const N = addresses.length;
 
@@ -165,7 +182,11 @@ export class V2Person implements AvatarInterfaceV2 {
 
     const approvalStatus = await this.sdk.v2Hub!.isApprovedForAll(this.address, to);
     if (!approvalStatus) {
-      await this.sdk.v2Hub!.setApprovalForAll(this.address, true);
+      const v2HubAddress = await this.sdk.v2Hub?.getAddress();
+      if (!v2HubAddress) {
+        throw new Error('V2 hub address not found');
+      }
+      await this.sdk.v2Hub!.setApprovalForAll(v2HubAddress, true);
     }
 
     const tx = await this.sdk.v2Hub!.operateFlowMatrix(flowVertices, flow, streams, packedCoordinates);
@@ -175,6 +196,36 @@ export class V2Person implements AvatarInterfaceV2 {
     }
 
     return receipt;
+  }
+
+  private async directTransfer(to: string, amount: bigint, tokenAddress: string): Promise<ContractTransactionReceipt> {
+    const tokenInf = await this.sdk.data.getTokenInfo(tokenAddress);
+    if (!tokenInf) {
+      throw new Error('Token not found');
+    }
+
+    const numericTokenId = addressToUInt256(tokenInf.tokenId);
+    const tx = await this.sdk.v2Hub?.safeTransferFrom(
+      this.address,
+      to,
+      numericTokenId,
+      amount,
+      new Uint8Array(0));
+
+    const receipt = await tx?.wait();
+    if (!receipt) {
+      throw new Error('Transfer failed');
+    }
+
+    return receipt;
+  }
+
+  async transfer(to: string, amount: bigint, tokenAddress?: string): Promise<ContractTransactionReceipt> {
+    if (!tokenAddress) {
+      return this.transitiveTransfer(to, amount);
+    } else {
+      return this.directTransfer(to, amount, tokenAddress);
+    }
   }
 
   async trust(avatar: string): Promise<ContractTransactionReceipt> {
@@ -234,7 +285,7 @@ export class V2Person implements AvatarInterfaceV2 {
   }
 
   private throwIfV2IsNotAvailable() {
-    if (!this.sdk.chainConfig.v2HubAddress) {
+    if (!this.sdk.circlesConfig.v2HubAddress) {
       throw new Error('V2 is not available');
     }
   }
