@@ -136,9 +136,10 @@ export class Avatar implements AvatarInterfaceV2 {
   /**
    * Utilizes the pathfinder to find the maximum Circles amount that can be transferred from this Avatar to the other avatar.
    * @param to The address to transfer the Circles to.
+   * @param tokenId The token ID to transfer. If not specified, a transitve transfer is calculated.
    * @returns The maximum Circles amount that can be transferred.
    */
-  getMaxTransferableAmount = (to: string): Promise<bigint> => this.onlyIfInitialized(() => this._avatar!.getMaxTransferableAmount(to));
+  getMaxTransferableAmount = (to: string, tokenId?: string): Promise<bigint> => this.onlyIfInitialized(() => this._avatar!.getMaxTransferableAmount(to, tokenId));
   /**
    * Transfers Circles to another avatar.
    *
@@ -155,9 +156,9 @@ export class Avatar implements AvatarInterfaceV2 {
         ? tcToCrc(new Date(), amount)
         : parseEther(amount.toString());
 
-      return this.onlyIfInitialized(() => this._avatar!.transfer(to, sendValue))
+      return this.onlyIfInitialized(() => this._avatar!.transfer(to, sendValue, token))
     }
-    return this.onlyIfInitialized(() => this._avatar!.transfer(to, amount))
+    return this.onlyIfInitialized(() => this._avatar!.transfer(to, amount, token))
   }
   /**
    * Trusts another avatar. Trusting an avatar means you're willing to accept Circles that have been issued by this avatar.
