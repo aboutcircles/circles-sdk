@@ -1,5 +1,5 @@
 {
-  "name": "@circles-sdk/abi-v1",
+  "name": "@circles-sdk/adapter",
   "version": "0.6.0-preview-1",
   "description": "",
   "type": "module",
@@ -17,7 +17,6 @@
     "build": "rollup -c"
   },
   "dependencies": {
-    "ethers": "^6.13.2"
   },
   "keywords": [],
   "author": "",

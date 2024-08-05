@@ -1,6 +1,6 @@
 import { AvatarInterfaceV2 } from '../AvatarInterface';
 import {
-  ContractTransactionReceipt,
+  ContractTransactionReceipt, ethers,
   formatEther
 } from 'ethers';
 import { Sdk } from '../sdk';
@@ -11,6 +11,7 @@ import {
   TrustRelationRow
 } from '@circles-sdk/data';
 import { addressToUInt256, cidV0ToUint8Array } from '@circles-sdk/utils';
+import { Pathfinder } from './pathfinderV2';
 
 export type FlowEdge = {
   streamSinkId: bigint;
@@ -54,8 +55,20 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  async getMaxTransferableAmount(to: string): Promise<bigint> {
+  async getMaxTransferableAmount(to: string, tokenId?: string): Promise<bigint> {
     this.throwIfV2IsNotAvailable();
+
+    if (tokenId) {
+      const tokenInfo = await this.sdk.data.getTokenInfo(tokenId);
+      if (!tokenInfo) {
+        throw new Error('Token not found');
+      }
+
+      const tokenBalances = await this.sdk.data.getTokenBalancesV2(this.address);
+      const tokenBalance = tokenBalances.filter(b => b.tokenOwner.toString() === tokenInfo.tokenId.toString());
+      console.log(`Token balance:`, tokenBalance);
+      return !tokenBalance[0].balance ? 0n : ethers.parseEther(tokenBalance[0].balance.toString());
+    }
 
     const largeAmount = BigInt('999999999999999999999999999999');
     const transferPath = await this.sdk.v2Pathfinder!.getTransferPath(
@@ -113,98 +126,28 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  private packCoordinates(coordinates: number[]): Uint8Array {
-    const packedCoordinates = new Uint8Array(coordinates.length * 2);
-    for (let i = 0; i < coordinates.length; i++) {
-      packedCoordinates[2 * i] = coordinates[i] >> 8; // High byte
-      packedCoordinates[2 * i + 1] = coordinates[i] & 0xFF; // Low byte
-    }
-    return packedCoordinates;
-  }
-
-  private sortAddressesWithPermutationMap(addresses: string[]) {
-    const sortedAddresses = [...addresses].sort();
-    const permutationMap = addresses.map((address) => sortedAddresses.indexOf(address));
-    const lookupMap = permutationMap.map((_, i) => permutationMap.indexOf(i));
-
-    return { sortedAddresses, lookupMap };
-  }
-
   private async transitiveTransfer(to: string, amount: bigint): Promise<ContractTransactionReceipt> {
     this.throwIfV2IsNotAvailable();
 
-
-    const addresses = [this.address, to];
-    const N = addresses.length;
-
-    const {
-      sortedAddresses
-      , lookupMap
-    } = this.sortAddressesWithPermutationMap(addresses);
-
-    // the flow vertices need to be provided in ascending order
-    let flowVertices: string[] = new Array(N);
-    for (let i = 0; i < addresses.length; i++) {
-      flowVertices[i] = sortedAddresses[i];
-    }
-
-    let flow: FlowEdge[] = new Array(N - 1);
-    let coordinates: number[] = new Array((N - 1) * 3);
-    // the "flow matrix" is a rang three tensor:
-    // Circles identifier, flow edge, and flow vertex (location)
-    let coordinateIndex = 0;
-    for (let i = 0; i < N - 1; i++) {
-      // flow is the amount of Circles to send, here constant for each edge
-      flow[i] = { amount: amount, streamSinkId: BigInt(1) };
-      // first index indicates which Circles to use
-      // for our example, we use the Circles of the sender
-      coordinates[coordinateIndex++] = lookupMap[i];
-      // the second coordinate refers to the sender
-      coordinates[coordinateIndex++] = lookupMap[i];
-      // the third coordinate specifies the receiver
-      coordinates[coordinateIndex++] = lookupMap[i + 1];
-    }
-
-    // only the last flow edge is a terminal edge in this example to Charlie->David
-    // and it then refers to the single stream Alice -> David of 5 (Charlie) Circles
-    // start counting from 1, to reserve 0 for the non-terminal edges
-    // TODO ???
-
-    let packedCoordinates = this.packCoordinates(coordinates);
-
-    // Intended total flow (stream: source -> sink)
-    let streams: Stream[] = new Array(1);
-    streams[0] = {
-      sourceCoordinate: BigInt(lookupMap[0]),
-      flowEdgeIds: [BigInt(0)],
-      data: new Uint8Array(0)
-    };
-
-    const approvalStatus = await this.sdk.v2Hub!.isApprovedForAll(this.address, to);
-    if (!approvalStatus) {
-      const v2HubAddress = await this.sdk.v2Hub?.getAddress();
-      if (!v2HubAddress) {
-        throw new Error('V2 hub address not found');
-      }
-      await this.sdk.v2Hub!.setApprovalForAll(v2HubAddress, true);
-    }
-
-    const tx = await this.sdk.v2Hub!.operateFlowMatrix(flowVertices, flow, streams, packedCoordinates);
-    const receipt = await tx.wait();
+    const pathfinder = new Pathfinder(this.sdk.circlesConfig.v2PathfinderUrl!);
+    const flowMatrix = await pathfinder.getArgsForPath(this.address, to, amount.toString());
+    const result = await this.sdk.v2Hub?.operateFlowMatrix(flowMatrix.flowVertices, flowMatrix.flowEdges, flowMatrix.streams, flowMatrix.packedCoordinates);
+    const receipt = await result?.wait();
     if (!receipt) {
       throw new Error('Transfer failed');
     }
-
     return receipt;
   }
 
   private async directTransfer(to: string, amount: bigint, tokenAddress: string): Promise<ContractTransactionReceipt> {
     const tokenInf = await this.sdk.data.getTokenInfo(tokenAddress);
+    console.log(`Direct transfer - of: ${amount} - tokenId: ${tokenInf?.tokenId} - to: ${to}`);
     if (!tokenInf) {
       throw new Error('Token not found');
     }
 
     const numericTokenId = addressToUInt256(tokenInf.tokenId);
+    console.log(`numericTokenId: ${numericTokenId}`);
     const tx = await this.sdk.v2Hub?.safeTransferFrom(
       this.address,
       to,

@@ -1,5 +1,5 @@
 {
-  "name": "@circles-sdk/abi-v1",
+  "name": "@circles-sdk/adapter-ethers",
   "version": "0.6.0-preview-1",
   "description": "",
   "type": "module",
@@ -17,7 +17,8 @@
     "build": "rollup -c"
   },
   "dependencies": {
-    "ethers": "^6.13.2"
+    "ethers": "^6.13.2",
+    "@circles-sdk/adapter": "0.6.0-preview-1"
   },
   "keywords": [],
   "author": "",

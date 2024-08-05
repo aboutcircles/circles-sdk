@@ -42,17 +42,30 @@ export class V1Avatar implements AvatarInterface {
     }
 
     if (this.avatarInfo.v1Token) {
-      this._v1Token = Token__factory.connect(this.avatarInfo.v1Token, this.sdk.contractRunner.runner);
+      this._v1Token = Token__factory.connect(this.avatarInfo.v1Token, this.sdk.contractRunner);
     }
   }
 
   /**
    * Utilizes the pathfinder to find the max. transferable amount from the avatar to `to`.
    * @param to The recipient
+   * @param tokenId The token to transfer (address). Leave empty to allow transitive transfers.
    * @returns The max. transferable amount at the time.
    */
-  async getMaxTransferableAmount(to: string): Promise<bigint> {
+  async getMaxTransferableAmount(to: string, tokenId?: string): Promise<bigint> {
     this.throwIfNotInitialized();
+
+    if (tokenId) {
+      const tokenInfo = await this.sdk.data.getTokenInfo(tokenId);
+      if (!tokenInfo) {
+        throw new Error('Token not found');
+      }
+
+      const tokenBalances = await this.sdk.data.getTokenBalances(this.address);
+      const tokenBalance = tokenBalances.filter(b => b.token === tokenId)[0]?.balance;
+      return BigInt(tokenBalance ?? 0);
+    }
+
     this.throwIfPathfinderIsNotAvailable();
 
     const largeAmount = BigInt('999999999999999999999999999999');
