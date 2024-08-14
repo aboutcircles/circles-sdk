@@ -165,6 +165,16 @@ export class V2Avatar implements AvatarInterfaceV2 {
 
   async transfer(to: string, amount: bigint, tokenAddress?: string): Promise<ContractTransactionReceipt> {
     if (!tokenAddress) {
+      const approvalStatus = await this.sdk.v2Hub!.isApprovedForAll(this.address, this.address);
+      if (!approvalStatus) {
+        const tx = await this.sdk.v2Hub!.setApprovalForAll(this.address, true);
+        const receipt = await tx.wait();
+        if (!receipt) {
+          throw new Error('Approval failed');
+        }
+      }
+      console.log(`Approval by ${this.address} for ${this.address} successful`);
+
       return this.transitiveTransfer(to, amount);
     } else {
       return this.directTransfer(to, amount, tokenAddress);
