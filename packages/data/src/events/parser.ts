@@ -144,13 +144,6 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
         id: values.id ? hexToBigInt(values.id) : undefined,
         value: values.value ? hexToBigInt(values.value) : undefined
       };
-    case 'CrcV2_DiscountCost':
-      return {
-        ...baseEvent,
-        account: values.account,
-        id: values.id ? hexToBigInt(values.id) : undefined,
-        discountCost: values.discountCost ? hexToBigInt(values.discountCost) : undefined
-      };
     case 'CrcV2_RegisterShortName':
       return {
         ...baseEvent,
@@ -170,7 +163,61 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
         avatar: values.avatar,
         cidV0Digest: values.cidV0Digest ? hexToUint8Array(values.cidV0Digest) : undefined
       };
-    default:
+    case "CrcV2_CreateVault":
+      return {
+        ...baseEvent,
+          group: values.group,
+          vault: values.vault
+      };
+    case "CrcV2_StreamCompleted":
+      return {
+        ...baseEvent,
+          operator: values.operator,
+          from: values.from,
+          to: values.to,
+          id: values.id ? hexToBigInt(values.id) : undefined,
+          amount: values.amount ? hexToBigInt(values.amount) : undefined
+      };
+      case "CrcV2_GroupMintBatch":
+        return {
+          ...baseEvent,
+            group: values.group,
+            id: values.id ? hexToBigInt(values.id) : undefined,
+            value: values.value ? hexToBigInt(values.value) : undefined,
+            userData: values.userData ? hexToUint8Array(values.userData) : undefined
+        };
+      case "CrcV2_GroupMintSingle":
+        return {
+          ...baseEvent,
+            group: values.group,
+            id: values.id ? hexToBigInt(values.id) : undefined,
+            value: values.value ? hexToBigInt(values.value) : undefined,
+            userData: values.userData ? hexToUint8Array(values.userData) : undefined,
+        };
+      case "CrcV2_GroupRedeem":
+        return {
+            ...baseEvent,
+            group: values.group,
+            id: values.id ? hexToBigInt(values.id) : undefined,
+            value: values.value ? hexToBigInt(values.value) : undefined,
+            data: values.data ? hexToUint8Array(values.data) : undefined
+        };
+      case "CrcV2_GroupRedeemCollateralBurn":
+        return {
+            ...baseEvent,
+            group: values.group,
+            to: values.to,
+            id: values.id ? hexToBigInt(values.id) : undefined,
+            value: values.value ? hexToBigInt(values.value) : undefined
+        };
+      case "CrcV2_GroupRedeemCollateralReturn":
+        return {
+            ...baseEvent,
+            group: values.group,
+            id: values.id ? hexToBigInt(values.id) : undefined,
+            value: values.value ? hexToBigInt(values.value) : undefined
+        };
+      default:
       throw new Error(`Unknown event type: ${event}`);
   }
 };
