@@ -59,10 +59,17 @@ interface SdkInterface {
    */
   registerHuman: () => Promise<AvatarInterface>;
   /**
-   * Registers the connected wallet as a human avatar in Circles v2.
-   * @param cidV0 The CIDv0 of the avatar's ERC1155 token metadata.
+   * Registers the connected wallet as a human avatar in Circles v2 and creates a profile.
+   * @param profile The profile data of the avatar.
+   * @returns The Avatar instance.
    */
-  registerHumanV2: (profile: Profile) => Promise<AvatarInterface>;
+  registerHumanV2(profile: Profile): Promise<AvatarInterface>;
+  /**
+   * Registers the connected wallet as a human avatar in Circles v2 and using an existing CID as profile.
+   * @param cidV0 The CIDv0 of the avatar's ERC1155 token metadata.
+   * @returns The Avatar instance.
+   */
+  registerHumanV2(cidV0: string): Promise<AvatarInterface>;
   /**
    * Registers the connected wallet as an organization avatar in Circles v1.
    */
@@ -199,8 +206,19 @@ export class Sdk implements SdkInterface {
    * Note: This will only work if you already have a v1 avatar and only during the migration period.
    *       The only way to join after the migration period is to be invited by an existing member.
    * @param profile The profile data of the avatar.
+   * @returns The Avatar instance.
    */
-  registerHumanV2 = async (profile: Profile | string): Promise<AvatarInterface> => {
+  registerHumanV2(profile: Profile): Promise<AvatarInterface>;
+    /**
+     * Registers the connected wallet as a human avatar in Circles v2 using an existing CID as profile.
+     * Note: This will only work if you already have a v1 avatar and only during the migration period.
+     *      The only way to join after the migration period is to be invited by an existing member.
+     * @param cidV0 The CIDv0 of the avatar's ERC1155 token metadata.
+     * @returns The Avatar instance.
+     */
+  registerHumanV2(cidV0: string): Promise<AvatarInterface>;
+
+  async registerHumanV2(profile: Profile | string): Promise<AvatarInterface> {
     if (!this.v2Hub) {
       throw new Error('V2 hub not available');
     }
