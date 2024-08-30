@@ -3,6 +3,7 @@ import {
   TrustRelationRow
 } from '@circles-sdk/data';
 import { ContractTransactionReceipt } from 'ethers';
+import {Profile} from "@circles-sdk/profiles";
 
 /**
  * An Avatar represents a user registered at Circles.
@@ -85,6 +86,11 @@ export interface AvatarInterface {
    * Gets the avatar's total circles balance.
    */
   getTotalBalance(): Promise<number>;
+
+  /**
+   * Gets the avatar's balance of chain native token (e.g. xDai).
+   */
+  getGasTokenBalance(): Promise<bigint>;
 }
 
 /**
@@ -123,4 +129,17 @@ export interface AvatarInterfaceV2 extends AvatarInterface {
    * @param cid The IPFS CID of the metadata.
    */
   updateMetadata(cid: string): Promise<ContractTransactionReceipt>;
+
+  /**
+   * Gets the profile that's associated with the avatar or returns `undefined` if no profile is associated.
+   * @returns The profile or `undefined`.
+   */
+  getProfile() : Promise<Profile | undefined>;
+
+   /**
+    * Updates the avatar's metadata (profile).
+    * @param profile The new profile.
+    * @returns The IPFS CID of the updated profile.
+    */
+  updateProfile(profile: Profile) : Promise<string>;
 }

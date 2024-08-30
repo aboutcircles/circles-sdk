@@ -11,6 +11,7 @@ import {
 import { V2Avatar } from './v2/v2Avatar';
 import { CirclesEvent } from '@circles-sdk/data';
 import { tcToCrc } from '@circles-sdk/utils';
+import { Profile } from "@circles-sdk/profiles";
 
 /**
  * An Avatar represents a user registered at Circles.
@@ -147,6 +148,7 @@ export class Avatar implements AvatarInterfaceV2 {
    *       Use the `getMaxTransferableAmount()` method to calculate the max. transferable amount if you need to know it beforehand.
    * @param to The address of the avatar to transfer to.
    * @param amount The amount to transfer.
+   * @param token The token to transfer. Leave empty to allow transitive transfers.
    */
   transfer(to: string, amount: number, token?: string): Promise<ContractTransactionReceipt>;
   transfer(to: string, amount: bigint, token?: string): Promise<ContractTransactionReceipt>;
@@ -190,6 +192,12 @@ export class Avatar implements AvatarInterfaceV2 {
    *       Token holdings in v1 can be migrated to v2. Check out `Sdk.migrateAvatar` or `Sdk.migrateAllV1Tokens` for more information.
    */
   getTotalBalance = (): Promise<number> => this.onlyIfInitialized(() => this._avatar!.getTotalBalance());
+
+  /**
+   * Gets the avatar's total balance of chain-native tokens.
+   */
+  getGasTokenBalance = (): Promise<bigint> => this.onlyIfInitialized(() => this._avatar!.getGasTokenBalance());
+
   /**
    * Use collateral, trusted by the group, to mint new Group Circles.
    * @param group The group which Circles to mint.
@@ -221,4 +229,17 @@ export class Avatar implements AvatarInterfaceV2 {
    * @param cid The IPFS content identifier of the metadata (Qm....).
    */
   updateMetadata = (cid: string): Promise<ContractTransactionReceipt> => this.onlyIfV2((_avatar) => _avatar.updateMetadata(cid));
+
+  /**
+   * Gets the profile that's associated with the avatar or returns `undefined` if no profile is associated.
+   * @returns The profile or `undefined`.
+   */
+  getProfile = (): Promise<Profile | undefined> => this.onlyIfV2((_avatar) => _avatar.getProfile());
+
+  /**
+   * Updates the avatar's profile.
+   * @param profile The new profile.
+   * @returns The IPFS CID of the updated profile.
+   */
+  updateProfile = (profile: Profile): Promise<string> => this.onlyIfV2((_avatar) => _avatar.updateProfile(profile));
 }

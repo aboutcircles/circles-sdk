@@ -47,7 +47,7 @@ export interface AvatarRow extends EventRow {
   cidV0Digest?: string;
 
   /**
-   * The CIDv0 of the avatar's metadata (profile
+   * The CIDv0 of the avatar's metadata (profile)
    */
   cidV0?: string;
 

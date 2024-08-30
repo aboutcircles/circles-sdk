@@ -9,13 +9,14 @@
     "packages/profiles",
     "packages/adapter",
     "packages/adapter-cometh",
-    "packages/adapter-ethers"
+    "packages/adapter-ethers",
+    "packages/adapter-safe-app"
   ],
   "scripts": {
     "test": "jest",
-    "build": "./generateCode.sh && npm run build -w @circles-sdk/abi-v1 -w @circles-sdk/abi-v2 -w @circles-sdk/utils -w @circles-sdk/data -w @circles-sdk/profiles -w @circles-sdk/adapter -w @circles-sdk/adapter-cometh -w @circles-sdk/adapter-ethers -w @circles-sdk/sdk",
-    "publish": "npm run build && npm publish -w @circles-sdk/abi-v1 -w @circles-sdk/abi-v2 -w @circles-sdk/utils -w @circles-sdk/data -w @circles-sdk/profiles -w @circles-sdk/adapter -w @circles-sdk/adapter-cometh -w @circles-sdk/adapter-ethers -w @circles-sdk/sdk",
-    "publish:dry-run": "npm run build && npm publish --dry-run -w @circles-sdk/abi-v1 -w @circles-sdk/abi-v2 -w @circles-sdk/utils -w @circles-sdk/data -w @circles-sdk/profiles -w @circles-sdk/adapter -w @circles-sdk/adapter-cometh -w @circles-sdk/adapter-ethers -w @circles-sdk/sdk"
+    "build": "./generateCode.sh && npm run build -w @circles-sdk/abi-v1 -w @circles-sdk/abi-v2 -w @circles-sdk/utils -w @circles-sdk/data -w @circles-sdk/profiles -w @circles-sdk/adapter -w @circles-sdk/adapter-cometh -w @circles-sdk/adapter-ethers -w @circles-sdk/adapter-safe-app  -w @circles-sdk/sdk",
+    "publish": "npm run build && npm publish -w @circles-sdk/abi-v1 -w @circles-sdk/abi-v2 -w @circles-sdk/utils -w @circles-sdk/data -w @circles-sdk/profiles -w @circles-sdk/adapter -w @circles-sdk/adapter-cometh -w @circles-sdk/adapter-ethers -w @circles-sdk/adapter-safe-app -w @circles-sdk/sdk",
+    "publish:dry-run": "npm run build && npm publish --dry-run -w @circles-sdk/abi-v1 -w @circles-sdk/abi-v2 -w @circles-sdk/utils -w @circles-sdk/data -w @circles-sdk/profiles -w @circles-sdk/adapter -w @circles-sdk/adapter-cometh -w @circles-sdk/adapter-ethers -w @circles-sdk/adapter-safe-app  -w @circles-sdk/sdk"
   },
   "devDependencies": {
     "@rollup/plugin-json": "^6.1.0",
@@ -34,5 +35,5 @@
   },
   "name": "@cirlces-sdk/root",
   "license": "MIT",
-  "version": "0.7.0-preview-1"
+  "version": "0.7.1"
 }

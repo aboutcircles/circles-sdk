@@ -1,5 +1,5 @@
 {
-  "name": "@circles-sdk/utils",
+  "name": "@circles-sdk/adapter-safe-app",
   "version": "0.7.1",
   "description": "",
   "type": "module",
@@ -17,7 +17,8 @@
     "build": "rollup -c"
   },
   "dependencies": {
-    "bignumber.js": "^9.1.2"
+    "@circles-sdk/adapter": "0.7.1",
+    "@safe-global/safe-apps-sdk": "^9.1.0"
   },
   "keywords": [],
   "author": "",

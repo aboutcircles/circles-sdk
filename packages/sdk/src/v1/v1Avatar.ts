@@ -204,6 +204,10 @@ export class V1Avatar implements AvatarInterface {
     return parseFloat(await this.sdk.data.getTotalBalance(this.address, true));
   }
 
+  async getGasTokenBalance(): Promise<bigint> {
+    return await this.sdk.contractRunner.provider?.getBalance(this.address) ?? 0n;
+  }
+
   private throwIfPathfinderIsNotAvailable() {
     if (!this.sdk.v1Pathfinder) {
       throw new Error('Pathfinder is not available');

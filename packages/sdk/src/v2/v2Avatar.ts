@@ -12,6 +12,7 @@ import {
 } from '@circles-sdk/data';
 import { addressToUInt256, cidV0ToUint8Array } from '@circles-sdk/utils';
 import { Pathfinder } from './pathfinderV2';
+import {Profile} from "@circles-sdk/profiles";
 
 export type FlowEdge = {
   streamSinkId: bigint;
@@ -33,6 +34,9 @@ export class V2Avatar implements AvatarInterfaceV2 {
 
   public readonly avatarInfo: AvatarRow;
 
+  private _cachedProfile: Profile | undefined;
+  private _cachedProfileCid: string | undefined;
+
   constructor(sdk: Sdk, avatarInfo: AvatarRow) {
     this.sdk = sdk;
     this.avatarInfo = avatarInfo;
@@ -51,6 +55,8 @@ export class V2Avatar implements AvatarInterfaceV2 {
     if (!receipt) {
       throw new Error('Transfer failed');
     }
+
+    this.avatarInfo.cidV0 = cid;
 
     return receipt;
   }
@@ -91,6 +97,10 @@ export class V2Avatar implements AvatarInterfaceV2 {
 
   async getTotalBalance(): Promise<number> {
     return parseFloat(await this.sdk.data.getTotalBalanceV2(this.address, true));
+  }
+
+  async getGasTokenBalance(): Promise<bigint> {
+    return await this.sdk.contractRunner.provider?.getBalance(this.address) ?? 0n;
   }
 
   async getTransactionHistory(pageSize: number): Promise<CirclesQuery<TransactionHistoryRow>> {
@@ -214,6 +224,45 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
+  async getProfile(): Promise<Profile | undefined> {
+      const profileCid = this.avatarInfo?.cidV0;
+      if (this._cachedProfile && this._cachedProfileCid === profileCid) {
+          return this._cachedProfile;
+      }
+
+      if (profileCid) {
+          try {
+              const profileData = await this.sdk?.profiles?.get(profileCid);
+              if (profileData) {
+                  this._cachedProfile = profileData;
+                  this._cachedProfileCid = profileCid;
+
+                  return this._cachedProfile;
+              }
+          } catch (e) {
+              console.warn(`Couldn't load profile for CID ${profileCid}`, e);
+          }
+      }
+
+      return undefined;
+  }
+
+  async updateProfile(profile: Profile): Promise<string> {
+    const result = await this.sdk?.profiles?.create(profile);
+    if (!result) {
+      throw new Error('Failed to update profile. The profile service did not return a CID.');
+    }
+
+    const updateCidResult = await this.updateMetadata(result);
+    if (!updateCidResult) {
+      throw new Error('Failed to update profile. The CID was not updated.');
+    }
+
+    this.avatarInfo.cidV0 = result;
+
+    return result;
+  }
+
   wrapDemurrageErc20(amount: bigint): Promise<ContractTransactionReceipt> {
     throw new Error('Not implemented');
   }
@@ -222,7 +271,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
     throw new Error('Not implemented');
   }
 
-  /**
+    /**
    * Invite a user to Circles (TODO: May cost you invite fees).
    * @param avatar The address of the avatar to invite. Can be either a v1 address or an address that's not signed up yet.
    */

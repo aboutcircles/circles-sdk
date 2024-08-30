@@ -43,7 +43,6 @@ export {
   CrcV2_TransferBatch,
   CrcV2_TransferSingle,
   CrcV2_Trust,
-  CrcV2_DiscountCost,
   CrcV2_Stopped,
   CrcV2_URI,
   CrcV2_PersonalMint,
