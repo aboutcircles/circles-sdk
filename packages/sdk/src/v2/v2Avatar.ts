@@ -1,17 +1,17 @@
-import { AvatarInterfaceV2 } from '../AvatarInterface';
+import {AvatarInterfaceV2} from '../AvatarInterface';
 import {
   ContractTransactionReceipt, ethers,
   formatEther
 } from 'ethers';
-import { Sdk } from '../sdk';
+import {Sdk} from '../sdk';
 import {
   AvatarRow,
   CirclesQuery,
   TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
-import { addressToUInt256, cidV0ToUint8Array } from '@circles-sdk/utils';
-import { Pathfinder } from './pathfinderV2';
+import {addressToUInt256, cidV0ToUint8Array} from '@circles-sdk/utils';
+import {Pathfinder} from './pathfinderV2';
 import {Profile} from "@circles-sdk/profiles";
 
 export type FlowEdge = {
@@ -225,26 +225,26 @@ export class V2Avatar implements AvatarInterfaceV2 {
   }
 
   async getProfile(): Promise<Profile | undefined> {
-      const profileCid = this.avatarInfo?.cidV0;
-      if (this._cachedProfile && this._cachedProfileCid === profileCid) {
+    const profileCid = this.avatarInfo?.cidV0;
+    if (this._cachedProfile && this._cachedProfileCid === profileCid) {
+      return this._cachedProfile;
+    }
+
+    if (profileCid) {
+      try {
+        const profileData = await this.sdk?.profiles?.get(profileCid);
+        if (profileData) {
+          this._cachedProfile = profileData;
+          this._cachedProfileCid = profileCid;
+
           return this._cachedProfile;
+        }
+      } catch (e) {
+        console.warn(`Couldn't load profile for CID ${profileCid}`, e);
       }
+    }
 
-      if (profileCid) {
-          try {
-              const profileData = await this.sdk?.profiles?.get(profileCid);
-              if (profileData) {
-                  this._cachedProfile = profileData;
-                  this._cachedProfileCid = profileCid;
-
-                  return this._cachedProfile;
-              }
-          } catch (e) {
-              console.warn(`Couldn't load profile for CID ${profileCid}`, e);
-          }
-      }
-
-      return undefined;
+    return undefined;
   }
 
   async updateProfile(profile: Profile): Promise<string> {
@@ -271,14 +271,19 @@ export class V2Avatar implements AvatarInterfaceV2 {
     throw new Error('Not implemented');
   }
 
-    /**
-   * Invite a user to Circles (TODO: May cost you invite fees).
+  /**
+   * Invite a user to Circles.
    * @param avatar The address of the avatar to invite. Can be either a v1 address or an address that's not signed up yet.
    */
   async inviteHuman(avatar: string): Promise<ContractTransactionReceipt> {
     this.throwIfV2IsNotAvailable();
-    const tx = await this.sdk.v2Hub!.inviteHuman(avatar);
-    const receipt = await tx.wait();
+
+    const avatarInfo = await this.sdk.data.getAvatarInfo(avatar);
+    if (avatarInfo?.version == 2) {
+      throw new Error('Avatar is already a v2 avatar');
+    }
+
+    const receipt = await this.trust(avatar);
     if (!receipt) {
       throw new Error('Invite failed');
     }

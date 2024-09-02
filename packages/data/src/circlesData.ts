@@ -1,22 +1,33 @@
-import { CirclesQuery } from './pagedQuery/circlesQuery';
-import { TransactionHistoryRow } from './rows/transactionHistoryRow';
-import { TrustListRow } from './rows/trustListRow';
-import { TokenBalanceRow } from './rows/tokenBalanceRow';
-import { CirclesRpc } from './circlesRpc';
-import { AvatarRow } from './rows/avatarRow';
-import { crcToTc, hexStringToUint8Array, uint8ArrayToCidV0 } from '@circles-sdk/utils';
-import { ethers } from 'ethers';
-import { TrustRelation, TrustRelationRow } from './rows/trustRelationRow';
-import { CirclesDataInterface, GroupQueryParams } from './circlesDataInterface';
-import { Observable } from './observable';
-import { CirclesEvent } from './events/events';
-import { InvitationRow } from './rows/invitationRow';
-import { PagedQueryParams } from './pagedQuery/pagedQueryParams';
-import { Filter } from './rpcSchema/filter';
-import { GroupMembershipRow } from './rows/groupMembershipRow';
-import { GroupRow } from './rows/groupRow';
-import { TokenInfoRow } from './rows/tokenInfoRow';
-import { parseRpcSubscriptionMessage, RcpSubscriptionEvent } from './events/parser';
+import {CirclesQuery} from './pagedQuery/circlesQuery';
+import {TransactionHistoryRow} from './rows/transactionHistoryRow';
+import {TrustListRow} from './rows/trustListRow';
+import {TokenBalanceRow} from './rows/tokenBalanceRow';
+import {CirclesRpc} from './circlesRpc';
+import {AvatarRow} from './rows/avatarRow';
+import {crcToTc, hexStringToUint8Array, uint8ArrayToCidV0} from '@circles-sdk/utils';
+import {ethers} from 'ethers';
+import {TrustRelation, TrustRelationRow} from './rows/trustRelationRow';
+import {CirclesDataInterface, GroupQueryParams} from './circlesDataInterface';
+import {Observable} from './observable';
+import {CirclesEvent} from './events/events';
+import {InvitationRow} from './rows/invitationRow';
+import {PagedQueryParams} from './pagedQuery/pagedQueryParams';
+import {Filter} from './rpcSchema/filter';
+import {GroupMembershipRow} from './rows/groupMembershipRow';
+import {GroupRow} from './rows/groupRow';
+import {TokenInfoRow} from './rows/tokenInfoRow';
+import {parseRpcSubscriptionMessage, RcpSubscriptionEvent} from './events/parser';
+
+export type TrustEvent = {
+  blockNumber: number;
+  timestamp: number;
+  transactionIndex: number;
+  logIndex: number;
+  transactionHash: string;
+  trustee: string;
+  truster: string;
+  expiryTime: number;
+};
 
 export class CirclesData implements CirclesDataInterface {
   readonly rpc: CirclesRpc;
@@ -138,6 +149,42 @@ export class CirclesData implements CirclesDataInterface {
     }]);
   }
 
+  getIncomingTrustEvents(avatar: string, pageSize: number): CirclesQuery<TrustEvent> {
+    return new CirclesQuery<TrustEvent>(this.rpc, {
+      namespace: 'V_Crc',
+      table: 'TrustRelations',
+      sortOrder: 'DESC',
+      limit: pageSize,
+      columns: [
+        "blockNumber",
+        "timestamp",
+        "transactionIndex",
+        "logIndex",
+        "transactionHash",
+        "trustee",
+        "truster",
+        "expiryTime"
+      ],
+      filter: [
+        {
+          Type: 'Conjunction',
+          ConjunctionType: 'And',
+          Predicates: [{
+            Type: 'FilterPredicate',
+            FilterType: 'Equals',
+            Column: 'trustee',
+            Value: avatar.toLowerCase()
+          }, {
+            Type: 'FilterPredicate',
+            FilterType: 'IsNotNull',
+            Column: 'expiryTime',
+            Value: true
+          }]
+        }
+      ]
+    });
+  }
+
   /**
    * Gets the current incoming and outgoing trust relations of an address.
    * Expired or revoked trust relations are not included.
@@ -248,8 +295,8 @@ export class CirclesData implements CirclesDataInterface {
    * @returns The avatar info or undefined if the avatar is not found.
    */
   async getAvatarInfo(avatar: string): Promise<AvatarRow | undefined> {
-      const avatarInfos = await this.getAvatarInfos([avatar]);
-      return avatarInfos.length > 0 ? avatarInfos[0] : undefined;
+    const avatarInfos = await this.getAvatarInfos([avatar]);
+    return avatarInfos.length > 0 ? avatarInfos[0] : undefined;
   }
 
   /**
@@ -259,7 +306,7 @@ export class CirclesData implements CirclesDataInterface {
    */
   async getAvatarInfos(avatars: string[]): Promise<AvatarRow[]> {
     if (avatars.length === 0) {
-        return [];
+      return [];
     }
 
     const circlesQuery = new CirclesQuery<AvatarRow>(this.rpc, {
@@ -287,7 +334,7 @@ export class CirclesData implements CirclesDataInterface {
       ],
       sortOrder: 'ASC',
       limit: 1000
-  }, [{
+    }, [{
       name: 'cidV0',
       generator: async (row: AvatarRow) => {
         try {
@@ -307,24 +354,24 @@ export class CirclesData implements CirclesDataInterface {
     const results: AvatarRow[] = [];
 
     while (await circlesQuery.queryNextPage()) {
-        const resultRows = circlesQuery.currentPage?.results ?? [];
-        if (resultRows.length === 0) break;
-        results.push(...resultRows);
-        if (resultRows.length < 1000) break;
+      const resultRows = circlesQuery.currentPage?.results ?? [];
+      if (resultRows.length === 0) break;
+      results.push(...resultRows);
+      if (resultRows.length < 1000) break;
     }
 
     const avatarMap: { [key: string]: AvatarRow } = {};
 
     results.forEach(avatarRow => {
       if (!avatarMap[avatarRow.avatar]) {
-            avatarMap[avatarRow.avatar] = avatarRow;
+        avatarMap[avatarRow.avatar] = avatarRow;
       }
 
       if (avatarRow.version === 1) {
-            avatarMap[avatarRow.avatar].hasV1 = true;
-            avatarMap[avatarRow.avatar].v1Token = avatarRow.tokenId;
+        avatarMap[avatarRow.avatar].hasV1 = true;
+        avatarMap[avatarRow.avatar].v1Token = avatarRow.tokenId;
       } else {
-            avatarMap[avatarRow.avatar] = {
+        avatarMap[avatarRow.avatar] = {
           ...avatarMap[avatarRow.avatar],
           ...avatarRow
         };

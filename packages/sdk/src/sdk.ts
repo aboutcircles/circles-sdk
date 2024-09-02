@@ -1,18 +1,19 @@
-import { Avatar } from './avatar';
-import { CirclesConfig } from './circlesConfig';
-import { Pathfinder } from './v1/pathfinder';
-import { AvatarInterface } from './AvatarInterface';
-import { Hub as HubV1, Hub__factory as HubV1Factory, Token__factory } from '@circles-sdk/abi-v1';
+import {Avatar} from './avatar';
+import {CirclesConfig} from './circlesConfig';
+import {Pathfinder} from './v1/pathfinder';
+import {AvatarInterface} from './AvatarInterface';
+import {Hub as HubV1, Hub__factory as HubV1Factory, Token__factory} from '@circles-sdk/abi-v1';
 import {
   Hub as HubV2,
   Hub__factory as HubV2Factory,
   Migration__factory, NameRegistry, NameRegistry__factory
 } from '@circles-sdk/abi-v2';
-import { AvatarRow, CirclesData, CirclesRpc } from '@circles-sdk/data';
-import { V1Avatar } from './v1/v1Avatar';
-import { cidV0ToUint8Array } from '@circles-sdk/utils';
-import { GroupProfile, Profile, Profiles } from '@circles-sdk/profiles';
-import { EthersContractRunner } from '@circles-sdk/adapter-ethers';
+import {AvatarRow, CirclesData, CirclesRpc} from '@circles-sdk/data';
+import {V1Avatar} from './v1/v1Avatar';
+import {cidV0ToUint8Array} from '@circles-sdk/utils';
+import {GroupProfile, Profile, Profiles} from '@circles-sdk/profiles';
+import {EthersContractRunner} from '@circles-sdk/adapter-ethers';
+import {ZeroAddress} from "ethers";
 
 /**
  * The SDK interface.
@@ -58,18 +59,21 @@ interface SdkInterface {
    * @returns The Avatar instance.
    */
   registerHuman: () => Promise<AvatarInterface>;
+
   /**
    * Registers the connected wallet as a human avatar in Circles v2 and creates a profile.
    * @param profile The profile data of the avatar.
    * @returns The Avatar instance.
    */
   registerHumanV2(profile: Profile): Promise<AvatarInterface>;
+
   /**
    * Registers the connected wallet as a human avatar in Circles v2 and using an existing CID as profile.
    * @param cidV0 The CIDv0 of the avatar's ERC1155 token metadata.
    * @returns The Avatar instance.
    */
   registerHumanV2(cidV0: string): Promise<AvatarInterface>;
+
   /**
    * Registers the connected wallet as an organization avatar in Circles v1.
    */
@@ -209,23 +213,48 @@ export class Sdk implements SdkInterface {
    * @returns The Avatar instance.
    */
   registerHumanV2(profile: Profile): Promise<AvatarInterface>;
-    /**
-     * Registers the connected wallet as a human avatar in Circles v2 using an existing CID as profile.
-     * Note: This will only work if you already have a v1 avatar and only during the migration period.
-     *      The only way to join after the migration period is to be invited by an existing member.
-     * @param cidV0 The CIDv0 of the avatar's ERC1155 token metadata.
-     * @returns The Avatar instance.
-     */
+  /**
+   * Registers the connected wallet as a human avatar in Circles v2 using an existing CID as profile.
+   * Note: This will only work if you already have a v1 avatar and only during the migration period.
+   *      The only way to join after the migration period is to be invited by an existing member.
+   * @param cidV0 The CIDv0 of the avatar's ERC1155 token metadata.
+   * @returns The Avatar instance.
+   */
   registerHumanV2(cidV0: string): Promise<AvatarInterface>;
-
+  /**
+   * Registers the connected wallet as a human avatar in Circles v2.
+   * @param profile The profile data of the avatar.
+   */
   async registerHumanV2(profile: Profile | string): Promise<AvatarInterface> {
+    return this._registerHuman(ZeroAddress, profile);
+  };
+
+  /**
+   * If you have been invited to Circles, you can accept the invitation and join the Circles network.
+   * Specify who invited you and supply the profile you want to use with your new account.
+   * @param inviter The address of the avatar that invited you.
+   * @param cidV0 The CIDv0 of the avatar's ERC1155 token metadata.
+   */
+  acceptInvitation(inviter: string, cidV0: string): Promise<AvatarInterface>;
+  /**
+   * If you have been invited to Circles, you can accept the invitation and join the Circles network.
+   * @param inviter The address of the avatar that invited you.
+   * @param profile The profile data of the avatar.
+   */
+  acceptInvitation(inviter: string, profile: Profile): Promise<AvatarInterface>;
+
+  async acceptInvitation(inviter: string, profile: Profile | string): Promise<AvatarInterface> {
+    return this._registerHuman(inviter, profile);
+  }
+
+  private async _registerHuman(inviter: string, profile: Profile | string): Promise<AvatarInterface> {
     if (!this.v2Hub) {
       throw new Error('V2 hub not available');
     }
 
     let metadataDigest: Uint8Array = await this.createProfileIfNecessary(profile);
 
-    const tx = await this.v2Hub.registerHuman(metadataDigest);
+    const tx = await this.v2Hub.registerHuman(inviter, metadataDigest);
     const receipt = await tx.wait();
     if (!receipt) {
       throw new Error('Transaction failed');
@@ -234,7 +263,7 @@ export class Sdk implements SdkInterface {
     await this.waitForAvatarInfo(this.contractRunner.address!);
 
     return this.getAvatar(this.contractRunner.address!);
-  };
+  }
 
   /**
    * Checks if the profile argument is a string or a Profile object and creates the profile if necessary.
