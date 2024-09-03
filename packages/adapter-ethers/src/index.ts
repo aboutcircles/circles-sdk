@@ -5,9 +5,9 @@ import {
   ContractRunner,
   Provider,
   TransactionRequest,
-  TransactionResponse
+  TransactionResponse, Wallet
 } from 'ethers';
-import { SdkContractRunner } from '@circles-sdk/adapter';
+import {SdkContractRunner} from '@circles-sdk/adapter';
 
 export abstract class EthersContractRunner implements ContractRunner {
   abstract address?: string;
@@ -18,6 +18,39 @@ export abstract class EthersContractRunner implements ContractRunner {
   abstract sendTransaction?: ((tx: TransactionRequest) => Promise<TransactionResponse>) | undefined;
 
   abstract init(): Promise<void>;
+}
+
+export class PrivateKeyContractRunner implements EthersContractRunner {
+  constructor(public provider: Provider, private privateKey: string) {
+  }
+
+  private _wallet?: Wallet;
+
+  async init(): Promise<void> {
+    this._wallet = new Wallet(this.privateKey, this.provider);
+    this.address = await this._wallet.getAddress();
+  }
+
+  private ensureWallet(): Wallet {
+    if (!this._wallet) {
+      throw new Error('Not initialized');
+    }
+    return this._wallet;
+  }
+
+  address?: string;
+  estimateGas?: ((tx: TransactionRequest) => Promise<bigint>) | undefined = async (tx) => {
+    return this.ensureWallet().estimateGas(tx);
+  };
+  call?: ((tx: TransactionRequest) => Promise<string>) | undefined = async (tx) => {
+    return this.ensureWallet().call(tx);
+  };
+  resolveName?: ((name: string) => Promise<string | null>) | undefined = async (name) => {
+    return this.ensureWallet().resolveName(name);
+  };
+  sendTransaction?: ((tx: TransactionRequest) => Promise<TransactionResponse>) | undefined = async (tx) => {
+    return this.ensureWallet().sendTransaction(tx);
+  };
 }
 
 export class BrowserProviderContractRunner implements EthersContractRunner {
