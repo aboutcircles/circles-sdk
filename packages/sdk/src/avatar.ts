@@ -1,17 +1,17 @@
-import { V1Avatar } from './v1/v1Avatar';
-import { ContractTransactionReceipt, parseEther } from 'ethers';
-import { Sdk } from './sdk';
-import { AvatarInterface, AvatarInterfaceV2 } from './AvatarInterface';
+import {V1Avatar} from './v1/v1Avatar';
+import {ContractTransactionReceipt, parseEther} from 'ethers';
+import {Sdk} from './sdk';
+import {AvatarInterface, AvatarInterfaceV2} from './AvatarInterface';
 import {
   AvatarRow,
   CirclesQuery, Observable,
   TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
-import { V2Avatar } from './v2/v2Avatar';
-import { CirclesEvent } from '@circles-sdk/data';
-import { tcToCrc } from '@circles-sdk/utils';
-import { Profile } from "@circles-sdk/profiles";
+import {V2Avatar} from './v2/v2Avatar';
+import {CirclesEvent} from '@circles-sdk/data';
+import {tcToCrc} from '@circles-sdk/utils';
+import {Profile} from "@circles-sdk/profiles";
 
 /**
  * An Avatar represents a user registered at Circles.
@@ -73,7 +73,7 @@ export class Avatar implements AvatarInterfaceV2 {
       throw new Error('Avatar is not signed up at Circles');
     }
 
-    const { version, hasV1 } = this._avatarInfo;
+    const {version, hasV1} = this._avatarInfo;
     const v1Person = () => new V1Avatar(this._sdk, this._avatarInfo!);
     const v2Person = () => new V2Avatar(this._sdk, this._avatarInfo!);
 
@@ -141,6 +141,7 @@ export class Avatar implements AvatarInterfaceV2 {
    * @returns The maximum Circles amount that can be transferred.
    */
   getMaxTransferableAmount = (to: string, tokenId?: string): Promise<bigint> => this.onlyIfInitialized(() => this._avatar!.getMaxTransferableAmount(to, tokenId));
+
   /**
    * Transfers Circles to another avatar.
    *
@@ -162,6 +163,7 @@ export class Avatar implements AvatarInterfaceV2 {
     }
     return this.onlyIfInitialized(() => this._avatar!.transfer(to, amount, token))
   }
+
   /**
    * Trusts another avatar. Trusting an avatar means you're willing to accept Circles that have been issued by this avatar.
    * @param avatar The address of the avatar to trust.
@@ -174,6 +176,21 @@ export class Avatar implements AvatarInterfaceV2 {
    * @returns The transaction receipt.
    */
   untrust = (avatar: string): Promise<ContractTransactionReceipt> => this.onlyIfInitialized(() => this._avatar!.untrust(avatar));
+
+  /**
+   * Can be used to check if this avatar trusts the other avatar.
+   * @param otherAvatar The address of the other avatar.
+   * @return `true` if this avatar trusts the other avatar.
+   */
+  trusts = (otherAvatar: string): Promise<boolean> => this.onlyIfInitialized(() => this._avatar!.trusts(otherAvatar));
+
+  /**
+   * Can be used to check if this avatar is trusted by the other avatar.
+   * @param otherAvatar The address of the other avatar.
+   * @return `true` if this avatar is trusted by the other avatar.
+   */
+  isTrustedBy = (otherAvatar: string): Promise<boolean> => this.onlyIfInitialized(() => this._avatar!.isTrustedBy(otherAvatar));
+
   /**
    * Gets the trust relations of the avatar.
    * @returns An array of trust relations in this form: avatar1 - [trusts|trustedBy|mutuallyTrusts] -> avatar2.
@@ -210,15 +227,29 @@ export class Avatar implements AvatarInterfaceV2 {
   /**
    * Wraps the specified amount of personal Circles into demurraged ERC20 tokens for use outside the Circles protocol.
    * Note: This kind of token can be incompatible with services since it's demurraged and thus the balance changes over time.
+   * @param avatarAddress The address of the avatar whose Circles should be wrapped.
    * @param amount The amount of Circles to wrap.
    */
-  wrapDemurrageErc20 = (amount: bigint): Promise<ContractTransactionReceipt> => this.onlyIfV2((avatar) => avatar.wrapDemurrageErc20(amount));
+  wrapDemurrageErc20 = (avatarAddress: string, amount: bigint): Promise<string> => this.onlyIfV2((avatar) => avatar.wrapDemurrageErc20(avatarAddress, amount));
   /**
    * Wraps the specified amount of inflation Circles into ERC20 tokens for use outside the Circles protocol.
    * In contrast to demurraged tokens, these token's balance does not change over time.
-   * @param amount
+   * @param avatarAddress The address of the avatar whose Circles should be wrapped.
+   * @param amount The amount of Circles to wrap.
    */
-  wrapInflationErc20 = (amount: bigint): Promise<ContractTransactionReceipt> => this.onlyIfV2((avatar) => avatar.wrapInflationErc20(amount));
+  wrapInflationErc20 = (avatarAddress: string, amount: bigint): Promise<string> => this.onlyIfV2((avatar) => avatar.wrapInflationErc20(avatarAddress, amount));
+  /**
+   * Unwraps the specified amount of demurraged ERC20 Circles back to personal Circles.
+   * @param tokenAddress The token address of the ERC20 Circles.
+   * @param amount The amount of ERC20 Circles to unwrap.
+   */
+  unwrapDemurrageErc20 = (tokenAddress: string, amount: bigint): Promise<ContractTransactionReceipt> => this.onlyIfV2((avatar) => avatar.unwrapDemurrageErc20(tokenAddress, amount));
+  /**
+   * Unwraps the specified amount of inflation ERC20 Circles back to personal Circles.
+   * @param avatarAddress The address of the avatar whose Circles should be unwrapped.
+   * @param amount The amount of ERC20 Circles to unwrap.
+   */
+  unwrapInflationErc20 = (avatarAddress: string, amount: bigint): Promise<ContractTransactionReceipt> => this.onlyIfV2((avatar) => avatar.unwrapInflationErc20(avatarAddress, amount));
   /**
    * Invite a human avatar to join Circles.
    * @param avatar The address of any human controlled wallet.

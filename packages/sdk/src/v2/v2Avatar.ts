@@ -46,6 +46,13 @@ export class V2Avatar implements AvatarInterfaceV2 {
     }
   }
 
+  trusts(otherAvatar: string): Promise<boolean> {
+    return this.sdk.v2Hub!.isTrusted(this.address, otherAvatar);
+  }
+  isTrustedBy(otherAvatar: string): Promise<boolean> {
+    return this.sdk.v2Hub!.isTrusted(otherAvatar, this.address);
+  }
+
   async updateMetadata(cid: string): Promise<ContractTransactionReceipt> {
     this.throwIfNameRegistryIsNotAvailable();
 
@@ -263,11 +270,64 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return result;
   }
 
-  wrapDemurrageErc20(amount: bigint): Promise<ContractTransactionReceipt> {
+  async wrapDemurrageErc20(avatarAddress: string, amount: bigint): Promise<string> {
+    const wrapResult = await this.sdk.v2Hub?.wrap(avatarAddress, amount, 0n /*Demurrage*/);
+    const receipt = await wrapResult?.wait();
+    console.log(`wrapDemurrageErc20 receipt: ${receipt}`);
+
+    if (!receipt) {
+      throw new Error('Wrap failed');
+    }
+
+    return await this.decodeErc20WrapperDeployed(receipt);
+  }
+
+  async wrapInflationErc20(avatarAddress: string, amount: bigint): Promise<string> {
+    const wrapResult = await this.sdk.v2Hub?.wrap(avatarAddress, amount, 1n /*Inflation*/);
+    const receipt = await wrapResult?.wait();
+    console.log(`wrapInflationErc20 receipt: ${receipt}`);
+
+    if (!receipt) {
+      throw new Error('Wrap failed');
+    }
+
+    return await this.decodeErc20WrapperDeployed(receipt);
+  }
+
+  async unwrapDemurrageErc20(avatarAddress: string, amount: bigint): Promise<ContractTransactionReceipt> {
+  //   const wrapResult = await this.sdk.v2Hub?.wrap)
+  //   const receipt = await wrapResult?.wait();
+  //   console.log(`unwrapDemurrageErc20 receipt: ${receipt}`);
+  //
+  //   if (!receipt) {
+  //     throw new Error('Unwrap failed');
+  //   }
+  //   return receipt;
     throw new Error('Not implemented');
   }
 
-  wrapInflationErc20(amount: bigint): Promise<ContractTransactionReceipt> {
+  async unwrapInflationErc20(avatarAddress: string, amount: bigint): Promise<ContractTransactionReceipt> {
+  //   const wrapResult = await this.sdk.v2Hub?.unwrap(avatarAddress, amount, 1n /*Inflation*/);
+  //   const receipt = await wrapResult?.wait();
+  //   console.log(`unwrapInflationErc20 receipt: ${receipt}`);
+  //
+  //   if (!receipt) {
+  //     throw new Error('Unwrap failed');
+  //   }
+  //   return receipt;
+    throw new Error('Not implemented');
+  }
+
+  /**
+   * Decode the ERC20WrapperDeployed event from the receipt.
+   * @param receipt The receipt of the transaction that deployed the ERC20 wrapper.
+   * @return The address of the deployed ERC20 wrapper.
+   */
+  async decodeErc20WrapperDeployed(receipt: ContractTransactionReceipt): Promise<string> {
+    // Decode: event ERC20WrapperDeployed(address indexed avatar, address indexed erc20Wrapper, CirclesType circlesType);
+    const decoded = this.sdk.v2Hub?.interface.parseLog(receipt.logs[0]);
+    console.log(`decoded: ${JSON.stringify(decoded)}`);
+
     throw new Error('Not implemented');
   }
 

@@ -2,7 +2,7 @@ import {
   AvatarRow, CirclesQuery, TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
-import { ContractTransactionReceipt } from 'ethers';
+import {ContractTransactionReceipt} from 'ethers';
 import {Profile} from "@circles-sdk/profiles";
 
 /**
@@ -91,6 +91,20 @@ export interface AvatarInterface {
    * Gets the avatar's balance of chain native token (e.g. xDai).
    */
   getGasTokenBalance(): Promise<bigint>;
+
+  /**
+   * Can be used to check if this avatar trusts the other avatar.
+   * @param otherAvatar The address of the other avatar.
+   * @return `true` if this avatar trusts the other avatar.
+   */
+  trusts(otherAvatar: string) : Promise<boolean>;
+
+  /**
+   * Can be used to check if this avatar is trusted by the other avatar.
+   * @param otherAvatar The address of the other avatar.
+   * @return `true` if this avatar is trusted by the other avatar.
+   */
+  isTrustedBy(otherAvatar: string): Promise<boolean>;
 }
 
 /**
@@ -108,15 +122,33 @@ export interface AvatarInterfaceV2 extends AvatarInterface {
 
   /**
    * Wraps ERC115 Circles into demurraged ERC20 Circles.
+   * @param avatarAddress The address of the avatar whose Circles should be wrapped.
    * @param amount The amount of ERC115 Circles to wrap.
+   * @returns The token address of the ERC20 Circles.
    */
-  wrapDemurrageErc20(amount: bigint): Promise<ContractTransactionReceipt>;
+  wrapDemurrageErc20(avatarAddress: string, amount: bigint): Promise<string>;
+
+  /**
+   * Unwraps demurraged ERC20 Circles into personal ERC115 Circles.
+   * @param tokenAddress The token address of the ERC20 Circles.
+   * @param amount The amount of ERC20 Circles to unwrap.
+   */
+  unwrapDemurrageErc20(tokenAddress: string, amount: bigint): Promise<ContractTransactionReceipt>;
 
   /**
    * Wraps inflation ERC20 Circles into demurraged ERC20 Circles.
+   * @param avatarAddress The address of the avatar whose Circles should be wrapped.
    * @param amount The amount of inflation ERC20 Circles to wrap.
+   * @returns The token address of the ERC20 Circles.
    */
-  wrapInflationErc20(amount: bigint): Promise<ContractTransactionReceipt>;
+  wrapInflationErc20(avatarAddress: string, amount: bigint): Promise<string>;
+
+  /**
+   * Unwraps inflation ERC20 Circles into personal ERC115 Circles.
+   * @param avatarAddress The avatar address.
+   * @param amount The amount of ERC20 Circles to unwrap.
+   */
+  unwrapInflationErc20(avatarAddress: string, amount: bigint): Promise<ContractTransactionReceipt>;
 
   /**
    * Invites an address as human to Circles v2.
@@ -134,12 +166,12 @@ export interface AvatarInterfaceV2 extends AvatarInterface {
    * Gets the profile that's associated with the avatar or returns `undefined` if no profile is associated.
    * @returns The profile or `undefined`.
    */
-  getProfile() : Promise<Profile | undefined>;
+  getProfile(): Promise<Profile | undefined>;
 
-   /**
-    * Updates the avatar's metadata (profile).
-    * @param profile The new profile.
-    * @returns The IPFS CID of the updated profile.
-    */
-  updateProfile(profile: Profile) : Promise<string>;
+  /**
+   * Updates the avatar's metadata (profile).
+   * @param profile The new profile.
+   * @returns The IPFS CID of the updated profile.
+   */
+  updateProfile(profile: Profile): Promise<string>;
 }

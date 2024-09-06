@@ -208,6 +208,14 @@ export class V1Avatar implements AvatarInterface {
     return await this.sdk.contractRunner.provider?.getBalance(this.address) ?? 0n;
   }
 
+  async trusts(otherAvatar: string): Promise<boolean> {
+    return (await this.sdk.v1Hub.limits(this.address, otherAvatar)) > 0n;
+  }
+
+  async isTrustedBy(otherAvatar: string): Promise<boolean> {
+    return (await this.sdk.v1Hub.limits(otherAvatar, this.address)) > 0n;
+  }
+
   private throwIfPathfinderIsNotAvailable() {
     if (!this.sdk.v1Pathfinder) {
       throw new Error('Pathfinder is not available');
