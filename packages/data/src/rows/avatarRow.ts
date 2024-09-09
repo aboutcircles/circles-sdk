@@ -21,7 +21,7 @@ export interface AvatarRow extends EventRow {
   /**
    * The type of the avatar.
    */
-  type: 'human' | 'organization' | 'group';
+  type: 'CrcV2_RegisterHuman' | 'CrcV2_RegisterGroup' | 'CrcV2_RegisterOrganization' | 'CrcV1_Signup';
   /**
    * The address of the avatar.
    */
@@ -57,4 +57,9 @@ export interface AvatarRow extends EventRow {
    * Note: This is only set during `Avatar` initialization.
    */
   v1Stopped?: boolean;
+
+  /**
+   * Indicates whether the entity is a human.
+   */
+  isHuman: boolean;
 }

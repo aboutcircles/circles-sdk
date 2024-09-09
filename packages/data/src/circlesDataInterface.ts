@@ -57,13 +57,6 @@ export interface CirclesDataInterface {
   getTokenBalances(avatar: string, asTimeCircles: boolean): Promise<TokenBalanceRow[]>;
 
   /**
-   * Gets the detailed CRC v2 token balances of an address.
-   * @param avatar The address to get the token balances for.
-   * @param asTimeCircles Whether to return the balances as TimeCircles or not (default: true).
-   */
-  getTokenBalancesV2(avatar: string, asTimeCircles: boolean): Promise<TokenBalanceRow[]>;
-
-  /**
    * Gets the transaction history of an address.
    * This contains incoming/outgoing transactions and minting of CRC (in v1 and v2).
    * @param avatar The address to get the transaction history for.

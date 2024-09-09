@@ -12,6 +12,7 @@ import {V2Avatar} from './v2/v2Avatar';
 import {CirclesEvent} from '@circles-sdk/data';
 import {tcToCrc} from '@circles-sdk/utils';
 import {Profile} from "@circles-sdk/profiles";
+import {TokenBalanceRow} from "../../data";
 
 /**
  * An Avatar represents a user registered at Circles.
@@ -209,6 +210,16 @@ export class Avatar implements AvatarInterfaceV2 {
    *       Token holdings in v1 can be migrated to v2. Check out `Sdk.migrateAvatar` or `Sdk.migrateAllV1Tokens` for more information.
    */
   getTotalBalance = (): Promise<number> => this.onlyIfInitialized(() => this._avatar!.getTotalBalance());
+
+  /**
+   * Retrieves the token balances.
+   *
+   * This asynchronous function fetches the token balances available for the current context.
+   * It requires the system to be initialized before it can be invoked.
+   *
+   * @returns {Promise<TokenBalanceRow[]>} A promise that resolves to an array of token balance rows.
+   */
+  getBalances = (): Promise<TokenBalanceRow[]> => this.onlyIfInitialized(() => this._avatar!.getBalances());
 
   /**
    * Gets the avatar's total balance of chain-native tokens.

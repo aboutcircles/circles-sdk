@@ -7,6 +7,7 @@ import {Sdk} from '../sdk';
 import {
   AvatarRow,
   CirclesQuery,
+  TokenBalanceRow,
   TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
@@ -77,13 +78,12 @@ export class V2Avatar implements AvatarInterfaceV2 {
         throw new Error('Token not found');
       }
 
-      const tokenBalances = await this.sdk.data.getTokenBalancesV2(this.address);
-      const tokenBalance = tokenBalances.filter(b => b.tokenOwner.toString() === tokenInfo.tokenId.toString());
-      console.log(`Token balance:`, tokenBalance);
-      return !tokenBalance[0].balance ? 0n : ethers.parseEther(tokenBalance[0].balance.toString());
+      const tokenBalances = await this.sdk.data.getTokenBalances(this.address);
+      const tokenBalance = tokenBalances.filter(b => b.version === 2 && b.tokenOwner.toString() === tokenInfo.token.toString())[0];
+      return BigInt(tokenBalance?.attoCircles ?? "0");
     }
 
-    const largeAmount = BigInt('999999999999999999999999999999');
+    const largeAmount = BigInt('79228162514264337593543950335');
     const transferPath = await this.sdk.v2Pathfinder!.getTransferPath(
       this.address,
       to,
@@ -119,6 +119,11 @@ export class V2Avatar implements AvatarInterfaceV2 {
 
   async getTrustRelations(): Promise<TrustRelationRow[]> {
     return this.sdk.data.getAggregatedTrustRelations(this.address);
+  }
+
+  async getBalances(): Promise<TokenBalanceRow[]> {
+    const allBalances = await this.sdk.data.getTokenBalances(this.address);
+    return allBalances.filter(o => o.version === 2);
   }
 
   async personalMint(): Promise<ContractTransactionReceipt> {
@@ -158,12 +163,12 @@ export class V2Avatar implements AvatarInterfaceV2 {
 
   private async directTransfer(to: string, amount: bigint, tokenAddress: string): Promise<ContractTransactionReceipt> {
     const tokenInf = await this.sdk.data.getTokenInfo(tokenAddress);
-    console.log(`Direct transfer - of: ${amount} - tokenId: ${tokenInf?.tokenId} - to: ${to}`);
+    console.log(`Direct transfer - of: ${amount} - tokenId: ${tokenInf?.token} - to: ${to}`);
     if (!tokenInf) {
       throw new Error('Token not found');
     }
 
-    const numericTokenId = addressToUInt256(tokenInf.tokenId);
+    const numericTokenId = addressToUInt256(tokenInf.token);
     console.log(`numericTokenId: ${numericTokenId}`);
     const tx = await this.sdk.v2Hub?.safeTransferFrom(
       this.address,

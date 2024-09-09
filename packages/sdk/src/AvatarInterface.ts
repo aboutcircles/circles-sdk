@@ -1,5 +1,5 @@
 import {
-  AvatarRow, CirclesQuery, TransactionHistoryRow,
+  AvatarRow, CirclesQuery, TokenBalanceRow, TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
 import {ContractTransactionReceipt} from 'ethers';
@@ -105,6 +105,12 @@ export interface AvatarInterface {
    * @return `true` if this avatar is trusted by the other avatar.
    */
   isTrustedBy(otherAvatar: string): Promise<boolean>;
+
+  /**
+   * Gets the token balances of the avatar.
+   * @returns The token balances.
+   */
+  getBalances(): Promise<TokenBalanceRow[]>;
 }
 
 /**

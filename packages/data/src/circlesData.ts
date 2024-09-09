@@ -57,22 +57,11 @@ export class CirclesData implements CirclesDataInterface {
   }
 
   /**
-   * Gets the detailed CRC v1 token balances of an address.
+   * Gets the detailed token balances of an address.
    * @param avatar The address to get the token balances for.
-   * @param asTimeCircles Whether to return the balances as TimeCircles or not (default: true).
    */
-  async getTokenBalances(avatar: string, asTimeCircles: boolean = true): Promise<TokenBalanceRow[]> {
-    const response = await this.rpc.call<TokenBalanceRow[]>('circles_getTokenBalances', [avatar, asTimeCircles]);
-    return response.result;
-  }
-
-  /**
-   * Gets the detailed CRC v2 token balances of an address.
-   * @param avatar The address to get the token balances for.
-   * @param asTimeCircles Whether to return the balances as TimeCircles or not (default: true).
-   */
-  async getTokenBalancesV2(avatar: string, asTimeCircles: boolean = true): Promise<TokenBalanceRow[]> {
-    const response = await this.rpc.call<TokenBalanceRow[]>('circlesV2_getTokenBalances', [avatar, asTimeCircles]);
+  async getTokenBalances(avatar: string): Promise<TokenBalanceRow[]> {
+    const response = await this.rpc.call<TokenBalanceRow[]>('circles_getTokenBalances', [avatar]);
     return response.result;
   }
 
@@ -342,6 +331,8 @@ export class CirclesData implements CirclesDataInterface {
             return undefined;
           }
 
+          row.isHuman = row.type == "CrcV2_RegisterHuman" || row.type == "CrcV1_Signup";
+
           const dataFromHexString = hexStringToUint8Array(row.cidV0Digest.substring(2));
           return uint8ArrayToCidV0(dataFromHexString);
         } catch (error) {
@@ -389,23 +380,23 @@ export class CirclesData implements CirclesDataInterface {
   async getTokenInfo(address: string): Promise<TokenInfoRow | undefined> {
     const circlesQuery = new CirclesQuery<TokenInfoRow>(this.rpc, {
       namespace: 'V_Crc',
-      table: 'Avatars',
+      table: 'Tokens',
       columns: [
-        'blockNumber',
-        'timestamp',
-        'transactionIndex',
-        'logIndex',
-        'transactionHash',
-        'version',
-        'type',
-        'avatar',
-        'tokenId'
+        "blockNumber",
+        "timestamp",
+        "transactionIndex",
+        "logIndex",
+        "transactionHash",
+        "version",
+        "type",
+        "token",
+        "tokenOwner"
       ],
       filter: [
         {
           Type: 'FilterPredicate',
           FilterType: 'Equals',
-          Column: 'tokenId',
+          Column: 'token',
           Value: address.toLowerCase()
         }
       ],

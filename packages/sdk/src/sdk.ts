@@ -406,14 +406,15 @@ export class Sdk implements SdkInterface {
     if (!this.circlesConfig.migrationAddress) {
       throw new Error('Migration address not set');
     }
-    const balances = await this.data.getTokenBalances(avatar, false);
+    const balances = await this.data.getTokenBalances(avatar);
+    const v1Balances = balances.filter(o => o.version === 1);
     const tokensToMigrate = balances
-      .filter(o => BigInt(o.balance) > 0);
+      .filter(o => BigInt(o.staticAttoCircles) > 0);
 
     // TODO: Send in one transaction if sent to Safe
     await Promise.all(tokensToMigrate.map(async (t, i) => {
-      const balance = BigInt(t.balance);
-      const token = Token__factory.connect(t.token, this.contractRunner);
+      const balance = BigInt(t.staticAttoCircles);
+      const token = Token__factory.connect(t.tokenAddress, this.contractRunner);
       const allowance = await token.allowance(avatar, this.circlesConfig.migrationAddress!);
       if (allowance < balance) {
         const increase = balance - allowance;
@@ -425,7 +426,7 @@ export class Sdk implements SdkInterface {
     const migrationContract = Migration__factory.connect(this.circlesConfig.migrationAddress, this.contractRunner);
     const migrateTx = await migrationContract.migrate(
       tokensToMigrate.map(o => o.tokenOwner)
-      , tokensToMigrate.map(o => BigInt(o.balance)));
+      , tokensToMigrate.map(o => BigInt(o.staticAttoCircles)));
 
     await migrateTx.wait();
   };

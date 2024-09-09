@@ -7,10 +7,11 @@ import { Token, Token__factory } from '@circles-sdk/abi-v1';
 import {
   AvatarRow,
   CirclesQuery,
+  TokenBalanceRow,
   TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
-import { crcToTc } from '@circles-sdk/utils';
+import {crcToTc} from '@circles-sdk/utils';
 
 export class V1Avatar implements AvatarInterface {
   public readonly sdk: Sdk;
@@ -46,6 +47,11 @@ export class V1Avatar implements AvatarInterface {
     }
   }
 
+  async getBalances(): Promise<TokenBalanceRow[]> {
+    const allBalances = await this.sdk.data.getTokenBalances(this.address);
+    return allBalances.filter(o => o.version === 1);
+  }
+
   /**
    * Utilizes the pathfinder to find the max. transferable amount from the avatar to `to`.
    * @param to The recipient
@@ -62,8 +68,8 @@ export class V1Avatar implements AvatarInterface {
       }
 
       const tokenBalances = await this.sdk.data.getTokenBalances(this.address);
-      const tokenBalance = tokenBalances.filter(b => b.token === tokenId)[0]?.balance;
-      return BigInt(tokenBalance ?? 0);
+      const tokenBalance = tokenBalances.filter(b => b.version === 1 && b.tokenAddress === tokenId)[0]?.attoCircles;
+      return BigInt(tokenBalance ?? "0");
     }
 
     this.throwIfPathfinderIsNotAvailable();
