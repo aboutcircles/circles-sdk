@@ -14,6 +14,14 @@ import {cidV0ToUint8Array} from '@circles-sdk/utils';
 import {GroupProfile, Profile, Profiles} from '@circles-sdk/profiles';
 import {EthersContractRunner} from '@circles-sdk/adapter-ethers';
 import {ZeroAddress} from "ethers";
+import {
+  InflationaryCircles,
+  InflationaryCircles__factory
+} from "@circles-sdk/abi-v2";
+import {
+  DemurrageCircles,
+  DemurrageCircles__factory
+} from "@circles-sdk/abi-v2";
 
 /**
  * The SDK interface.
@@ -430,4 +438,12 @@ export class Sdk implements SdkInterface {
 
     await migrateTx.wait();
   };
+
+  getInflationaryWrapper = async (wrapperAddress: string): Promise<InflationaryCircles> => {
+    return InflationaryCircles__factory.connect(wrapperAddress, this.contractRunner);
+  }
+
+  getDemurragedWrapper = async (wrapperAddress: string): Promise<DemurrageCircles> => {
+    return DemurrageCircles__factory.connect(wrapperAddress, this.contractRunner);
+  }
 }

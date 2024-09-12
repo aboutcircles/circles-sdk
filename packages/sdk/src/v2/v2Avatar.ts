@@ -1,7 +1,6 @@
 import {AvatarInterfaceV2} from '../AvatarInterface';
 import {
-  ContractTransactionReceipt, ethers,
-  formatEther
+  ContractTransactionReceipt, formatEther
 } from 'ethers';
 import {Sdk} from '../sdk';
 import {
@@ -299,28 +298,24 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return await this.decodeErc20WrapperDeployed(receipt);
   }
 
-  async unwrapDemurrageErc20(avatarAddress: string, amount: bigint): Promise<ContractTransactionReceipt> {
-  //   const wrapResult = await this.sdk.v2Hub?.wrap)
-  //   const receipt = await wrapResult?.wait();
-  //   console.log(`unwrapDemurrageErc20 receipt: ${receipt}`);
-  //
-  //   if (!receipt) {
-  //     throw new Error('Unwrap failed');
-  //   }
-  //   return receipt;
-    throw new Error('Not implemented');
+  async unwrapDemurrageErc20(wrapperTokenAddress: string, amount: bigint): Promise<ContractTransactionReceipt> {
+    const demurragedWrapper = await this.sdk.getDemurragedWrapper(wrapperTokenAddress);
+    const tx = await demurragedWrapper.unwrap(amount);
+    const receipt = await tx.wait();
+    if (!receipt){
+      throw new Error('Unwrap failed');
+    }
+    return receipt;
   }
 
-  async unwrapInflationErc20(avatarAddress: string, amount: bigint): Promise<ContractTransactionReceipt> {
-  //   const wrapResult = await this.sdk.v2Hub?.unwrap(avatarAddress, amount, 1n /*Inflation*/);
-  //   const receipt = await wrapResult?.wait();
-  //   console.log(`unwrapInflationErc20 receipt: ${receipt}`);
-  //
-  //   if (!receipt) {
-  //     throw new Error('Unwrap failed');
-  //   }
-  //   return receipt;
-    throw new Error('Not implemented');
+  async unwrapInflationErc20(wrapperTokenAddress: string, amount: bigint): Promise<ContractTransactionReceipt> {
+    const inflationWrapper = await this.sdk.getInflationaryWrapper(wrapperTokenAddress);
+    const tx = await inflationWrapper.unwrap(amount);
+    const receipt = await tx.wait();
+    if (!receipt){
+      throw new Error('Unwrap failed');
+    }
+    return receipt;
   }
 
   /**

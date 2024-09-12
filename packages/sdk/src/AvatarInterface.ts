@@ -139,7 +139,7 @@ export interface AvatarInterfaceV2 extends AvatarInterface {
    * @param tokenAddress The token address of the ERC20 Circles.
    * @param amount The amount of ERC20 Circles to unwrap.
    */
-  unwrapDemurrageErc20(tokenAddress: string, amount: bigint): Promise<ContractTransactionReceipt>;
+  unwrapDemurrageErc20(wrapperTokenAddress: string, amount: bigint): Promise<ContractTransactionReceipt>;
 
   /**
    * Wraps inflation ERC20 Circles into demurraged ERC20 Circles.
@@ -154,7 +154,7 @@ export interface AvatarInterfaceV2 extends AvatarInterface {
    * @param avatarAddress The avatar address.
    * @param amount The amount of ERC20 Circles to unwrap.
    */
-  unwrapInflationErc20(avatarAddress: string, amount: bigint): Promise<ContractTransactionReceipt>;
+  unwrapInflationErc20(wrapperTokenAddress: string, amount: bigint): Promise<ContractTransactionReceipt>;
 
   /**
    * Invites an address as human to Circles v2.

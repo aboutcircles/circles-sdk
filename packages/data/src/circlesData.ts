@@ -4,7 +4,7 @@ import {TrustListRow} from './rows/trustListRow';
 import {TokenBalanceRow} from './rows/tokenBalanceRow';
 import {CirclesRpc} from './circlesRpc';
 import {AvatarRow} from './rows/avatarRow';
-import {crcToTc, hexStringToUint8Array, uint8ArrayToCidV0} from '@circles-sdk/utils';
+import {crcToTc, hexStringToUint8Array, tcToCrc, uint8ArrayToCidV0} from '@circles-sdk/utils';
 import {ethers} from 'ethers';
 import {TrustRelation, TrustRelationRow} from './rows/trustRelationRow';
 import {CirclesDataInterface, GroupQueryParams} from './circlesDataInterface';
@@ -28,6 +28,105 @@ export type TrustEvent = {
   truster: string;
   expiryTime: number;
 };
+
+export type TokenInfo = {
+  isErc20: boolean,
+  isErc1155: boolean,
+  isWrapped: boolean,
+  isInflationary: boolean,
+  isGroup: boolean
+};
+
+export function attoCirclesToCircles(weiBalance: bigint): number {
+  return parseFloat(ethers.formatEther(weiBalance.toString()));
+}
+
+export function circlesToAttoCircles(circlesBalance: number): bigint {
+  return BigInt(ethers.parseEther(circlesBalance.toFixed(18)).toString());
+}
+
+export const TokenTypes: Record<string, TokenInfo> = {
+  "CrcV1_Signup": {
+    isErc20: true,
+    isErc1155: false,
+    isWrapped: false,
+    isInflationary: true,
+    isGroup: false
+  },
+  "CrcV2_RegisterHuman": {
+    isErc20: false,
+    isErc1155: true,
+    isWrapped: false,
+    isInflationary: false,
+    isGroup: false
+  },
+  "CrcV2_RegisterGroup": {
+    isErc20: false,
+    isErc1155: true,
+    isWrapped: false,
+    isInflationary: false,
+    isGroup: true
+  },
+  "CrcV2_ERC20WrapperDeployed_Inflationary": {
+    isErc20: true,
+    isErc1155: false,
+    isWrapped: true,
+    isInflationary: true,
+    isGroup: false
+  },
+  "CrcV2_ERC20WrapperDeployed_Demurraged": {
+    isErc20: true,
+    isErc1155: false,
+    isWrapped: true,
+    isInflationary: false,
+    isGroup: false
+  }
+}
+
+function calculateBalances(row: TransactionHistoryRow) {
+  try {
+    const rawBalance = row.value;
+    const tokenInfo = TokenTypes[row.tokenType];
+    if (!tokenInfo) {
+      throw new Error(`Token type ${row.tokenType} not found.`);
+    }
+
+    let attoCircles: bigint;
+    let circles: number;
+    let staticAttoCircles: bigint;
+    let staticCircles: number;
+
+    if (tokenInfo?.isInflationary) {
+      staticAttoCircles = BigInt(rawBalance);
+      staticCircles = attoCirclesToCircles(staticAttoCircles);
+
+      circles = crcToTc(new Date(), staticAttoCircles);
+      attoCircles = circlesToAttoCircles(circles);
+    } else {
+      attoCircles = BigInt(rawBalance);
+      circles = attoCirclesToCircles(attoCircles);
+
+      staticAttoCircles = tcToCrc(new Date(), circles);
+      staticCircles = attoCirclesToCircles(staticAttoCircles);
+    }
+
+    return {
+      attoCircles,
+      circles,
+      staticAttoCircles,
+      staticCircles
+    };
+  } catch (e) {
+    console.error(e);
+    console.log(row);
+    return {
+      attoCircles: 0n,
+      circles: 0,
+      staticAttoCircles: 0n,
+      inflationaryCircles: 0
+    }
+  }
+}
 
 export class CirclesData implements CirclesDataInterface {
   readonly rpc: CirclesRpc;
@@ -89,7 +188,9 @@ export class CirclesData implements CirclesDataInterface {
         'from',
         'to',
         'id',
-        'value'
+        'value',
+        'type',
+        'tokenType'
       ],
       filter: [
         {
@@ -112,29 +213,17 @@ export class CirclesData implements CirclesDataInterface {
         }
       ]
     }, [{
-      name: 'timeCircles',
-      generator: async (row: TransactionHistoryRow) => {
-        if (row.version === 1) {
-          const timestamp = new Date(row.timestamp * 1000);
-          return crcToTc(timestamp, BigInt(row.value)).toFixed(2);
-        } else {
-          return parseFloat(ethers.formatEther(row.value)).toFixed(2);
-        }
-      }
+      name: "circles",
+      generator: async (row: TransactionHistoryRow) => calculateBalances(row).circles
     }, {
-      name: 'tokenAddress',
-      generator: async (row: TransactionHistoryRow) => {
-        // If the id isset, doesn't start with 0x and only consists of digits, it's a BigInt that
-        // needs to be converted to a ethereum address. The BigInt is actually an encoded byte[20]
-        // that represents the address.
-        if (row.id && !row.id.startsWith('0x') && /^\d+$/.test(row.id)) {
-          // UInt256 to ethereum address (use native BigInt)
-          const hexString = BigInt(row.id).toString(16).padStart(40, '0');
-          return ethers.getAddress('0x' + hexString).toLowerCase();
-        } else if (row.id && row.id.startsWith('0x')) {
-          return row.id.toLowerCase();
-        }
-      }
+      name: "attoCircles",
+      generator: async (row: TransactionHistoryRow) => calculateBalances(row).attoCircles
+    }, {
+      name: "staticCircles",
+      generator: async (row: TransactionHistoryRow) => calculateBalances(row).staticCircles
+    }, {
+      name: "staticAttoCircles",
+      generator: async (row: TransactionHistoryRow) => calculateBalances(row).staticAttoCircles
     }]);
   }
 
