@@ -15,7 +15,7 @@ export interface GroupQueryParams {
   nameStartsWith?: string;
   symbolStartsWith?: string;
   groupAddressIn?: string[];
-  sortBy?: 'age_asc' | 'age_desc' | 'name_asc' | 'name_desc' | 'symbol_asc' | 'symbol_desc';
+  sortBy?: 'age_asc' | 'age_desc' | 'name_asc' | 'name_desc' | 'symbol_asc' | 'symbol_desc' | 'memberCount_desc' | 'memberCount_asc' | 'trustedCount_desc' | 'trustedCount_asc';
 }
 
 export interface CirclesDataInterface {

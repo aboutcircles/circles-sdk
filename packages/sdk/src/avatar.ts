@@ -1,5 +1,5 @@
 import {V1Avatar} from './v1/v1Avatar';
-import {ContractTransactionReceipt, parseEther} from 'ethers';
+import {ContractTransactionReceipt, parseEther, TransactionReceipt} from 'ethers';
 import {Sdk} from './sdk';
 import {AvatarInterface, AvatarInterfaceV2} from './AvatarInterface';
 import {
@@ -61,13 +61,24 @@ export class Avatar implements AvatarInterfaceV2 {
 
   private _events: Observable<CirclesEvent> | undefined;
 
-  /**
-   * Initializes the avatar.
-   */
-  initialize = async () => {
+  unsubscribeFromEvents = () => {
     if (this._tokenEventSubscription) {
       this._tokenEventSubscription();
     }
+  }
+
+  subscribeToEvents = async () => {
+    if (!this._avatarInfo) {
+      throw new Error('Avatar is not initialized');
+    }
+    this._events = await this._sdk.data.subscribeToEvents(this._avatarInfo.avatar);
+  }
+
+  /**
+   * Initializes the avatar.
+   */
+  initialize = async (subscribe: boolean = true) => {
+    this.unsubscribeFromEvents();
 
     this._avatarInfo = await this._sdk.data.getAvatarInfo(this.address);
     if (!this._avatarInfo) {
@@ -101,7 +112,9 @@ export class Avatar implements AvatarInterfaceV2 {
         throw new Error('Unsupported avatar');
     }
 
-    this._events = await this._sdk.data.subscribeToEvents(this._avatarInfo.avatar);
+    if (subscribe) {
+      await this.subscribeToEvents();
+    }
   };
 
   private onlyIfInitialized<T>(func: () => T) {
@@ -152,9 +165,9 @@ export class Avatar implements AvatarInterfaceV2 {
    * @param amount The amount to transfer.
    * @param token The token to transfer. Leave empty to allow transitive transfers.
    */
-  transfer(to: string, amount: number, token?: string): Promise<ContractTransactionReceipt>;
-  transfer(to: string, amount: bigint, token?: string): Promise<ContractTransactionReceipt>;
-  transfer(to: string, amount: number | bigint, token?: string): Promise<ContractTransactionReceipt> {
+  transfer(to: string, amount: number, token?: string): Promise<TransactionReceipt>;
+  transfer(to: string, amount: bigint, token?: string): Promise<TransactionReceipt>;
+  transfer(to: string, amount: number | bigint, token?: string): Promise<TransactionReceipt> {
     if (typeof amount === 'number') {
       const sendValue = this?.avatarInfo?.version === 1
         ? tcToCrc(new Date(), amount)
@@ -207,7 +220,7 @@ export class Avatar implements AvatarInterfaceV2 {
    * Gets the avatar's total Circles balance.
    *
    * Note: This queries either the v1 or the v2 balance of an avatar. Check the `avatarInfo` property to see which version your avatar uses.
-   *       Token holdings in v1 can be migrated to v2. Check out `Sdk.migrateAvatar` or `Sdk.migrateAllV1Tokens` for more information.
+   *       Token holdings in v1 can be migrated to v2. Check out `Sdk.migrateAvatar` or `Sdk.migrateV1Tokens` for more information.
    */
   getTotalBalance = (): Promise<number> => this.onlyIfInitialized(() => this._avatar!.getTotalBalance());
 

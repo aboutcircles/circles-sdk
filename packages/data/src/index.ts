@@ -49,3 +49,5 @@ export {
   CrcV2_UpdateMetadataDigest
 } from './events/events';
 export {TrustEvent} from "./circlesData";
+export {TokenType} from './rows/tokenInfoRow';
+export {TrustRelation} from './rows/trustRelationRow';

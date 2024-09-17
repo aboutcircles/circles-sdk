@@ -8,4 +8,6 @@ export interface GroupRow extends EventRow {
   symbol: string;
   isMember?: boolean;
   cidV0Digest?: string;
+  memberCount?: number;
+  trustedCount?: number;
 }

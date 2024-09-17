@@ -1,9 +1,9 @@
 import {
-  ContractTransactionReceipt
+  ContractTransactionReceipt, ethers, TransactionReceipt
 } from 'ethers';
-import { Sdk } from '../sdk';
-import { AvatarInterface } from '../AvatarInterface';
-import { Token, Token__factory } from '@circles-sdk/abi-v1';
+import {Sdk} from '../sdk';
+import {AvatarInterface} from '../AvatarInterface';
+import {Token, Token__factory} from '@circles-sdk/abi-v1';
 import {
   AvatarRow,
   CirclesQuery,
@@ -48,8 +48,7 @@ export class V1Avatar implements AvatarInterface {
   }
 
   async getBalances(): Promise<TokenBalanceRow[]> {
-    const allBalances = await this.sdk.data.getTokenBalances(this.address);
-    return allBalances.filter(o => o.version === 1);
+    return await this.sdk.data.getTokenBalances(this.address);
   }
 
   /**
@@ -91,27 +90,47 @@ export class V1Avatar implements AvatarInterface {
    * Utilizes the pathfinder to transitively send `amount` Circles to `to`.
    * @param to The recipient
    * @param amount The amount to send
+   * @param token The token to transfer (address). Leave empty to allow transitive transfers.
    */
-  async transfer(to: string, amount: bigint): Promise<ContractTransactionReceipt> {
+  async transfer(to: string, amount: bigint, token?: string): Promise<TransactionReceipt> {
     this.throwIfNotInitialized();
-    this.throwIfPathfinderIsNotAvailable();
+    let receipt: TransactionReceipt | null = null;
+    if (!token) {
+      this.throwIfPathfinderIsNotAvailable();
+      // transitive transfer
+      const transferPath = await this.sdk.v1Pathfinder!.getTransferPath(
+        this.address,
+        to,
+        amount);
 
-    const transferPath = await this.sdk.v1Pathfinder!.getTransferPath(
-      this.address,
-      to,
-      amount);
+      if (!transferPath.isValid || transferPath.transferSteps.length === 0) {
+        throw new Error(`Couldn't find a valid path from ${this.address} to ${to} for ${amount}.`);
+      }
 
-    if (!transferPath.isValid || transferPath.transferSteps.length === 0) {
-      throw new Error(`Couldn't find a valid path from ${this.address} to ${to} for ${amount}.`);
+      const tokenOwners = transferPath.transferSteps.map(o => o.token_owner);
+      const srcs = transferPath.transferSteps.map(o => o.from);
+      const dests = transferPath.transferSteps.map(o => o.to);
+      const wads = transferPath.transferSteps.map(o => BigInt(o.value));
+      const tx = await this.sdk.v1Hub.transferThrough(tokenOwners, srcs, dests, wads);
+
+      receipt = await tx.wait();
+    } else {
+      // erc20 transfer via ethers.Interface
+      const iface = new ethers.Interface(['function transfer(address to, uint256 value)']);
+      const data = iface.encodeFunctionData('transfer', [to, amount]);
+
+      if (!this.sdk?.contractRunner?.sendTransaction) {
+        throw new Error('ContractRunner not available');
+      }
+
+      const tx = await this.sdk.contractRunner.sendTransaction({
+        to: token,
+        data: data
+      });
+
+      receipt = await tx.wait();
     }
 
-    const tokenOwners = transferPath.transferSteps.map(o => o.token_owner);
-    const srcs = transferPath.transferSteps.map(o => o.from);
-    const dests = transferPath.transferSteps.map(o => o.to);
-    const wads = transferPath.transferSteps.map(o => BigInt(o.value));
-
-    const tx = await this.sdk.v1Hub.transferThrough(tokenOwners, srcs, dests, wads);
-    const receipt = await tx.wait();
     if (!receipt) {
       throw new Error(`The transferThrough call for '${this.address} -> ${to}: ${amount}' didn't yield a receipt.`);
     }

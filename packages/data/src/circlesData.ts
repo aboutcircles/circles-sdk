@@ -95,35 +95,58 @@ function calculateBalances(row: TransactionHistoryRow) {
     let circles: number;
     let staticAttoCircles: bigint;
     let staticCircles: number;
+    let attoCrc: bigint;
+    let crc: number;
 
-    if (tokenInfo?.isInflationary) {
-      staticAttoCircles = BigInt(rawBalance);
-      staticCircles = attoCirclesToCircles(staticAttoCircles);
+    if (row.version === 1) {
+      attoCrc = BigInt(rawBalance);
+      crc = attoCirclesToCircles(attoCrc);
 
-      circles = crcToTc(new Date(), staticAttoCircles);
+      circles = crcToTc(new Date(), attoCrc);
       attoCircles = circlesToAttoCircles(circles);
-    } else {
-      attoCircles = BigInt(rawBalance);
-      circles = attoCirclesToCircles(attoCircles);
 
-      staticAttoCircles = tcToCrc(new Date(), circles);
-      staticCircles = attoCirclesToCircles(staticAttoCircles);
+      staticCircles = crc * 3.0;
+      staticAttoCircles = attoCircles * 3n;
+    } else {
+      if (tokenInfo?.isInflationary) {
+        staticAttoCircles = BigInt(rawBalance);
+        staticCircles = attoCirclesToCircles(staticAttoCircles);
+
+        circles = crcToTc(new Date(), staticAttoCircles / 3n);
+        attoCircles = circlesToAttoCircles(circles);
+
+        attoCrc = tcToCrc(new Date(), circles);
+        crc = attoCirclesToCircles(attoCrc);
+      } else {
+        attoCircles = BigInt(rawBalance);
+        circles = attoCirclesToCircles(attoCircles);
+
+        attoCrc = tcToCrc(new Date(), circles);
+        crc = attoCirclesToCircles(attoCrc);
+
+        staticAttoCircles = tcToCrc(new Date(), circles) * 3n;
+        staticCircles = attoCirclesToCircles(staticAttoCircles);
+      }
     }
 
     return {
       attoCircles,
       circles,
       staticAttoCircles,
-      staticCircles
+      staticCircles,
+      attoCrc,
+      crc
     };
   } catch (e) {
-    console.error(e);
-    console.log(row);
+    // console.error(e);
+    // console.log(row);
     return {
       attoCircles: 0n,
       circles: 0,
       staticAttoCircles: 0n,
-      inflationaryCircles: 0
+      inflationaryCircles: 0,
+      attoCrc: 0n,
+      crc: 0
     }
   }
 }
@@ -224,6 +247,12 @@ export class CirclesData implements CirclesDataInterface {
     }, {
       name: "staticAttoCircles",
       generator: async (row: TransactionHistoryRow) => calculateBalances(row).staticAttoCircles
+    }, {
+      name: "crc",
+      generator: async (row: TransactionHistoryRow) => calculateBalances(row).crc
+    }, {
+      name: "attoCrc",
+      generator: async (row: TransactionHistoryRow) => calculateBalances(row).attoCrc
     }]);
   }
 
@@ -400,7 +429,8 @@ export class CirclesData implements CirclesDataInterface {
         'type',
         'avatar',
         'tokenId',
-        'cidV0Digest'
+        'cidV0Digest',
+        'name'
       ],
       filter: [
         {
@@ -603,8 +633,10 @@ export class CirclesData implements CirclesDataInterface {
         'name',
         'symbol',
         'cidV0Digest',
+        'memberCount',
+        'trustedCount'
       ],
-      sortOrder: 'DESC',
+      sortOrder: "DESC",
       limit: pageSize
     };
 

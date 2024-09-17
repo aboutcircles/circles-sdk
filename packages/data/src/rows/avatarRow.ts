@@ -62,4 +62,12 @@ export interface AvatarRow extends EventRow {
    * Indicates whether the entity is a human.
    */
   isHuman: boolean;
+  /**
+   * Groups have a names
+   */
+  name?: string;
+  /**
+   * Groups have a symbol
+   */
+  symbol?: string;
 }

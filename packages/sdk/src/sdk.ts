@@ -191,12 +191,13 @@ export class Sdk implements SdkInterface {
   /**
    * Gets an avatar by its address.
    * @param avatarAddress The avatar's address.
+   * @param subscribe Whether to subscribe to avatar events.
    * @returns The avatar instance.
    * @throws If the given avatar address is not signed up at Circles.
    */
-  getAvatar = async (avatarAddress: string): Promise<Avatar> => {
+  getAvatar = async (avatarAddress: string, subscribe: boolean = true): Promise<Avatar> => {
     const avatar = new Avatar(this, avatarAddress);
-    await avatar.initialize();
+    await avatar.initialize(subscribe);
 
     return avatar;
   };
@@ -396,33 +397,32 @@ export class Sdk implements SdkInterface {
       await calculateIssuanceTx.wait();
 
       // 4. Migrate V1 tokens
-      await this.migrateAllV1Tokens(avatar);
+      await this.migrateV1Tokens(avatar);
     } else {
       throw new Error('Avatar is not a V1 avatar');
     }
   };
 
   /**
-   * Migrates all V1 tokens of an avatar to V2.
-   * @param avatar The avatar's address.
-   */
-  /**
    * Migrates all V1 token holdings of an avatar to V2.
    * @param avatar The avatar whose tokens to migrate.
+   * @param tokens An optional list of token addresses to migrate. If not provided, all tokens will be migrated.
    */
-  migrateAllV1Tokens = async (avatar: string): Promise<void> => {
+  migrateV1Tokens = async (avatar: string, tokens?: string[]): Promise<void> => {
     if (!this.circlesConfig.migrationAddress) {
       throw new Error('Migration address not set');
     }
+
     const balances = await this.data.getTokenBalances(avatar);
-    const v1Balances = balances.filter(o => o.version === 1);
-    const tokensToMigrate = balances
-      .filter(o => BigInt(o.staticAttoCircles) > 0);
+    const v1Balances = balances.filter(o => o.version === 1 && (tokens ? tokens.map(o => o.toLowerCase()).includes(o.tokenAddress?.toLowerCase()) : true));
+    const tokensToMigrate = v1Balances.filter(o => BigInt(o.attoCrc) > 0);
+    console.log(`Migrating the following v1 token:`, tokensToMigrate);
 
     // TODO: Send in one transaction if sent to Safe
-    await Promise.all(tokensToMigrate.map(async (t, i) => {
-      const balance = BigInt(t.staticAttoCircles);
-      const token = Token__factory.connect(t.tokenAddress, this.contractRunner);
+    await Promise.all(tokensToMigrate.map(async (tokenToMigrate) => {
+      const balance = BigInt(tokenToMigrate.attoCrc);
+      console.log(`tokenToMigrate`, tokenToMigrate);
+      const token = Token__factory.connect(tokenToMigrate.tokenAddress, this.contractRunner);
       const allowance = await token.allowance(avatar, this.circlesConfig.migrationAddress!);
       if (allowance < balance) {
         const increase = balance - allowance;
@@ -434,7 +434,7 @@ export class Sdk implements SdkInterface {
     const migrationContract = Migration__factory.connect(this.circlesConfig.migrationAddress, this.contractRunner);
     const migrateTx = await migrationContract.migrate(
       tokensToMigrate.map(o => o.tokenOwner)
-      , tokensToMigrate.map(o => BigInt(o.staticAttoCircles)));
+      , tokensToMigrate.map(o => BigInt(o.attoCrc)));
 
     await migrateTx.wait();
   };

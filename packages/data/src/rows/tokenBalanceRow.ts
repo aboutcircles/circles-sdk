@@ -8,6 +8,8 @@ export interface TokenBalanceRow {
   circles: number;
   staticAttoCircles: string;
   staticCircles: number;
+  attoCrc: string;
+  crc: number;
   isErc20: boolean,
   isErc1155: boolean,
   isWrapped: boolean,

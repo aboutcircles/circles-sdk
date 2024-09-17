@@ -2,7 +2,7 @@ import {
   AvatarRow, CirclesQuery, TokenBalanceRow, TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
-import {ContractTransactionReceipt} from 'ethers';
+import {ContractTransactionReceipt, TransactionReceipt} from 'ethers';
 import {Profile} from "@circles-sdk/profiles";
 
 /**
@@ -41,7 +41,7 @@ export interface AvatarInterface {
    * @param amount The amount to transfer.
    * @param token The token to transfer (address). Leave empty to allow transitive transfers.
    */
-  transfer(to: string, amount: bigint, token?: string): Promise<ContractTransactionReceipt>;
+  transfer(to: string, amount: bigint, token?: string): Promise<TransactionReceipt>;
 
   /**
    * Trusts another avatar. Trusting an avatar means you're willing to accept Circles that have been issued by this avatar.
