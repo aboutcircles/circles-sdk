@@ -1,16 +1,21 @@
-import { SdkContractRunner, TransactionRequest, TransactionResponse } from '@circles-sdk/adapter';
+import {
+  BatchRun,
+  SdkContractRunner,
+  TransactionRequest,
+  TransactionResponse
+} from '@circles-sdk/adapter';
 import {
   ComethProvider,
   ComethWallet,
   ConnectAdaptor,
   SupportedNetworks
 } from '@cometh/connect-sdk';
-import { OperationType } from 'ethers-multisend';
+import {MetaTransaction, OperationType} from 'ethers-multisend';
 
 export class ComethSdkContractRunner implements SdkContractRunner {
   private comethWallet: ComethWallet;
   private walletAdaptor: ConnectAdaptor;
-  address: Promise<string>;
+  address?: string;
 
   constructor(apiKey: string, chainId: SupportedNetworks, walletAddress?: string) {
     this.walletAdaptor = new ConnectAdaptor({
@@ -23,7 +28,11 @@ export class ComethSdkContractRunner implements SdkContractRunner {
       apiKey
     });
 
-    this.address = this.comethWallet.connect(walletAddress)
+    this.address = walletAddress;
+  }
+
+  init = async () => {
+    this.address = await this.comethWallet.connect(this.address)
       .then(() => this.comethWallet.getAddress())
       .catch((error) => Promise.reject(error));
   }
@@ -61,4 +70,48 @@ export class ComethSdkContractRunner implements SdkContractRunner {
       chainId: network.chainId
     };
   };
+  sendBatchTransaction?: () => BatchRun = () => {
+    return new ComethBatchRun(this.comethWallet);
+  }
+}
+
+export class ComethBatchRun implements BatchRun {
+  private readonly transactions: TransactionRequest[] = [];
+
+  constructor(
+    private readonly comethWallet: ComethWallet) {
+  }
+
+  addTransaction(tx: TransactionRequest) {
+    this.transactions.push(tx);
+  }
+
+  async run() {
+    const provider = new ComethProvider(this.comethWallet);
+    const network = await provider.getNetwork();
+    const metaTransactions: MetaTransaction[] = this.transactions.map(tx => ({
+      operation: OperationType.Call,
+      to: tx.to,
+      value: tx.value.toString(),
+      data: tx.data
+    }));
+    const batchTxResponse = await this.comethWallet.sendBatchTransactions(metaTransactions);
+    const txPending = await provider.getTransaction(batchTxResponse.safeTxHash);
+    const txReceipt = await txPending.wait();
+
+    return <TransactionResponse>{
+      blockNumber: txReceipt.blockNumber,
+      blockHash: txReceipt.blockHash,
+      index: txReceipt.transactionIndex,
+      hash: txReceipt.transactionHash,
+      type: txReceipt.type,
+      to: txReceipt.to,
+      from: txReceipt.from,
+      gasLimit: BigInt(txReceipt.gasUsed.toString()),
+      gasPrice: BigInt(txReceipt.effectiveGasPrice.toString()),
+      data: '',
+      value: BigInt(0),
+      chainId: network.chainId
+    };
+  }
 }

@@ -3,14 +3,15 @@ import SafeAppsSDK from "@safe-global/safe-apps-sdk";
 
 export class SafeSdkContractRunner implements SdkContractRunner {
     private safeSdk: SafeAppsSDK;
+    address?: string;
 
     constructor(safeSdk: SafeAppsSDK) {
         this.safeSdk = safeSdk;
     }
 
-    address: Promise<string> = (async () => {
-        return this.safeSdk.safe.getInfo().then((safe) => safe.safeAddress);
-    })();
+    init = async () => {
+        this.address = await this.safeSdk.safe.getInfo().then((safe) => safe.safeAddress);
+    }
 
     async estimateGas(tx: TransactionRequest): Promise<bigint> {
         return Promise.resolve(0n);

@@ -4,24 +4,22 @@ import {Pathfinder} from './v1/pathfinder';
 import {AvatarInterface} from './AvatarInterface';
 import {Hub as HubV1, Hub__factory as HubV1Factory, Token__factory} from '@circles-sdk/abi-v1';
 import {
+  DemurrageCircles,
+  DemurrageCircles__factory,
   Hub as HubV2,
   Hub__factory as HubV2Factory,
-  Migration__factory, NameRegistry, NameRegistry__factory
+  InflationaryCircles,
+  InflationaryCircles__factory,
+  Migration__factory,
+  NameRegistry,
+  NameRegistry__factory
 } from '@circles-sdk/abi-v2';
 import {AvatarRow, CirclesData, CirclesRpc} from '@circles-sdk/data';
 import {V1Avatar} from './v1/v1Avatar';
 import {cidV0ToUint8Array} from '@circles-sdk/utils';
 import {GroupProfile, Profile, Profiles} from '@circles-sdk/profiles';
-import {EthersContractRunner} from '@circles-sdk/adapter-ethers';
-import {ZeroAddress} from "ethers";
-import {
-  InflationaryCircles,
-  InflationaryCircles__factory
-} from "@circles-sdk/abi-v2";
-import {
-  DemurrageCircles,
-  DemurrageCircles__factory
-} from "@circles-sdk/abi-v2";
+import {ContractRunner, ZeroAddress} from "ethers";
+import {SdkContractRunner, TransactionRequest} from "@circles-sdk/adapter";
 
 /**
  * The SDK interface.
@@ -30,7 +28,7 @@ interface SdkInterface {
   /**
    * The signer used to sign transactions (connected wallet e.g. MetaMask).
    */
-  contractRunner: EthersContractRunner;
+  contractRunner: SdkContractRunner;
   /**
    * The chain specific Circles configuration (contract addresses and rpc endpoints).
    */
@@ -118,7 +116,7 @@ export class Sdk implements SdkInterface {
   /**
    * The signer used to sign transactions.
    */
-  readonly contractRunner: EthersContractRunner;
+  readonly contractRunner: SdkContractRunner;
   /**
    * The chain specific Circles configuration.
    */
@@ -161,7 +159,7 @@ export class Sdk implements SdkInterface {
    * @param circlesConfig The chain specific Circles configuration.
    * @param contractRunner A contract runner instance and its address.
    */
-  constructor(circlesConfig: CirclesConfig, contractRunner: EthersContractRunner) {
+  constructor(circlesConfig: CirclesConfig, contractRunner: SdkContractRunner) {
     this.circlesConfig = circlesConfig;
     this.contractRunner = contractRunner;
     if (!this.contractRunner.address) {
@@ -170,9 +168,9 @@ export class Sdk implements SdkInterface {
 
     this.circlesRpc = new CirclesRpc(circlesConfig.circlesRpcUrl);
     this.data = new CirclesData(this.circlesRpc);
-    this.v1Hub = HubV1Factory.connect(circlesConfig.v1HubAddress ?? '0x29b9a7fBb8995b2423a71cC17cf9810798F6C543', this.contractRunner);
+    this.v1Hub = HubV1Factory.connect(circlesConfig.v1HubAddress ?? '0x29b9a7fBb8995b2423a71cC17cf9810798F6C543', <ContractRunner>this.contractRunner);
     if (circlesConfig.v2HubAddress) {
-      this.v2Hub = HubV2Factory.connect(circlesConfig.v2HubAddress, this.contractRunner);
+      this.v2Hub = HubV2Factory.connect(circlesConfig.v2HubAddress, <ContractRunner>this.contractRunner);
     }
     if (circlesConfig.pathfinderUrl) {
       this.v1Pathfinder = new Pathfinder(circlesConfig.pathfinderUrl);
@@ -181,7 +179,7 @@ export class Sdk implements SdkInterface {
       this.v2Pathfinder = new Pathfinder(circlesConfig.v2PathfinderUrl);
     }
     if (circlesConfig.nameRegistryAddress) {
-      this.nameRegistry = NameRegistry__factory.connect(circlesConfig.nameRegistryAddress, this.contractRunner);
+      this.nameRegistry = NameRegistry__factory.connect(circlesConfig.nameRegistryAddress, <ContractRunner>this.contractRunner);
     }
     if (circlesConfig.profileServiceUrl) {
       this.profiles = new Profiles(circlesConfig.profileServiceUrl);
@@ -362,6 +360,11 @@ export class Sdk implements SdkInterface {
    * @param avatar The avatar's address.
    * @param profile The profile data of the avatar.
    */
+  /**
+   * Migrates a v1 avatar and all its Circles holdings to v2.
+   * @param avatar The avatar's address.
+   * @param profile The profile data of the avatar.
+   */
   migrateAvatar = async (avatar: string, profile: Profile): Promise<void> => {
     if (!this.v2Hub) {
       throw new Error('V2 hub not available');
@@ -371,6 +374,15 @@ export class Sdk implements SdkInterface {
       throw new Error('Avatar not found');
     }
 
+    // Check if the contract runner supports batch transactions
+    const contractRunner = this.contractRunner;
+    if (!contractRunner.sendBatchTransaction) {
+      throw new Error('Batch transaction not supported by contract runner');
+    }
+
+    // Create a new batch
+    const batch = contractRunner.sendBatchTransaction();
+
     if (avatarInfo.hasV1) {
       // 1. Stop V1 token if necessary
       if (avatarInfo.v1Token) {
@@ -378,28 +390,139 @@ export class Sdk implements SdkInterface {
         const isStopped = await v1Avatar.v1Token?.stopped();
 
         if (!isStopped) {
-          await v1Avatar.personalMint();
-          const stopTx = await v1Avatar.v1Token?.stop();
-          const stopTxReceipt = await stopTx?.wait();
-          if (!stopTxReceipt) {
-            throw new Error('Failed to stop V1 avatar');
+          if (!v1Avatar.v1Token) {
+            throw new Error(`Could not load V1 token for avatar ${avatar}. Token address: ${avatarInfo.v1Token}`);
           }
+
+          // Add 'personalMint' to the batch
+          const personalMintData = v1Avatar.v1Token.interface.encodeFunctionData('update');
+          const personalMintTx: TransactionRequest = {
+            to: avatarInfo.v1Token!,
+            data: personalMintData,
+            value: 0n,
+          };
+          batch.addTransaction(personalMintTx);
+
+          // Add 'v1Token.stop' to the batch
+          const stopData = v1Avatar.v1Token.interface.encodeFunctionData('stop');
+          const stopTx: TransactionRequest = {
+            to: avatarInfo.v1Token,
+            data: stopData,
+            value: 0n,
+          };
+          batch.addTransaction(stopTx);
         }
       }
 
       // 2. Signup V2 avatar if necessary
       if (avatarInfo.version === 1) {
-        await this.registerHumanV2(profile);
+        // Add 'registerHumanV2' to the batch
+        const metadataDigest = await this.createProfileIfNecessary(profile);
+        const registerHumanData = this.v2Hub.interface.encodeFunctionData('registerHuman', [ZeroAddress, metadataDigest]);
+        const registerHumanTx: TransactionRequest = {
+          to: this.circlesConfig.v2HubAddress!,
+          data: registerHumanData,
+          value: 0n,
+        };
+        batch.addTransaction(registerHumanTx);
       }
 
-      // 3. Make sure the v1 token minting status is known to the v2 hub
-      const calculateIssuanceTx = await this.v2Hub.calculateIssuanceWithCheck(avatar);
-      await calculateIssuanceTx.wait();
+      // 3. Ensure the v1 token minting status is known to the v2 hub
+      // Add 'calculateIssuanceTx' to the batch
+      const calculateIssuanceData = this.v2Hub.interface.encodeFunctionData('calculateIssuanceWithCheck', [avatar]);
+      const calculateIssuanceTx: TransactionRequest = {
+        to: this.circlesConfig.v2HubAddress!,
+        data: calculateIssuanceData,
+        value: 0n,
+      };
+      batch.addTransaction(calculateIssuanceTx);
 
       // 4. Migrate V1 tokens
-      await this.migrateV1Tokens(avatar);
+      // Add 'migrateV1Tokens' to the batch
+      await this.migrateV1TokensBatch(avatar, undefined, batch);
+
+      // Run the batch
+      const batchResponse = await batch.run();
+      console.log('Batch transaction response:', batchResponse);
     } else {
       throw new Error('Avatar is not a V1 avatar');
+    }
+  };
+
+  /**
+   * Migrates all V1 token holdings of an avatar to V2 using batch transactions.
+   * @param avatar The avatar whose tokens to migrate.
+   * @param tokens An optional list of token addresses to migrate. If not provided, all tokens will be migrated.
+   * @param batch An optional batch transaction to add transactions to.
+   */
+  migrateV1TokensBatch = async (avatar: string, tokens?: string[], batch?: any): Promise<void> => {
+    if (!this.circlesConfig.migrationAddress) {
+      throw new Error('Migration address not set');
+    }
+
+    // If no batch is provided, create one
+    let ownBatch = false;
+    if (!batch) {
+      const contractRunner = this.contractRunner;
+      if (!contractRunner.sendBatchTransaction) {
+        throw new Error('Batch transaction not supported by contract runner');
+      }
+      batch = contractRunner.sendBatchTransaction();
+      ownBatch = true;
+    }
+
+    const tokenSet = new Set(tokens?.map(o => o.toLowerCase()) ?? []);
+    const balances = await this.data.getTokenBalances(avatar);
+    const v1Balances = balances.filter(o =>
+      o.version === 1 &&
+      (tokenSet.size > 0 ? tokenSet.has(o.tokenAddress?.toLowerCase()) : true)
+    );
+
+    const tokensToMigrate = v1Balances.filter(o => BigInt(o.attoCrc) > 0n);
+    console.log(`Migrating the following v1 tokens:`, tokensToMigrate);
+
+    // Fetch allowances in parallel
+    const allowances = await Promise.all(tokensToMigrate.map(async (tokenToMigrate) => {
+      const token = Token__factory.connect(tokenToMigrate.tokenAddress, <ContractRunner>this.contractRunner);
+      return await token.allowance(avatar, this.circlesConfig.migrationAddress!);
+    }));
+
+    // Process tokensToMigrate and allowances
+    for (let i = 0; i < tokensToMigrate.length; i++) {
+      const tokenToMigrate = tokensToMigrate[i];
+      const allowance = allowances[i];
+      const balance = BigInt(tokenToMigrate.attoCrc);
+      const token = Token__factory.connect(tokenToMigrate.tokenAddress, <ContractRunner>this.contractRunner);
+
+      if (allowance < balance) {
+        const increase = balance - allowance;
+        const increaseAllowanceData = token.interface.encodeFunctionData('increaseAllowance', [this.circlesConfig.migrationAddress!, increase]);
+        const tx: TransactionRequest = {
+          to: tokenToMigrate.tokenAddress,
+          data: increaseAllowanceData,
+          value: 0n,
+        };
+        batch.addTransaction(tx);
+      }
+    }
+
+    // Add the migrate call
+    const migrationContract = Migration__factory.connect(this.circlesConfig.migrationAddress, <ContractRunner>this.contractRunner);
+    const tokensToMigrateAddresses = tokensToMigrate.map(o => o.tokenOwner);
+    const amountsToMigrate = tokensToMigrate.map(o => BigInt(o.attoCrc));
+
+    const migrateData = migrationContract.interface.encodeFunctionData('migrate', [tokensToMigrateAddresses, amountsToMigrate]);
+    const migrateTx: TransactionRequest = {
+      to: this.circlesConfig.migrationAddress,
+      data: migrateData,
+      value: 0n,
+    };
+    batch.addTransaction(migrateTx);
+
+    // If we created our own batch, run it
+    if (ownBatch) {
+      const batchResponse = await batch.run();
+      console.log('Batch transaction response:', batchResponse);
     }
   };
 
@@ -422,7 +545,7 @@ export class Sdk implements SdkInterface {
     await Promise.all(tokensToMigrate.map(async (tokenToMigrate) => {
       const balance = BigInt(tokenToMigrate.attoCrc);
       console.log(`tokenToMigrate`, tokenToMigrate);
-      const token = Token__factory.connect(tokenToMigrate.tokenAddress, this.contractRunner);
+      const token = Token__factory.connect(tokenToMigrate.tokenAddress, <ContractRunner>this.contractRunner);
       const allowance = await token.allowance(avatar, this.circlesConfig.migrationAddress!);
       if (allowance < balance) {
         const increase = balance - allowance;
@@ -431,7 +554,7 @@ export class Sdk implements SdkInterface {
       }
     }));
 
-    const migrationContract = Migration__factory.connect(this.circlesConfig.migrationAddress, this.contractRunner);
+    const migrationContract = Migration__factory.connect(this.circlesConfig.migrationAddress, <ContractRunner>this.contractRunner);
     const migrateTx = await migrationContract.migrate(
       tokensToMigrate.map(o => o.tokenOwner)
       , tokensToMigrate.map(o => BigInt(o.attoCrc)));
@@ -440,10 +563,10 @@ export class Sdk implements SdkInterface {
   };
 
   getInflationaryWrapper = async (wrapperAddress: string): Promise<InflationaryCircles> => {
-    return InflationaryCircles__factory.connect(wrapperAddress, this.contractRunner);
+    return InflationaryCircles__factory.connect(wrapperAddress, <ContractRunner>this.contractRunner);
   }
 
   getDemurragedWrapper = async (wrapperAddress: string): Promise<DemurrageCircles> => {
-    return DemurrageCircles__factory.connect(wrapperAddress, this.contractRunner);
+    return DemurrageCircles__factory.connect(wrapperAddress, <ContractRunner>this.contractRunner);
   }
 }

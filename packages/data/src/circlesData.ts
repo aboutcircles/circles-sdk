@@ -86,7 +86,21 @@ export const TokenTypes: Record<string, TokenInfo> = {
 function calculateBalances(row: TransactionHistoryRow) {
   try {
     const rawBalance = row.value;
-    const tokenInfo = TokenTypes[row.tokenType];
+    let tokenInfo: TokenInfo;
+
+    if (row.version === 1 && !row.tokenType) {
+      // CrcHubTransfer
+      tokenInfo = {
+        isErc20: true,
+        isErc1155: false,
+        isGroup: false,
+        isInflationary: true,
+        isWrapped: false
+      };
+    } else {
+      tokenInfo = TokenTypes[row.tokenType];
+    }
+
     if (!tokenInfo) {
       throw new Error(`Token type ${row.tokenType} not found.`);
     }

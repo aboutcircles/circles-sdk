@@ -1,4 +1,5 @@
 import {
+  ContractRunner,
   ContractTransactionReceipt, ethers, TransactionReceipt
 } from 'ethers';
 import {Sdk} from '../sdk';
@@ -43,7 +44,7 @@ export class V1Avatar implements AvatarInterface {
     }
 
     if (this.avatarInfo.v1Token) {
-      this._v1Token = Token__factory.connect(this.avatarInfo.v1Token, this.sdk.contractRunner);
+      this._v1Token = Token__factory.connect(this.avatarInfo.v1Token, <ContractRunner>this.sdk.contractRunner);
     }
   }
 
@@ -125,10 +126,11 @@ export class V1Avatar implements AvatarInterface {
 
       const tx = await this.sdk.contractRunner.sendTransaction({
         to: token,
-        data: data
+        data: data,
+        value: 0n,
       });
 
-      receipt = await tx.wait();
+      receipt = <TransactionReceipt><unknown>tx;
     }
 
     if (!receipt) {
@@ -230,7 +232,9 @@ export class V1Avatar implements AvatarInterface {
   }
 
   async getGasTokenBalance(): Promise<bigint> {
-    return await this.sdk.contractRunner.provider?.getBalance(this.address) ?? 0n;
+    // TODO: re-implement
+    // return await this.sdk.contractRunner.provider?.getBalance(this.address) ?? 0n;
+    return 0n;
   }
 
   async trusts(otherAvatar: string): Promise<boolean> {

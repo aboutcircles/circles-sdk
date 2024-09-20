@@ -1,6 +1,6 @@
 import {AvatarInterfaceV2} from '../AvatarInterface';
 import {
-  ContractTransactionReceipt, ethers, formatEther, TransactionReceipt
+  ContractTransactionReceipt, ethers, formatEther, TransactionReceipt, ZeroAddress
 } from 'ethers';
 import {Sdk} from '../sdk';
 import {
@@ -14,6 +14,7 @@ import {addressToUInt256, cidV0ToUint8Array} from '@circles-sdk/utils';
 import {Pathfinder} from './pathfinderV2';
 import {Profile} from "@circles-sdk/profiles";
 import {TokenType} from "@circles-sdk/data/dist/rows/tokenInfoRow";
+import {BatchRun, TransactionRequest} from "@circles-sdk/adapter";
 
 export type FlowEdge = {
   streamSinkId: bigint;
@@ -108,7 +109,9 @@ export class V2Avatar implements AvatarInterfaceV2 {
   }
 
   async getGasTokenBalance(): Promise<bigint> {
-    return await this.sdk.contractRunner.provider?.getBalance(this.address) ?? 0n;
+    // TODO: re-implement
+    // return await this.sdk.contractRunner.provider?.getBalance(this.address) ?? 0n;
+    return 0n;
   }
 
   async getTransactionHistory(pageSize: number): Promise<CirclesQuery<TransactionHistoryRow>> {
@@ -148,17 +151,24 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  private async transitiveTransfer(to: string, amount: bigint): Promise<ContractTransactionReceipt> {
+  private async transitiveTransfer(to: string, amount: bigint, batch: BatchRun) {
     this.throwIfV2IsNotAvailable();
 
     const pathfinder = new Pathfinder(this.sdk.circlesConfig.v2PathfinderUrl!);
     const flowMatrix = await pathfinder.getArgsForPath(this.address, to, amount.toString());
-    const result = await this.sdk.v2Hub?.operateFlowMatrix(flowMatrix.flowVertices, flowMatrix.flowEdges, flowMatrix.streams, flowMatrix.packedCoordinates);
-    const receipt = await result?.wait();
-    if (!receipt) {
-      throw new Error('Transfer failed');
+
+    if (!this.sdk.v2Hub || this.sdk.contractRunner) {
+      throw new Error('V2Hub or contract runner not available');
     }
-    return receipt;
+
+    const operateFlowMatrixCallData = this.sdk.v2Hub.interface.encodeFunctionData("operateFlowMatrix", [flowMatrix.flowVertices, flowMatrix.flowEdges, flowMatrix.streams, flowMatrix.packedCoordinates]);
+    const personalMintTx: TransactionRequest = {
+      to: this.sdk.circlesConfig.v2HubAddress!,
+      data: operateFlowMatrixCallData,
+      value: 0n,
+    };
+
+    batch.addTransaction(personalMintTx);
   }
 
   private async directTransfer(to: string, amount: bigint, tokenAddress: string): Promise<TransactionReceipt> {
@@ -174,7 +184,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
     if (erc1155Types.has(tokenInf.type)) {
       return await this.transferErc1155(tokenAddress, to, amount);
     } else if (erc20Types.has(tokenInf.type)) {
-      return await this.transferErc20(to, amount, tokenAddress);
+      return <TransactionReceipt><unknown>await this.transferErc20(to, amount, tokenAddress);
     }
     throw new Error(`Token type ${tokenInf.type} not supported`);
   }
@@ -189,15 +199,11 @@ export class V2Avatar implements AvatarInterfaceV2 {
 
     const tx = await this.sdk.contractRunner.sendTransaction({
       to: tokenAddress,
-      data: data
+      data: data,
+      value: 0n
     });
 
-    const receipt = await tx.wait();
-    if (!receipt) {
-      throw new Error('Transfer failed');
-    }
-
-    return receipt;
+    return tx;
   }
 
   private async transferErc1155(tokenAddress: string, to: string, amount: bigint) {
@@ -219,18 +225,26 @@ export class V2Avatar implements AvatarInterfaceV2 {
   }
 
   async transfer(to: string, amount: bigint, tokenAddress?: string): Promise<TransactionReceipt> {
+    if (!this.sdk?.contractRunner?.sendBatchTransaction) {
+      throw new Error('ContractRunner (or sendBatchTransaction capability) not available');
+    }
     if (!tokenAddress) {
+      const batch = this.sdk.contractRunner.sendBatchTransaction();
+
       const approvalStatus = await this.sdk.v2Hub!.isApprovedForAll(this.address, this.address);
       if (!approvalStatus) {
-        const tx = await this.sdk.v2Hub!.setApprovalForAll(this.address, true);
-        const receipt = await tx.wait();
-        if (!receipt) {
-          throw new Error('Approval failed');
-        }
+        const tx = this.sdk.v2Hub!.interface.encodeFunctionData("setApprovalForAll", [this.address, true]);
+        batch.addTransaction({
+          to: this.sdk.circlesConfig.v2HubAddress!,
+          data: tx,
+          value: 0n
+        });
       }
       console.log(`Approval by ${this.address} for ${this.address} successful`);
 
-      return this.transitiveTransfer(to, amount);
+      await this.transitiveTransfer(to, amount, batch);
+
+      return <TransactionReceipt><unknown>(await batch.run());
     } else {
       return this.directTransfer(to, amount, tokenAddress);
     }
@@ -317,7 +331,9 @@ export class V2Avatar implements AvatarInterfaceV2 {
       throw new Error('Wrap failed');
     }
 
-    return await this.decodeErc20WrapperDeployed(receipt);
+    // TODO: Return the address of the wrapper
+    //return await this.decodeErc20WrapperDeployed(receipt);
+    return ZeroAddress;
   }
 
   async wrapInflationErc20(avatarAddress: string, amount: bigint): Promise<string> {
@@ -329,7 +345,9 @@ export class V2Avatar implements AvatarInterfaceV2 {
       throw new Error('Wrap failed');
     }
 
-    return await this.decodeErc20WrapperDeployed(receipt);
+    // TODO: Return the address of the wrapper
+    //return await this.decodeErc20WrapperDeployed(receipt);
+    return ZeroAddress;
   }
 
   async unwrapDemurrageErc20(wrapperTokenAddress: string, amount: bigint): Promise<ContractTransactionReceipt> {
@@ -350,19 +368,6 @@ export class V2Avatar implements AvatarInterfaceV2 {
       throw new Error('Unwrap failed');
     }
     return receipt;
-  }
-
-  /**
-   * Decode the ERC20WrapperDeployed event from the receipt.
-   * @param receipt The receipt of the transaction that deployed the ERC20 wrapper.
-   * @return The address of the deployed ERC20 wrapper.
-   */
-  async decodeErc20WrapperDeployed(receipt: ContractTransactionReceipt): Promise<string> {
-    // Decode: event ERC20WrapperDeployed(address indexed avatar, address indexed erc20Wrapper, CirclesType circlesType);
-    const decoded = this.sdk.v2Hub?.interface.parseLog(receipt.logs[0]);
-    console.log(`decoded: ${JSON.stringify(decoded, ((key: any, value: any) => typeof value === 'bigint' ? value.toString() : value), 2)}`);
-
-    throw new Error('Not implemented');
   }
 
   /**

@@ -1,5 +1,5 @@
 {
-  "name": "@circles-sdk/adapter-safe-app",
+  "name": "@circles-sdk/adapter-safe",
   "version": "0.10.0",
   "description": "",
   "type": "module",
@@ -11,14 +11,15 @@
     "package.json"
   ],
   "devDependencies": {
+    "rollup-plugin-node-polyfills": "^0.2.1",
     "typescript": "^5.3.3"
   },
   "scripts": {
     "build": "rollup -c"
   },
   "dependencies": {
-    "@circles-sdk/adapter": "0.10.0",
-    "@safe-global/safe-apps-sdk": "^9.1.0"
+    "@circles-sdk/adapter": "^0.10.0",
+    "@safe-global/protocol-kit": "^4.1.0"
   },
   "keywords": [],
   "author": "",
