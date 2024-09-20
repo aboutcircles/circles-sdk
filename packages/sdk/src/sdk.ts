@@ -65,20 +65,20 @@ interface SdkInterface {
    * @returns The Avatar instance.
    */
   registerHuman: () => Promise<AvatarInterface>;
+  //
+  // /**
+  //  * Registers the connected wallet as a human avatar in Circles v2 and creates a profile.
+  //  * @param profile The profile data of the avatar.
+  //  * @returns The Avatar instance.
+  //  */
+  // registerHumanV2(profile: Profile): Promise<AvatarInterface>;
 
-  /**
-   * Registers the connected wallet as a human avatar in Circles v2 and creates a profile.
-   * @param profile The profile data of the avatar.
-   * @returns The Avatar instance.
-   */
-  registerHumanV2(profile: Profile): Promise<AvatarInterface>;
-
-  /**
-   * Registers the connected wallet as a human avatar in Circles v2 and using an existing CID as profile.
-   * @param cidV0 The CIDv0 of the avatar's ERC1155 token metadata.
-   * @returns The Avatar instance.
-   */
-  registerHumanV2(cidV0: string): Promise<AvatarInterface>;
+  // /**
+  //  * Registers the connected wallet as a human avatar in Circles v2 and using an existing CID as profile.
+  //  * @param cidV0 The CIDv0 of the avatar's ERC1155 token metadata.
+  //  * @returns The Avatar instance.
+  //  */
+  // registerHumanV2(cidV0: string): Promise<AvatarInterface>;
 
   /**
    * Registers the connected wallet as an organization avatar in Circles v1.
@@ -219,7 +219,7 @@ export class Sdk implements SdkInterface {
    * @param profile The profile data of the avatar.
    * @returns The Avatar instance.
    */
-  registerHumanV2(profile: Profile): Promise<AvatarInterface>;
+  private registerHumanV2(profile: Profile): Promise<AvatarInterface>;
   /**
    * Registers the connected wallet as a human avatar in Circles v2 using an existing CID as profile.
    * Note: This will only work if you already have a v1 avatar and only during the migration period.
@@ -227,12 +227,12 @@ export class Sdk implements SdkInterface {
    * @param cidV0 The CIDv0 of the avatar's ERC1155 token metadata.
    * @returns The Avatar instance.
    */
-  registerHumanV2(cidV0: string): Promise<AvatarInterface>;
+  private registerHumanV2(cidV0: string): Promise<AvatarInterface>;
   /**
    * Registers the connected wallet as a human avatar in Circles v2.
    * @param profile The profile data of the avatar.
    */
-  async registerHumanV2(profile: Profile | string): Promise<AvatarInterface> {
+  private async registerHumanV2(profile: Profile | string): Promise<AvatarInterface> {
     return this._registerHuman(ZeroAddress, profile);
   };
 

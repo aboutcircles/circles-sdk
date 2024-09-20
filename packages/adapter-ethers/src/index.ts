@@ -206,4 +206,11 @@ export class SdkContractRunnerWrapper implements EthersContractRunner {
 
     return <SdkTransactionResponse><unknown>{...transactionResponse};
   };
+  sendBatchTransaction() {
+    if (!this.sdkContractRunner.sendBatchTransaction) {
+      throw new Error('sendBatchTransaction not supported');
+    }
+
+    return this.sdkContractRunner.sendBatchTransaction();
+  }
 }

@@ -30,7 +30,7 @@ export interface AvatarInterface {
    * @param tokenId The token to transfer (address). Leave empty to allow transitive transfers.
    * @returns The maximum amount that can be transferred.
    */
-  getMaxTransferableAmount(to: string, tokenId?: string): Promise<bigint>;
+  getMaxTransferableAmount(to: string, tokenId?: string): Promise<number>;
 
   /**
    * Transfers Circles to another avatar.

@@ -1,6 +1,6 @@
 {
   "name": "@circles-sdk/adapter-cometh",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "",
   "type": "module",
   "main": "./dist/index.js",
@@ -17,7 +17,7 @@
     "build": "rollup -c"
   },
   "dependencies": {
-    "@circles-sdk/adapter": "0.10.0",
+    "@circles-sdk/adapter": "0.10.1",
     "@cometh/connect-sdk": "1.2.29"
   },
   "keywords": [],

@@ -561,7 +561,7 @@ export class CirclesData implements CirclesDataInterface {
     );
     return parseRpcSubscriptionMessage(response.result);
   }
-
+  
   /**
    * Gets the invitations sent by an avatar.
    * @param avatar The avatar to get the invitations for.

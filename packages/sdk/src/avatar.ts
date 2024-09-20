@@ -154,7 +154,7 @@ export class Avatar implements AvatarInterfaceV2 {
    * @param tokenId The token ID to transfer. If not specified, a transitve transfer is calculated.
    * @returns The maximum Circles amount that can be transferred.
    */
-  getMaxTransferableAmount = (to: string, tokenId?: string): Promise<bigint> => this.onlyIfInitialized(() => this._avatar!.getMaxTransferableAmount(to, tokenId));
+  getMaxTransferableAmount = (to: string, tokenId?: string): Promise<number> => this.onlyIfInitialized(() => this._avatar!.getMaxTransferableAmount(to, tokenId));
 
   /**
    * Transfers Circles to another avatar.

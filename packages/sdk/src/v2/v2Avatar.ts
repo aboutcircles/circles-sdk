@@ -4,6 +4,7 @@ import {
 } from 'ethers';
 import {Sdk} from '../sdk';
 import {
+  attoCirclesToCircles,
   AvatarRow,
   CirclesQuery,
   TokenBalanceRow,
@@ -71,7 +72,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  async getMaxTransferableAmount(to: string, tokenId?: string): Promise<bigint> {
+  async getMaxTransferableAmount(to: string, tokenId?: string): Promise<number> {
     this.throwIfV2IsNotAvailable();
 
     if (tokenId) {
@@ -82,7 +83,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
 
       const tokenBalances = await this.sdk.data.getTokenBalances(this.address);
       const tokenBalance = tokenBalances.filter(b => b.version === 2 && b.tokenOwner.toString() === tokenInfo.token.toString())[0];
-      return BigInt(tokenBalance?.attoCircles ?? "0");
+      return tokenBalance?.circles ?? 0;
     }
 
     const largeAmount = BigInt('79228162514264337593543950335');
@@ -91,11 +92,15 @@ export class V2Avatar implements AvatarInterfaceV2 {
       to,
       largeAmount);
 
-    if (!transferPath.isValid) {
-      return Promise.resolve(BigInt(0));
+    if (transferPath.transferSteps.length == 0) {
+      return 0;
     }
 
-    return transferPath.maxFlow;
+    if (!transferPath.isValid) {
+      return 0;
+    }
+
+    return attoCirclesToCircles(transferPath.maxFlow);
   }
 
   async getMintableAmount(): Promise<number> {

@@ -70,7 +70,7 @@ export class ComethSdkContractRunner implements SdkContractRunner {
       chainId: network.chainId
     };
   };
-  sendBatchTransaction?: () => BatchRun = () => {
+  sendBatchTransaction()  {
     return new ComethBatchRun(this.comethWallet);
   }
 }

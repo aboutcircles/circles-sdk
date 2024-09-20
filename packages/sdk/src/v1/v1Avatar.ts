@@ -58,7 +58,7 @@ export class V1Avatar implements AvatarInterface {
    * @param tokenId The token to transfer (address). Leave empty to allow transitive transfers.
    * @returns The max. transferable amount at the time.
    */
-  async getMaxTransferableAmount(to: string, tokenId?: string): Promise<bigint> {
+  async getMaxTransferableAmount(to: string, tokenId?: string): Promise<number> {
     this.throwIfNotInitialized();
 
     if (tokenId) {
@@ -68,8 +68,8 @@ export class V1Avatar implements AvatarInterface {
       }
 
       const tokenBalances = await this.sdk.data.getTokenBalances(this.address);
-      const tokenBalance = tokenBalances.filter(b => b.version === 1 && b.tokenAddress === tokenId)[0]?.attoCircles;
-      return BigInt(tokenBalance ?? "0");
+      const tokenBalance = tokenBalances.filter(b => b.version === 1 && b.tokenAddress === tokenId)[0]?.circles;
+      return tokenBalance ?? "0";
     }
 
     this.throwIfPathfinderIsNotAvailable();
@@ -81,10 +81,10 @@ export class V1Avatar implements AvatarInterface {
       largeAmount);
 
     if (!transferPath.isValid) {
-      return Promise.resolve(BigInt(0));
+      return 0;
     }
 
-    return transferPath.maxFlow;
+    return crcToTc(new Date(), transferPath.maxFlow);
   }
 
   /**
@@ -107,6 +107,8 @@ export class V1Avatar implements AvatarInterface {
       if (!transferPath.isValid || transferPath.transferSteps.length === 0) {
         throw new Error(`Couldn't find a valid path from ${this.address} to ${to} for ${amount}.`);
       }
+
+      console.log('transferPath', transferPath);
 
       const tokenOwners = transferPath.transferSteps.map(o => o.token_owner);
       const srcs = transferPath.transferSteps.map(o => o.from);
