@@ -4,6 +4,7 @@ import {
 } from '@circles-sdk/data';
 import {ContractTransactionReceipt, TransactionReceipt} from 'ethers';
 import {Profile} from "@circles-sdk/profiles";
+import {TransactionResponse} from "@circles-sdk/adapter";
 
 /**
  * An Avatar represents a user registered at Circles.
@@ -47,13 +48,13 @@ export interface AvatarInterface {
    * Trusts another avatar. Trusting an avatar means you're willing to accept Circles that have been issued by this avatar.
    * @param avatar The address of the avatar to trust.
    */
-  trust(avatar: string): Promise<ContractTransactionReceipt>;
+  trust(avatar: string | string[]): Promise<TransactionResponse>;
 
   /**
    * Revokes trust from another avatar. This means you will no longer accept Circles issued by this avatar.
    * @param avatar
    */
-  untrust(avatar: string): Promise<ContractTransactionReceipt>;
+  untrust(avatar: string | string[]): Promise<TransactionResponse>;
 
   /**
    * Gets the amount available to mint via `personalMint()`.
@@ -136,7 +137,7 @@ export interface AvatarInterfaceV2 extends AvatarInterface {
 
   /**
    * Unwraps demurraged ERC20 Circles into personal ERC115 Circles.
-   * @param tokenAddress The token address of the ERC20 Circles.
+   * @param wrapperTokenAddress The token address of the ERC20 Circles.
    * @param amount The amount of ERC20 Circles to unwrap.
    */
   unwrapDemurrageErc20(wrapperTokenAddress: string, amount: bigint): Promise<ContractTransactionReceipt>;
@@ -151,7 +152,7 @@ export interface AvatarInterfaceV2 extends AvatarInterface {
 
   /**
    * Unwraps inflation ERC20 Circles into personal ERC115 Circles.
-   * @param avatarAddress The avatar address.
+   * @param wrapperTokenAddress The avatar address.
    * @param amount The amount of ERC20 Circles to unwrap.
    */
   unwrapInflationErc20(wrapperTokenAddress: string, amount: bigint): Promise<ContractTransactionReceipt>;
@@ -160,7 +161,7 @@ export interface AvatarInterfaceV2 extends AvatarInterface {
    * Invites an address as human to Circles v2.
    * @param avatar The avatar's avatar.
    */
-  inviteHuman(avatar: string): Promise<ContractTransactionReceipt>;
+  inviteHuman(avatar: string): Promise<TransactionResponse>;
 
   /**
    * Updates the avatar's metadata (profile).

@@ -1,6 +1,10 @@
 import {AvatarInterfaceV2} from '../AvatarInterface';
 import {
-  ContractTransactionReceipt, ethers, formatEther, TransactionReceipt, ZeroAddress
+  ContractTransactionReceipt,
+  ethers,
+  formatEther,
+  TransactionReceipt,
+  ZeroAddress
 } from 'ethers';
 import {Sdk} from '../sdk';
 import {
@@ -15,7 +19,7 @@ import {addressToUInt256, cidV0ToUint8Array} from '@circles-sdk/utils';
 import {Pathfinder} from './pathfinderV2';
 import {Profile} from "@circles-sdk/profiles";
 import {TokenType} from "@circles-sdk/data/dist/rows/tokenInfoRow";
-import {BatchRun, TransactionRequest} from "@circles-sdk/adapter";
+import {BatchRun, TransactionRequest, TransactionResponse} from "@circles-sdk/adapter";
 
 export type FlowEdge = {
   streamSinkId: bigint;
@@ -202,13 +206,11 @@ export class V2Avatar implements AvatarInterfaceV2 {
       throw new Error('ContractRunner not available');
     }
 
-    const tx = await this.sdk.contractRunner.sendTransaction({
+    return await this.sdk.contractRunner.sendTransaction({
       to: tokenAddress,
       data: data,
       value: 0n
     });
-
-    return tx;
   }
 
   private async transferErc1155(tokenAddress: string, to: string, amount: bigint) {
@@ -255,10 +257,26 @@ export class V2Avatar implements AvatarInterfaceV2 {
     }
   }
 
-  async trust(avatar: string): Promise<ContractTransactionReceipt> {
+  async trust(avatar: string | string[]): Promise<TransactionResponse> {
     this.throwIfV2IsNotAvailable();
-    const tx = await this.sdk.v2Hub!.trust(avatar, BigInt('79228162514264337593543950335'));
-    const receipt = await tx.wait();
+
+    if (!this.sdk?.contractRunner?.sendBatchTransaction) {
+      throw new Error('ContractRunner (or sendBatchTransaction capability) not available');
+    }
+
+    const avatars = Array.isArray(avatar) ? avatar : [avatar];
+    const batch = this.sdk.contractRunner.sendBatchTransaction();
+
+    for (const av of avatars) {
+      const txData = this.sdk.v2Hub!.interface.encodeFunctionData("trust", [av, BigInt('79228162514264337593543950335')]);
+      batch.addTransaction({
+        to: this.sdk.circlesConfig.v2HubAddress!,
+        data: txData,
+        value: 0n
+      });
+    }
+
+    const receipt = await batch.run();
     if (!receipt) {
       throw new Error('Trust failed');
     }
@@ -266,10 +284,26 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  async untrust(avatar: string): Promise<ContractTransactionReceipt> {
+  async untrust(avatar: string | string[]): Promise<TransactionResponse> {
     this.throwIfV2IsNotAvailable();
-    const tx = await this.sdk.v2Hub!.trust(avatar, BigInt('0'));
-    const receipt = await tx.wait();
+
+    if (!this.sdk?.contractRunner?.sendBatchTransaction) {
+      throw new Error('ContractRunner (or sendBatchTransaction capability) not available');
+    }
+
+    const avatars = Array.isArray(avatar) ? avatar : [avatar];
+    const batch = this.sdk.contractRunner.sendBatchTransaction();
+
+    for (const av of avatars) {
+      const txData = this.sdk.v2Hub!.interface.encodeFunctionData("trust", [av, BigInt('0')]);
+      batch.addTransaction({
+        to: this.sdk.circlesConfig.v2HubAddress!,
+        data: txData,
+        value: 0n
+      });
+    }
+
+    const receipt = await batch.run();
     if (!receipt) {
       throw new Error('Untrust failed');
     }
@@ -379,7 +413,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
    * Invite a user to Circles.
    * @param avatar The address of the avatar to invite. Can be either a v1 address or an address that's not signed up yet.
    */
-  async inviteHuman(avatar: string): Promise<ContractTransactionReceipt> {
+  async inviteHuman(avatar: string): Promise<TransactionResponse> {
     this.throwIfV2IsNotAvailable();
 
     const avatarInfo = await this.sdk.data.getAvatarInfo(avatar);

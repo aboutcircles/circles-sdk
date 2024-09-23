@@ -13,6 +13,7 @@ import {CirclesEvent} from '@circles-sdk/data';
 import {tcToCrc} from '@circles-sdk/utils';
 import {Profile} from "@circles-sdk/profiles";
 import {TokenBalanceRow} from "../../data";
+import {TransactionResponse} from "@circles-sdk/adapter";
 
 /**
  * An Avatar represents a user registered at Circles.
@@ -183,13 +184,13 @@ export class Avatar implements AvatarInterfaceV2 {
    * @param avatar The address of the avatar to trust.
    * @returns The transaction receipt.
    */
-  trust = (avatar: string): Promise<ContractTransactionReceipt> => this.onlyIfInitialized(() => this._avatar!.trust(avatar));
+  trust = (avatar: string|string[]): Promise<TransactionResponse> => this.onlyIfInitialized(() => this._avatar!.trust(avatar));
   /**
    * Revokes trust from another avatar. This means you will no longer accept Circles issued by this avatar. This will not affect already received Circles.
    * @param avatar The address of the avatar to untrust.
    * @returns The transaction receipt.
    */
-  untrust = (avatar: string): Promise<ContractTransactionReceipt> => this.onlyIfInitialized(() => this._avatar!.untrust(avatar));
+  untrust = (avatar: string|string[]): Promise<TransactionResponse> => this.onlyIfInitialized(() => this._avatar!.untrust(avatar));
 
   /**
    * Can be used to check if this avatar trusts the other avatar.
@@ -278,7 +279,7 @@ export class Avatar implements AvatarInterfaceV2 {
    * Invite a human avatar to join Circles.
    * @param avatar The address of any human controlled wallet.
    */
-  inviteHuman = (avatar: string): Promise<ContractTransactionReceipt> => this.onlyIfV2((_avatar) => _avatar.inviteHuman(avatar));
+  inviteHuman = (avatar: string): Promise<TransactionResponse> => this.onlyIfV2((_avatar) => _avatar.inviteHuman(avatar));
   /**
    * Updates the avatar's metadata (profile).
    * @param cid The IPFS content identifier of the metadata (Qm....).

@@ -13,6 +13,7 @@ import {
   TrustRelationRow
 } from '@circles-sdk/data';
 import {crcToTc} from '@circles-sdk/utils';
+import {TransactionResponse} from "@circles-sdk/adapter";
 
 export class V1Avatar implements AvatarInterface {
   public readonly sdk: Sdk;
@@ -142,27 +143,60 @@ export class V1Avatar implements AvatarInterface {
     return receipt;
   }
 
-  async trust(avatar: string) {
+  async trust(avatar: string | string[]): Promise<TransactionResponse> {
     this.throwIfNotInitialized();
 
-    const tx = await this.sdk.v1Hub.trust(avatar, BigInt(100));
-    const receipt = await tx.wait();
-    if (!receipt) {
-      throw new Error(`The trust call for '${this.address} -> ${avatar}' didn't yield a receipt.`);
+    if (!this.sdk?.contractRunner?.sendBatchTransaction) {
+      throw new Error('ContractRunner (or sendBatchTransaction capability) not available');
     }
+
+    const avatars = Array.isArray(avatar) ? avatar : [avatar];
+    const batch = this.sdk.contractRunner.sendBatchTransaction();
+
+    for (const av of avatars) {
+      const txData = this.sdk.v1Hub.interface.encodeFunctionData('trust', [av, BigInt(100)]);
+      batch.addTransaction({
+        to: this.sdk.circlesConfig.v1HubAddress,
+        data: txData,
+        value: 0n,
+      });
+    }
+
+    const receipt = await batch.run();
+    if (!receipt) {
+      throw new Error('Trust failed');
+    }
+
     return receipt;
   }
 
-  async untrust(avatar: string) {
+  async untrust(avatar: string | string[]): Promise<TransactionResponse> {
     this.throwIfNotInitialized();
 
-    const tx = await this.sdk.v1Hub.trust(avatar, BigInt(0));
-    const receipt = await tx.wait();
-    if (!receipt) {
-      throw new Error(`The untrust call for '${this.address} -> ${avatar}' didn't yield a receipt.`);
+    if (!this.sdk?.contractRunner?.sendBatchTransaction) {
+      throw new Error('ContractRunner (or sendBatchTransaction capability) not available');
     }
+
+    const avatars = Array.isArray(avatar) ? avatar : [avatar];
+    const batch = this.sdk.contractRunner.sendBatchTransaction();
+
+    for (const av of avatars) {
+      const txData = this.sdk.v1Hub.interface.encodeFunctionData('trust', [av, BigInt(0)]);
+      batch.addTransaction({
+        to: this.sdk.circlesConfig.v1HubAddress,
+        data: txData,
+        value: 0n,
+      });
+    }
+
+    const receipt = await batch.run();
+    if (!receipt) {
+      throw new Error('Untrust failed');
+    }
+
     return receipt;
   }
+
 
   async getMintableAmount(): Promise<number> {
     if (!this.v1Token) {
