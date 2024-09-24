@@ -109,7 +109,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
 
   async getMintableAmount(): Promise<number> {
     this.throwIfV2IsNotAvailable();
-    const [a, b, c] = await this.sdk.v2Hub!.calculateIssuance(this.address);
+    const [a, _, __] = await this.sdk.v2Hub!.calculateIssuance(this.address);
     return parseFloat(formatEther(a));
   }
 

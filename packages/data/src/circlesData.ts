@@ -17,6 +17,7 @@ import {GroupMembershipRow} from './rows/groupMembershipRow';
 import {GroupRow} from './rows/groupRow';
 import {TokenInfoRow} from './rows/tokenInfoRow';
 import {parseRpcSubscriptionMessage, RcpSubscriptionEvent} from './events/parser';
+import {FilterPredicate} from "./rpcSchema/filterPredicate";
 
 export type TrustEvent = {
   blockNumber: number;
@@ -553,15 +554,18 @@ export class CirclesData implements CirclesDataInterface {
    * @param avatar The avatar to get the events for.
    * @param fromBlock The block number to start from.
    * @param toBlock The block number to end at. If not provided, the latest block is used.
+   * @param eventTypes The event types to filter for.
+   * @param filters Additional filters to apply (filter columns must be present in all queried event types).
+   * @param sortAscending Whether to sort the events ascending or not.
    */
-  async getEvents(avatar: string, fromBlock: number, toBlock?: number): Promise<CirclesEvent[]> {
+  async getEvents(avatar?: string, fromBlock?: number, toBlock?: number, eventTypes?: string[], filters?: FilterPredicate[], sortAscending?: boolean): Promise<CirclesEvent[]> {
     const response = await this.rpc.call<RcpSubscriptionEvent[]>(
       'circles_events',
-      [avatar, fromBlock, toBlock]
+      [avatar, fromBlock, toBlock, eventTypes, filters, sortAscending]
     );
     return parseRpcSubscriptionMessage(response.result);
   }
-  
+
   /**
    * Gets the invitations sent by an avatar.
    * @param avatar The avatar to get the invitations for.
