@@ -184,13 +184,13 @@ export class Avatar implements AvatarInterfaceV2 {
    * @param avatar The address of the avatar to trust.
    * @returns The transaction receipt.
    */
-  trust = (avatar: string|string[]): Promise<TransactionResponse> => this.onlyIfInitialized(() => this._avatar!.trust(avatar));
+  trust = (avatar: string | string[]): Promise<TransactionResponse> => this.onlyIfInitialized(() => this._avatar!.trust(avatar));
   /**
    * Revokes trust from another avatar. This means you will no longer accept Circles issued by this avatar. This will not affect already received Circles.
    * @param avatar The address of the avatar to untrust.
    * @returns The transaction receipt.
    */
-  untrust = (avatar: string|string[]): Promise<TransactionResponse> => this.onlyIfInitialized(() => this._avatar!.untrust(avatar));
+  untrust = (avatar: string | string[]): Promise<TransactionResponse> => this.onlyIfInitialized(() => this._avatar!.untrust(avatar));
 
   /**
    * Can be used to check if this avatar trusts the other avatar.
@@ -298,4 +298,9 @@ export class Avatar implements AvatarInterfaceV2 {
    * @returns The IPFS CID of the updated profile.
    */
   updateProfile = (profile: Profile): Promise<string> => this.onlyIfV2((_avatar) => _avatar.updateProfile(profile));
+
+  /**
+   * Gets the total supply of either this avatar's Personal or Group Circles.
+   */
+  getTotalSupply = (): Promise<bigint> => this.onlyIfInitialized(() => this._avatar!.getTotalSupply());
 }

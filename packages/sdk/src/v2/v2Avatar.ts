@@ -429,6 +429,15 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
+  /**
+   * Gets the total supply of either this avatar's Personal- or Group-Circles, depending on the avatar's type.
+   * Returns '0' for organizations or if the avatar is not signed up at Circles.
+   */
+  async getTotalSupply(): Promise<bigint> {
+    this.throwIfV2IsNotAvailable();
+    return await this.sdk.v2Hub!.totalSupply(this.address);
+  }
+
   private throwIfV2IsNotAvailable() {
     if (!this.sdk.circlesConfig.v2HubAddress) {
       throw new Error('V2 is not available');

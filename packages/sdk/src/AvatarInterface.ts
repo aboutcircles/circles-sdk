@@ -112,6 +112,11 @@ export interface AvatarInterface {
    * @returns The token balances.
    */
   getBalances(): Promise<TokenBalanceRow[]>;
+
+  /**
+   * Gets the total supply of either this avatar's Personal or Group Circles.
+   */
+  getTotalSupply(): Promise<bigint>;
 }
 
 /**

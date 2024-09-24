@@ -281,6 +281,15 @@ export class V1Avatar implements AvatarInterface {
     return (await this.sdk.v1Hub.limits(otherAvatar, this.address)) > 0n;
   }
 
+  /**
+   * Gets the total supply of either this avatar's Personal Circles.
+   * Returns '0' for organizations or if the avatar is not signed up at Circles.
+   */
+  async getTotalSupply(): Promise<bigint> {
+    this.throwIfNotInitialized();
+    return await this._v1Token?.totalSupply() ?? 0n;
+  }
+
   private throwIfPathfinderIsNotAvailable() {
     if (!this.sdk.v1Pathfinder) {
       throw new Error('Pathfinder is not available');
