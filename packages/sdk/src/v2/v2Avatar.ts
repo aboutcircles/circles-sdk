@@ -166,8 +166,8 @@ export class V2Avatar implements AvatarInterfaceV2 {
     const pathfinder = new Pathfinder(this.sdk.circlesConfig.v2PathfinderUrl!);
     const flowMatrix = await pathfinder.getArgsForPath(this.address, to, amount.toString());
 
-    if (!this.sdk.v2Hub || this.sdk.contractRunner) {
-      throw new Error('V2Hub or contract runner not available');
+    if (!this.sdk.v2Hub) {
+      throw new Error('V2Hub not available');
     }
 
     const operateFlowMatrixCallData = this.sdk.v2Hub.interface.encodeFunctionData("operateFlowMatrix", [flowMatrix.flowVertices, flowMatrix.flowEdges, flowMatrix.streams, flowMatrix.packedCoordinates]);
