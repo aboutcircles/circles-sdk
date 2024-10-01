@@ -1,6 +1,6 @@
 {
   "name": "@circles-sdk/sdk",
-  "version": "0.11.1",
+  "version": "0.11.2",
   "description": "",
   "type": "module",
   "main": "./dist/index.js",
@@ -17,11 +17,11 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@circles-sdk/abi-v1": "0.11.1",
-    "@circles-sdk/abi-v2": "0.11.1",
-    "@circles-sdk/data": "0.11.1",
-    "@circles-sdk/profiles": "0.11.1",
-    "@circles-sdk/adapter-ethers": "0.11.1",
+    "@circles-sdk/abi-v1": "0.11.2",
+    "@circles-sdk/abi-v2": "0.11.2",
+    "@circles-sdk/data": "0.11.2",
+    "@circles-sdk/profiles": "0.11.2",
+    "@circles-sdk/adapter-ethers": "0.11.2",
     "ethers": "^6.13.2",
     "multihashes": "^4.0.3"
   },

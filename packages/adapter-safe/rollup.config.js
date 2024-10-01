@@ -18,5 +18,5 @@ export default {
       tsconfig: './tsconfig.json'
     })
   ],
-  external: ['@safe-global/protocol-kit', 'ethers']
+  external: ['@safe-global/protocol-kit', 'ethers', 'ethers-multisend']
 };
