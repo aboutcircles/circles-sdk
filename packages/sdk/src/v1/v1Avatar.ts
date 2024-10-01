@@ -25,9 +25,6 @@ export class V1Avatar implements AvatarInterface {
     return this.avatarInfo.avatar;
   }
 
-  // TODO: Empty stream makes no sense
-  // readonly events: Observable<AvatarEvent> = Observable.create<AvatarEvent>().property;
-
   get v1Token(): Token | undefined {
     return this._v1Token;
   }

@@ -231,6 +231,13 @@ export type CrcV2_Erc20WrapperTransfer = CirclesBaseEvent & {
   amount?: bigint;
 };
 
+export type CrcV2_Erc20WrapperDeployed = CirclesBaseEvent & {
+  $event: "CrcV2_Erc20WrapperDeployed",
+  avatar?: string;
+  erc20Wrapper?: string;
+  circlesType?: number;
+};
+
 export type CirclesEvent =
   | CrcV1_HubTransfer
   | CrcV1_Signup
@@ -246,6 +253,7 @@ export type CirclesEvent =
   | CrcV2_Trust
   | CrcV2_TransferSingle
   | CrcV2_Erc20WrapperTransfer
+  | CrcV2_Erc20WrapperDeployed
   | CrcV2_URI
   | CrcV2_ApprovalForAll
   | CrcV2_TransferBatch
@@ -279,6 +287,7 @@ export type CirclesEventType =
   | 'CrcV2_Trust'
   | 'CrcV2_TransferSingle'
   | 'CrcV2_Erc20WrapperTransfer'
+  | 'CrcV2_Erc20WrapperDeployed'
   | 'CrcV2_URI'
   | 'CrcV2_ApprovalForAll'
   | 'CrcV2_TransferBatch'

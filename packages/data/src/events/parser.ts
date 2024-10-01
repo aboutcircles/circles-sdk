@@ -286,6 +286,14 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
         to: values.to,
         amount: values.value ? hexToBigInt(values.value) : undefined
       }
+    case "CrcV2_Erc20WrapperDeployed":
+      return {
+        ...baseEvent,
+        $event: "CrcV2_Erc20WrapperDeployed",
+        avatar: values.avatar,
+        erc20Wrapper: values.erc20Wrapper,
+        circlesType: values.circlesType ? hexToNumber(values.circlesType) : undefined
+      };
     default:
       throw new Error(`Unknown event type: ${event}`);
   }
