@@ -1,18 +1,25 @@
-import { AvatarInterfaceV2 } from '../AvatarInterface';
+import {AvatarInterfaceV2} from '../AvatarInterface';
 import {
-  ContractTransactionReceipt, ethers,
-  formatEther
+  ContractTransactionReceipt,
+  ethers,
+  formatEther,
+  TransactionReceipt,
+  ZeroAddress
 } from 'ethers';
-import { Sdk } from '../sdk';
+import {Sdk} from '../sdk';
 import {
+  attoCirclesToCircles,
   AvatarRow,
   CirclesQuery,
+  TokenBalanceRow,
   TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
-import { addressToUInt256, cidV0ToUint8Array } from '@circles-sdk/utils';
-import { Pathfinder } from './pathfinderV2';
+import {addressToUInt256, cidV0ToUint8Array} from '@circles-sdk/utils';
+import {Pathfinder} from './pathfinderV2';
 import {Profile} from "@circles-sdk/profiles";
+import {TokenType} from "@circles-sdk/data/dist/rows/tokenInfoRow";
+import {BatchRun, TransactionRequest, TransactionResponse} from "@circles-sdk/adapter";
 
 export type FlowEdge = {
   streamSinkId: bigint;
@@ -46,6 +53,14 @@ export class V2Avatar implements AvatarInterfaceV2 {
     }
   }
 
+  trusts(otherAvatar: string): Promise<boolean> {
+    return this.sdk.v2Hub!.isTrusted(this.address, otherAvatar);
+  }
+
+  isTrustedBy(otherAvatar: string): Promise<boolean> {
+    return this.sdk.v2Hub!.isTrusted(otherAvatar, this.address);
+  }
+
   async updateMetadata(cid: string): Promise<ContractTransactionReceipt> {
     this.throwIfNameRegistryIsNotAvailable();
 
@@ -61,7 +76,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  async getMaxTransferableAmount(to: string, tokenId?: string): Promise<bigint> {
+  async getMaxTransferableAmount(to: string, tokenId?: string): Promise<number> {
     this.throwIfV2IsNotAvailable();
 
     if (tokenId) {
@@ -70,28 +85,31 @@ export class V2Avatar implements AvatarInterfaceV2 {
         throw new Error('Token not found');
       }
 
-      const tokenBalances = await this.sdk.data.getTokenBalancesV2(this.address);
-      const tokenBalance = tokenBalances.filter(b => b.tokenOwner.toString() === tokenInfo.tokenId.toString());
-      console.log(`Token balance:`, tokenBalance);
-      return !tokenBalance[0].balance ? 0n : ethers.parseEther(tokenBalance[0].balance.toString());
+      const tokenBalances = await this.sdk.data.getTokenBalances(this.address);
+      const tokenBalance = tokenBalances.filter(b => b.version === 2 && b.tokenOwner.toString() === tokenInfo.token.toString())[0];
+      return tokenBalance?.circles ?? 0;
     }
 
-    const largeAmount = BigInt('999999999999999999999999999999');
+    const largeAmount = BigInt('79228162514264337593543950335');
     const transferPath = await this.sdk.v2Pathfinder!.getTransferPath(
       this.address,
       to,
       largeAmount);
 
-    if (!transferPath.isValid) {
-      return Promise.resolve(BigInt(0));
+    if (transferPath.transferSteps.length == 0) {
+      return 0;
     }
 
-    return transferPath.maxFlow;
+    if (!transferPath.isValid) {
+      return 0;
+    }
+
+    return attoCirclesToCircles(transferPath.maxFlow);
   }
 
   async getMintableAmount(): Promise<number> {
     this.throwIfV2IsNotAvailable();
-    const [a, b, c] = await this.sdk.v2Hub!.calculateIssuance(this.address);
+    const [a, _, __] = await this.sdk.v2Hub!.calculateIssuance(this.address);
     return parseFloat(formatEther(a));
   }
 
@@ -100,7 +118,9 @@ export class V2Avatar implements AvatarInterfaceV2 {
   }
 
   async getGasTokenBalance(): Promise<bigint> {
-    return await this.sdk.contractRunner.provider?.getBalance(this.address) ?? 0n;
+    // TODO: re-implement
+    // return await this.sdk.contractRunner.provider?.getBalance(this.address) ?? 0n;
+    return 0n;
   }
 
   async getTransactionHistory(pageSize: number): Promise<CirclesQuery<TransactionHistoryRow>> {
@@ -112,6 +132,10 @@ export class V2Avatar implements AvatarInterfaceV2 {
 
   async getTrustRelations(): Promise<TrustRelationRow[]> {
     return this.sdk.data.getAggregatedTrustRelations(this.address);
+  }
+
+  async getBalances(): Promise<TokenBalanceRow[]> {
+    return await this.sdk.data.getTokenBalances(this.address);
   }
 
   async personalMint(): Promise<ContractTransactionReceipt> {
@@ -136,27 +160,61 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  private async transitiveTransfer(to: string, amount: bigint): Promise<ContractTransactionReceipt> {
+  private async transitiveTransfer(to: string, amount: bigint, batch: BatchRun) {
     this.throwIfV2IsNotAvailable();
 
     const pathfinder = new Pathfinder(this.sdk.circlesConfig.v2PathfinderUrl!);
     const flowMatrix = await pathfinder.getArgsForPath(this.address, to, amount.toString());
-    const result = await this.sdk.v2Hub?.operateFlowMatrix(flowMatrix.flowVertices, flowMatrix.flowEdges, flowMatrix.streams, flowMatrix.packedCoordinates);
-    const receipt = await result?.wait();
-    if (!receipt) {
-      throw new Error('Transfer failed');
+
+    if (!this.sdk.v2Hub) {
+      throw new Error('V2Hub not available');
     }
-    return receipt;
+
+    const operateFlowMatrixCallData = this.sdk.v2Hub.interface.encodeFunctionData("operateFlowMatrix", [flowMatrix.flowVertices, flowMatrix.flowEdges, flowMatrix.streams, flowMatrix.packedCoordinates]);
+    const personalMintTx: TransactionRequest = {
+      to: this.sdk.circlesConfig.v2HubAddress!,
+      data: operateFlowMatrixCallData,
+      value: 0n,
+    };
+
+    batch.addTransaction(personalMintTx);
   }
 
-  private async directTransfer(to: string, amount: bigint, tokenAddress: string): Promise<ContractTransactionReceipt> {
+  private async directTransfer(to: string, amount: bigint, tokenAddress: string): Promise<TransactionReceipt> {
     const tokenInf = await this.sdk.data.getTokenInfo(tokenAddress);
-    console.log(`Direct transfer - of: ${amount} - tokenId: ${tokenInf?.tokenId} - to: ${to}`);
+    console.log(`Direct transfer - of: ${amount} - tokenId: ${tokenInf?.token} - to: ${to}`);
     if (!tokenInf) {
       throw new Error('Token not found');
     }
 
-    const numericTokenId = addressToUInt256(tokenInf.tokenId);
+    const erc1155Types = new Set<TokenType>(['CrcV2_RegisterHuman', 'CrcV2_RegisterGroup']);
+    const erc20Types = new Set<TokenType>(['CrcV2_ERC20WrapperDeployed_Demurraged', 'CrcV2_ERC20WrapperDeployed_Inflationary', 'CrcV1_Signup']);
+
+    if (erc1155Types.has(tokenInf.type)) {
+      return await this.transferErc1155(tokenAddress, to, amount);
+    } else if (erc20Types.has(tokenInf.type)) {
+      return <TransactionReceipt><unknown>await this.transferErc20(to, amount, tokenAddress);
+    }
+    throw new Error(`Token type ${tokenInf.type} not supported`);
+  }
+
+  private async transferErc20(to: string, amount: bigint, tokenAddress: string) {
+    const iface = new ethers.Interface(['function transfer(address to, uint256 value)']);
+    const data = iface.encodeFunctionData('transfer', [to, amount]);
+
+    if (!this.sdk?.contractRunner?.sendTransaction) {
+      throw new Error('ContractRunner not available');
+    }
+
+    return await this.sdk.contractRunner.sendTransaction({
+      to: tokenAddress,
+      data: data,
+      value: 0n
+    });
+  }
+
+  private async transferErc1155(tokenAddress: string, to: string, amount: bigint) {
+    const numericTokenId = addressToUInt256(tokenAddress);
     console.log(`numericTokenId: ${numericTokenId}`);
     const tx = await this.sdk.v2Hub?.safeTransferFrom(
       this.address,
@@ -173,28 +231,52 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  async transfer(to: string, amount: bigint, tokenAddress?: string): Promise<ContractTransactionReceipt> {
+  async transfer(to: string, amount: bigint, tokenAddress?: string): Promise<TransactionReceipt> {
+    if (!this.sdk?.contractRunner?.sendBatchTransaction) {
+      throw new Error('ContractRunner (or sendBatchTransaction capability) not available');
+    }
     if (!tokenAddress) {
+      const batch = this.sdk.contractRunner.sendBatchTransaction();
+
       const approvalStatus = await this.sdk.v2Hub!.isApprovedForAll(this.address, this.address);
       if (!approvalStatus) {
-        const tx = await this.sdk.v2Hub!.setApprovalForAll(this.address, true);
-        const receipt = await tx.wait();
-        if (!receipt) {
-          throw new Error('Approval failed');
-        }
+        const tx = this.sdk.v2Hub!.interface.encodeFunctionData("setApprovalForAll", [this.address, true]);
+        batch.addTransaction({
+          to: this.sdk.circlesConfig.v2HubAddress!,
+          data: tx,
+          value: 0n
+        });
       }
       console.log(`Approval by ${this.address} for ${this.address} successful`);
 
-      return this.transitiveTransfer(to, amount);
+      await this.transitiveTransfer(to, amount, batch);
+
+      return <TransactionReceipt><unknown>(await batch.run());
     } else {
       return this.directTransfer(to, amount, tokenAddress);
     }
   }
 
-  async trust(avatar: string): Promise<ContractTransactionReceipt> {
+  async trust(avatar: string | string[]): Promise<TransactionResponse> {
     this.throwIfV2IsNotAvailable();
-    const tx = await this.sdk.v2Hub!.trust(avatar, BigInt('79228162514264337593543950335'));
-    const receipt = await tx.wait();
+
+    if (!this.sdk?.contractRunner?.sendBatchTransaction) {
+      throw new Error('ContractRunner (or sendBatchTransaction capability) not available');
+    }
+
+    const avatars = Array.isArray(avatar) ? avatar : [avatar];
+    const batch = this.sdk.contractRunner.sendBatchTransaction();
+
+    for (const av of avatars) {
+      const txData = this.sdk.v2Hub!.interface.encodeFunctionData("trust", [av, BigInt('79228162514264337593543950335')]);
+      batch.addTransaction({
+        to: this.sdk.circlesConfig.v2HubAddress!,
+        data: txData,
+        value: 0n
+      });
+    }
+
+    const receipt = await batch.run();
     if (!receipt) {
       throw new Error('Trust failed');
     }
@@ -202,10 +284,26 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  async untrust(avatar: string): Promise<ContractTransactionReceipt> {
+  async untrust(avatar: string | string[]): Promise<TransactionResponse> {
     this.throwIfV2IsNotAvailable();
-    const tx = await this.sdk.v2Hub!.trust(avatar, BigInt('0'));
-    const receipt = await tx.wait();
+
+    if (!this.sdk?.contractRunner?.sendBatchTransaction) {
+      throw new Error('ContractRunner (or sendBatchTransaction capability) not available');
+    }
+
+    const avatars = Array.isArray(avatar) ? avatar : [avatar];
+    const batch = this.sdk.contractRunner.sendBatchTransaction();
+
+    for (const av of avatars) {
+      const txData = this.sdk.v2Hub!.interface.encodeFunctionData("trust", [av, BigInt('0')]);
+      batch.addTransaction({
+        to: this.sdk.circlesConfig.v2HubAddress!,
+        data: txData,
+        value: 0n
+      });
+    }
+
+    const receipt = await batch.run();
     if (!receipt) {
       throw new Error('Untrust failed');
     }
@@ -225,26 +323,26 @@ export class V2Avatar implements AvatarInterfaceV2 {
   }
 
   async getProfile(): Promise<Profile | undefined> {
-      const profileCid = this.avatarInfo?.cidV0;
-      if (this._cachedProfile && this._cachedProfileCid === profileCid) {
+    const profileCid = this.avatarInfo?.cidV0;
+    if (this._cachedProfile && this._cachedProfileCid === profileCid) {
+      return this._cachedProfile;
+    }
+
+    if (profileCid) {
+      try {
+        const profileData = await this.sdk?.profiles?.get(profileCid);
+        if (profileData) {
+          this._cachedProfile = profileData;
+          this._cachedProfileCid = profileCid;
+
           return this._cachedProfile;
+        }
+      } catch (e) {
+        console.warn(`Couldn't load profile for CID ${profileCid}`, e);
       }
+    }
 
-      if (profileCid) {
-          try {
-              const profileData = await this.sdk?.profiles?.get(profileCid);
-              if (profileData) {
-                  this._cachedProfile = profileData;
-                  this._cachedProfileCid = profileCid;
-
-                  return this._cachedProfile;
-              }
-          } catch (e) {
-              console.warn(`Couldn't load profile for CID ${profileCid}`, e);
-          }
-      }
-
-      return undefined;
+    return undefined;
   }
 
   async updateProfile(profile: Profile): Promise<string> {
@@ -263,27 +361,81 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return result;
   }
 
-  wrapDemurrageErc20(amount: bigint): Promise<ContractTransactionReceipt> {
-    throw new Error('Not implemented');
+  async wrapDemurrageErc20(avatarAddress: string, amount: bigint): Promise<string> {
+    const wrapResult = await this.sdk.v2Hub?.wrap(avatarAddress, amount, 0n /*Demurrage*/);
+    const receipt = await wrapResult?.wait();
+    console.log(`wrapDemurrageErc20 receipt: ${receipt}`);
+
+    if (!receipt) {
+      throw new Error('Wrap failed');
+    }
+
+    // TODO: Return the address of the wrapper
+    //return await this.decodeErc20WrapperDeployed(receipt);
+    return ZeroAddress;
   }
 
-  wrapInflationErc20(amount: bigint): Promise<ContractTransactionReceipt> {
-    throw new Error('Not implemented');
+  async wrapInflationErc20(avatarAddress: string, amount: bigint): Promise<string> {
+    const wrapResult = await this.sdk.v2Hub?.wrap(avatarAddress, amount, 1n /*Inflation*/);
+    const receipt = await wrapResult?.wait();
+    console.log(`wrapInflationErc20 receipt: ${receipt}`);
+
+    if (!receipt) {
+      throw new Error('Wrap failed');
+    }
+
+    // TODO: Return the address of the wrapper
+    //return await this.decodeErc20WrapperDeployed(receipt);
+    return ZeroAddress;
   }
 
-    /**
-   * Invite a user to Circles (TODO: May cost you invite fees).
+  async unwrapDemurrageErc20(wrapperTokenAddress: string, amount: bigint): Promise<ContractTransactionReceipt> {
+    const demurragedWrapper = await this.sdk.getDemurragedWrapper(wrapperTokenAddress);
+    const tx = await demurragedWrapper.unwrap(amount);
+    const receipt = await tx.wait();
+    if (!receipt) {
+      throw new Error('Unwrap failed');
+    }
+    return receipt;
+  }
+
+  async unwrapInflationErc20(wrapperTokenAddress: string, amount: bigint): Promise<ContractTransactionReceipt> {
+    const inflationWrapper = await this.sdk.getInflationaryWrapper(wrapperTokenAddress);
+    const tx = await inflationWrapper.unwrap(amount);
+    const receipt = await tx.wait();
+    if (!receipt) {
+      throw new Error('Unwrap failed');
+    }
+    return receipt;
+  }
+
+  /**
+   * Invite a user to Circles.
    * @param avatar The address of the avatar to invite. Can be either a v1 address or an address that's not signed up yet.
    */
-  async inviteHuman(avatar: string): Promise<ContractTransactionReceipt> {
+  async inviteHuman(avatar: string): Promise<TransactionResponse> {
     this.throwIfV2IsNotAvailable();
-    const tx = await this.sdk.v2Hub!.inviteHuman(avatar);
-    const receipt = await tx.wait();
+
+    const avatarInfo = await this.sdk.data.getAvatarInfo(avatar);
+    if (avatarInfo?.version == 2) {
+      throw new Error('Avatar is already a v2 avatar');
+    }
+
+    const receipt = await this.trust(avatar);
     if (!receipt) {
       throw new Error('Invite failed');
     }
 
     return receipt;
+  }
+
+  /**
+   * Gets the total supply of either this avatar's Personal- or Group-Circles, depending on the avatar's type.
+   * Returns '0' for organizations or if the avatar is not signed up at Circles.
+   */
+  async getTotalSupply(): Promise<bigint> {
+    this.throwIfV2IsNotAvailable();
+    return await this.sdk.v2Hub!.totalSupply(this.address);
   }
 
   private throwIfV2IsNotAvailable() {

@@ -1,22 +1,170 @@
-import { CirclesQuery } from './pagedQuery/circlesQuery';
-import { TransactionHistoryRow } from './rows/transactionHistoryRow';
-import { TrustListRow } from './rows/trustListRow';
-import { TokenBalanceRow } from './rows/tokenBalanceRow';
-import { CirclesRpc } from './circlesRpc';
-import { AvatarRow } from './rows/avatarRow';
-import { crcToTc, hexStringToUint8Array, uint8ArrayToCidV0 } from '@circles-sdk/utils';
-import { ethers } from 'ethers';
-import { TrustRelation, TrustRelationRow } from './rows/trustRelationRow';
-import { CirclesDataInterface, GroupQueryParams } from './circlesDataInterface';
-import { Observable } from './observable';
-import { CirclesEvent } from './events/events';
-import { InvitationRow } from './rows/invitationRow';
-import { PagedQueryParams } from './pagedQuery/pagedQueryParams';
-import { Filter } from './rpcSchema/filter';
-import { GroupMembershipRow } from './rows/groupMembershipRow';
-import { GroupRow } from './rows/groupRow';
-import { TokenInfoRow } from './rows/tokenInfoRow';
-import { parseRpcSubscriptionMessage, RcpSubscriptionEvent } from './events/parser';
+import {CirclesQuery} from './pagedQuery/circlesQuery';
+import {TransactionHistoryRow} from './rows/transactionHistoryRow';
+import {TrustListRow} from './rows/trustListRow';
+import {TokenBalanceRow} from './rows/tokenBalanceRow';
+import {CirclesRpc} from './circlesRpc';
+import {AvatarRow} from './rows/avatarRow';
+import {crcToTc, hexStringToUint8Array, tcToCrc, uint8ArrayToCidV0} from '@circles-sdk/utils';
+import {ethers} from 'ethers';
+import {TrustRelation, TrustRelationRow} from './rows/trustRelationRow';
+import {CirclesDataInterface, GroupQueryParams} from './circlesDataInterface';
+import {Observable} from './observable';
+import {CirclesEvent} from './events/events';
+import {InvitationRow} from './rows/invitationRow';
+import {PagedQueryParams} from './pagedQuery/pagedQueryParams';
+import {Filter} from './rpcSchema/filter';
+import {GroupMembershipRow} from './rows/groupMembershipRow';
+import {GroupRow} from './rows/groupRow';
+import {TokenInfoRow} from './rows/tokenInfoRow';
+import {parseRpcSubscriptionMessage, RcpSubscriptionEvent} from './events/parser';
+import {FilterPredicate} from "./rpcSchema/filterPredicate";
+
+export type TrustEvent = {
+  blockNumber: number;
+  timestamp: number;
+  transactionIndex: number;
+  logIndex: number;
+  transactionHash: string;
+  trustee: string;
+  truster: string;
+  expiryTime: number;
+};
+
+export type TokenInfo = {
+  isErc20: boolean,
+  isErc1155: boolean,
+  isWrapped: boolean,
+  isInflationary: boolean,
+  isGroup: boolean
+};
+
+export function attoCirclesToCircles(weiBalance: bigint): number {
+  return parseFloat(ethers.formatEther(weiBalance.toString()));
+}
+
+export function circlesToAttoCircles(circlesBalance: number): bigint {
+  return BigInt(ethers.parseEther(circlesBalance.toFixed(18)).toString());
+}
+
+export const TokenTypes: Record<string, TokenInfo> = {
+  "CrcV1_Signup": {
+    isErc20: true,
+    isErc1155: false,
+    isWrapped: false,
+    isInflationary: true,
+    isGroup: false
+  },
+  "CrcV2_RegisterHuman": {
+    isErc20: false,
+    isErc1155: true,
+    isWrapped: false,
+    isInflationary: false,
+    isGroup: false
+  },
+  "CrcV2_RegisterGroup": {
+    isErc20: false,
+    isErc1155: true,
+    isWrapped: false,
+    isInflationary: false,
+    isGroup: true
+  },
+  "CrcV2_ERC20WrapperDeployed_Inflationary": {
+    isErc20: true,
+    isErc1155: false,
+    isWrapped: true,
+    isInflationary: true,
+    isGroup: false
+  },
+  "CrcV2_ERC20WrapperDeployed_Demurraged": {
+    isErc20: true,
+    isErc1155: false,
+    isWrapped: true,
+    isInflationary: false,
+    isGroup: false
+  }
+}
+
+function calculateBalances(row: TransactionHistoryRow) {
+  try {
+    const rawBalance = row.value;
+    let tokenInfo: TokenInfo;
+
+    if (row.version === 1 && !row.tokenType) {
+      // CrcHubTransfer
+      tokenInfo = {
+        isErc20: true,
+        isErc1155: false,
+        isGroup: false,
+        isInflationary: true,
+        isWrapped: false
+      };
+    } else {
+      tokenInfo = TokenTypes[row.tokenType];
+    }
+
+    if (!tokenInfo) {
+      throw new Error(`Token type ${row.tokenType} not found.`);
+    }
+
+    let attoCircles: bigint;
+    let circles: number;
+    let staticAttoCircles: bigint;
+    let staticCircles: number;
+    let attoCrc: bigint;
+    let crc: number;
+
+    if (row.version === 1) {
+      attoCrc = BigInt(rawBalance);
+      crc = attoCirclesToCircles(attoCrc);
+
+      circles = crcToTc(new Date(), attoCrc);
+      attoCircles = circlesToAttoCircles(circles);
+
+      staticCircles = crc * 3.0;
+      staticAttoCircles = attoCircles * 3n;
+    } else {
+      if (tokenInfo?.isInflationary) {
+        staticAttoCircles = BigInt(rawBalance);
+        staticCircles = attoCirclesToCircles(staticAttoCircles);
+
+        circles = crcToTc(new Date(), staticAttoCircles / 3n);
+        attoCircles = circlesToAttoCircles(circles);
+
+        attoCrc = tcToCrc(new Date(), circles);
+        crc = attoCirclesToCircles(attoCrc);
+      } else {
+        attoCircles = BigInt(rawBalance);
+        circles = attoCirclesToCircles(attoCircles);
+
+        attoCrc = tcToCrc(new Date(), circles);
+        crc = attoCirclesToCircles(attoCrc);
+
+        staticAttoCircles = tcToCrc(new Date(), circles) * 3n;
+        staticCircles = attoCirclesToCircles(staticAttoCircles);
+      }
+    }
+
+    return {
+      attoCircles,
+      circles,
+      staticAttoCircles,
+      staticCircles,
+      attoCrc,
+      crc
+    };
+  } catch (e) {
+    // console.error(e);
+    // console.log(row);
+    return {
+      attoCircles: 0n,
+      circles: 0,
+      staticAttoCircles: 0n,
+      inflationaryCircles: 0,
+      attoCrc: 0n,
+      crc: 0
+    }
+  }
+}
 
 export class CirclesData implements CirclesDataInterface {
   readonly rpc: CirclesRpc;
@@ -46,22 +194,11 @@ export class CirclesData implements CirclesDataInterface {
   }
 
   /**
-   * Gets the detailed CRC v1 token balances of an address.
+   * Gets the detailed token balances of an address.
    * @param avatar The address to get the token balances for.
-   * @param asTimeCircles Whether to return the balances as TimeCircles or not (default: true).
    */
-  async getTokenBalances(avatar: string, asTimeCircles: boolean = true): Promise<TokenBalanceRow[]> {
-    const response = await this.rpc.call<TokenBalanceRow[]>('circles_getTokenBalances', [avatar, asTimeCircles]);
-    return response.result;
-  }
-
-  /**
-   * Gets the detailed CRC v2 token balances of an address.
-   * @param avatar The address to get the token balances for.
-   * @param asTimeCircles Whether to return the balances as TimeCircles or not (default: true).
-   */
-  async getTokenBalancesV2(avatar: string, asTimeCircles: boolean = true): Promise<TokenBalanceRow[]> {
-    const response = await this.rpc.call<TokenBalanceRow[]>('circlesV2_getTokenBalances', [avatar, asTimeCircles]);
+  async getTokenBalances(avatar: string): Promise<TokenBalanceRow[]> {
+    const response = await this.rpc.call<TokenBalanceRow[]>('circles_getTokenBalances', [avatar]);
     return response.result;
   }
 
@@ -89,7 +226,9 @@ export class CirclesData implements CirclesDataInterface {
         'from',
         'to',
         'id',
-        'value'
+        'value',
+        'type',
+        'tokenType'
       ],
       filter: [
         {
@@ -112,30 +251,60 @@ export class CirclesData implements CirclesDataInterface {
         }
       ]
     }, [{
-      name: 'timeCircles',
-      generator: async (row: TransactionHistoryRow) => {
-        if (row.version === 1) {
-          const timestamp = new Date(row.timestamp * 1000);
-          return crcToTc(timestamp, BigInt(row.value)).toFixed(2);
-        } else {
-          return parseFloat(ethers.formatEther(row.value)).toFixed(2);
-        }
-      }
+      name: "circles",
+      generator: async (row: TransactionHistoryRow) => calculateBalances(row).circles
     }, {
-      name: 'tokenAddress',
-      generator: async (row: TransactionHistoryRow) => {
-        // If the id isset, doesn't start with 0x and only consists of digits, it's a BigInt that
-        // needs to be converted to a ethereum address. The BigInt is actually an encoded byte[20]
-        // that represents the address.
-        if (row.id && !row.id.startsWith('0x') && /^\d+$/.test(row.id)) {
-          // UInt256 to ethereum address (use native BigInt)
-          const hexString = BigInt(row.id).toString(16).padStart(40, '0');
-          return ethers.getAddress('0x' + hexString).toLowerCase();
-        } else if (row.id && row.id.startsWith('0x')) {
-          return row.id.toLowerCase();
-        }
-      }
+      name: "attoCircles",
+      generator: async (row: TransactionHistoryRow) => calculateBalances(row).attoCircles
+    }, {
+      name: "staticCircles",
+      generator: async (row: TransactionHistoryRow) => calculateBalances(row).staticCircles
+    }, {
+      name: "staticAttoCircles",
+      generator: async (row: TransactionHistoryRow) => calculateBalances(row).staticAttoCircles
+    }, {
+      name: "crc",
+      generator: async (row: TransactionHistoryRow) => calculateBalances(row).crc
+    }, {
+      name: "attoCrc",
+      generator: async (row: TransactionHistoryRow) => calculateBalances(row).attoCrc
     }]);
+  }
+
+  getIncomingTrustEvents(avatar: string, pageSize: number): CirclesQuery<TrustEvent> {
+    return new CirclesQuery<TrustEvent>(this.rpc, {
+      namespace: 'V_Crc',
+      table: 'TrustRelations',
+      sortOrder: 'DESC',
+      limit: pageSize,
+      columns: [
+        "blockNumber",
+        "timestamp",
+        "transactionIndex",
+        "logIndex",
+        "transactionHash",
+        "trustee",
+        "truster",
+        "expiryTime"
+      ],
+      filter: [
+        {
+          Type: 'Conjunction',
+          ConjunctionType: 'And',
+          Predicates: [{
+            Type: 'FilterPredicate',
+            FilterType: 'Equals',
+            Column: 'trustee',
+            Value: avatar.toLowerCase()
+          }, {
+            Type: 'FilterPredicate',
+            FilterType: 'IsNotNull',
+            Column: 'expiryTime',
+            Value: true
+          }]
+        }
+      ]
+    });
   }
 
   /**
@@ -248,8 +417,8 @@ export class CirclesData implements CirclesDataInterface {
    * @returns The avatar info or undefined if the avatar is not found.
    */
   async getAvatarInfo(avatar: string): Promise<AvatarRow | undefined> {
-      const avatarInfos = await this.getAvatarInfos([avatar]);
-      return avatarInfos.length > 0 ? avatarInfos[0] : undefined;
+    const avatarInfos = await this.getAvatarInfos([avatar]);
+    return avatarInfos.length > 0 ? avatarInfos[0] : undefined;
   }
 
   /**
@@ -259,7 +428,7 @@ export class CirclesData implements CirclesDataInterface {
    */
   async getAvatarInfos(avatars: string[]): Promise<AvatarRow[]> {
     if (avatars.length === 0) {
-        return [];
+      return [];
     }
 
     const circlesQuery = new CirclesQuery<AvatarRow>(this.rpc, {
@@ -275,7 +444,8 @@ export class CirclesData implements CirclesDataInterface {
         'type',
         'avatar',
         'tokenId',
-        'cidV0Digest'
+        'cidV0Digest',
+        'name'
       ],
       filter: [
         {
@@ -287,13 +457,15 @@ export class CirclesData implements CirclesDataInterface {
       ],
       sortOrder: 'ASC',
       limit: 1000
-  }, [{
+    }, [{
       name: 'cidV0',
       generator: async (row: AvatarRow) => {
         try {
           if (!row.cidV0Digest) {
             return undefined;
           }
+
+          row.isHuman = row.type == "CrcV2_RegisterHuman" || row.type == "CrcV1_Signup";
 
           const dataFromHexString = hexStringToUint8Array(row.cidV0Digest.substring(2));
           return uint8ArrayToCidV0(dataFromHexString);
@@ -307,24 +479,24 @@ export class CirclesData implements CirclesDataInterface {
     const results: AvatarRow[] = [];
 
     while (await circlesQuery.queryNextPage()) {
-        const resultRows = circlesQuery.currentPage?.results ?? [];
-        if (resultRows.length === 0) break;
-        results.push(...resultRows);
-        if (resultRows.length < 1000) break;
+      const resultRows = circlesQuery.currentPage?.results ?? [];
+      if (resultRows.length === 0) break;
+      results.push(...resultRows);
+      if (resultRows.length < 1000) break;
     }
 
     const avatarMap: { [key: string]: AvatarRow } = {};
 
     results.forEach(avatarRow => {
       if (!avatarMap[avatarRow.avatar]) {
-            avatarMap[avatarRow.avatar] = avatarRow;
+        avatarMap[avatarRow.avatar] = avatarRow;
       }
 
       if (avatarRow.version === 1) {
-            avatarMap[avatarRow.avatar].hasV1 = true;
-            avatarMap[avatarRow.avatar].v1Token = avatarRow.tokenId;
+        avatarMap[avatarRow.avatar].hasV1 = true;
+        avatarMap[avatarRow.avatar].v1Token = avatarRow.tokenId;
       } else {
-            avatarMap[avatarRow.avatar] = {
+        avatarMap[avatarRow.avatar] = {
           ...avatarMap[avatarRow.avatar],
           ...avatarRow
         };
@@ -342,23 +514,23 @@ export class CirclesData implements CirclesDataInterface {
   async getTokenInfo(address: string): Promise<TokenInfoRow | undefined> {
     const circlesQuery = new CirclesQuery<TokenInfoRow>(this.rpc, {
       namespace: 'V_Crc',
-      table: 'Avatars',
+      table: 'Tokens',
       columns: [
-        'blockNumber',
-        'timestamp',
-        'transactionIndex',
-        'logIndex',
-        'transactionHash',
-        'version',
-        'type',
-        'avatar',
-        'tokenId'
+        "blockNumber",
+        "timestamp",
+        "transactionIndex",
+        "logIndex",
+        "transactionHash",
+        "version",
+        "type",
+        "token",
+        "tokenOwner"
       ],
       filter: [
         {
           Type: 'FilterPredicate',
           FilterType: 'Equals',
-          Column: 'tokenId',
+          Column: 'token',
           Value: address.toLowerCase()
         }
       ],
@@ -382,11 +554,14 @@ export class CirclesData implements CirclesDataInterface {
    * @param avatar The avatar to get the events for.
    * @param fromBlock The block number to start from.
    * @param toBlock The block number to end at. If not provided, the latest block is used.
+   * @param eventTypes The event types to filter for.
+   * @param filters Additional filters to apply (filter columns must be present in all queried event types).
+   * @param sortAscending Whether to sort the events ascending or not.
    */
-  async getEvents(avatar: string, fromBlock: number, toBlock?: number): Promise<CirclesEvent[]> {
+  async getEvents(avatar?: string, fromBlock?: number, toBlock?: number, eventTypes?: string[], filters?: FilterPredicate[], sortAscending?: boolean): Promise<CirclesEvent[]> {
     const response = await this.rpc.call<RcpSubscriptionEvent[]>(
       'circles_events',
-      [avatar, fromBlock, toBlock]
+      [avatar, fromBlock, toBlock, eventTypes, filters, sortAscending]
     );
     return parseRpcSubscriptionMessage(response.result);
   }
@@ -476,8 +651,10 @@ export class CirclesData implements CirclesDataInterface {
         'name',
         'symbol',
         'cidV0Digest',
+        'memberCount',
+        'trustedCount'
       ],
-      sortOrder: 'DESC',
+      sortOrder: "DESC",
       limit: pageSize
     };
 

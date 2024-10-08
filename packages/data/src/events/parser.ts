@@ -245,6 +245,55 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
         id: values.id ? hexToBigInt(values.id) : undefined,
         value: values.value ? hexToBigInt(values.value) : undefined
       };
+    case "CrcV2_DepositDemurraged":
+      return {
+        ...baseEvent,
+        $event: "CrcV2_DepositDemurraged",
+        account: values.account,
+        amount: values.amount ? hexToBigInt(values.amount) : undefined,
+        inflationaryAmount: values.inflationaryAmount ? hexToBigInt(values.inflationaryAmount) : undefined
+      };
+    case "CrcV2_DepositInflationary":
+      return {
+        ...baseEvent,
+        $event: "CrcV2_DepositInflationary",
+        account: values.account,
+        amount: values.amount ? hexToBigInt(values.amount) : undefined,
+        demurragedAmount: values.demurragedAmount ? hexToBigInt(values.demurragedAmount) : undefined
+      };
+    case "CrcV2_WithdrawDemurraged":
+      return {
+        ...baseEvent,
+        $event: "CrcV2_WithdrawDemurraged",
+        account: values.account,
+        amount: values.amount ? hexToBigInt(values.amount) : undefined,
+        inflationaryAmount: values.inflationaryAmount ? hexToBigInt(values.inflationaryAmount) : undefined
+      };
+    case "CrcV2_WithdrawInflationary":
+      return {
+        ...baseEvent,
+        $event: "CrcV2_WithdrawInflationary",
+        account: values.account,
+        amount: values.amount ? hexToBigInt(values.amount) : undefined,
+        demurragedAmount: values.demurragedAmount ? hexToBigInt(values.demurragedAmount) : undefined
+      }
+    case "CrcV2_Erc20WrapperTransfer":
+      return {
+        ...baseEvent,
+        $event: "CrcV2_Erc20WrapperTransfer",
+        tokenAddress: values.tokenAddress,
+        from: values.from,
+        to: values.to,
+        amount: values.value ? hexToBigInt(values.value) : undefined
+      }
+    case "CrcV2_Erc20WrapperDeployed":
+      return {
+        ...baseEvent,
+        $event: "CrcV2_Erc20WrapperDeployed",
+        avatar: values.avatar,
+        erc20Wrapper: values.erc20Wrapper,
+        circlesType: values.circlesType ? hexToNumber(values.circlesType) : undefined
+      };
     default:
       throw new Error(`Unknown event type: ${event}`);
   }

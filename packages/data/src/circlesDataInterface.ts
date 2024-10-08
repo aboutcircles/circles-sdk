@@ -15,7 +15,7 @@ export interface GroupQueryParams {
   nameStartsWith?: string;
   symbolStartsWith?: string;
   groupAddressIn?: string[];
-  sortBy?: 'age_asc' | 'age_desc' | 'name_asc' | 'name_desc' | 'symbol_asc' | 'symbol_desc';
+  sortBy?: 'age_asc' | 'age_desc' | 'name_asc' | 'name_desc' | 'symbol_asc' | 'symbol_desc' | 'memberCount_desc' | 'memberCount_asc' | 'trustedCount_desc' | 'trustedCount_asc';
 }
 
 export interface CirclesDataInterface {
@@ -55,13 +55,6 @@ export interface CirclesDataInterface {
    * @param asTimeCircles Whether to return the balances as TimeCircles or not (default: true).
    */
   getTokenBalances(avatar: string, asTimeCircles: boolean): Promise<TokenBalanceRow[]>;
-
-  /**
-   * Gets the detailed CRC v2 token balances of an address.
-   * @param avatar The address to get the token balances for.
-   * @param asTimeCircles Whether to return the balances as TimeCircles or not (default: true).
-   */
-  getTokenBalancesV2(avatar: string, asTimeCircles: boolean): Promise<TokenBalanceRow[]>;
 
   /**
    * Gets the transaction history of an address.
