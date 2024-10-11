@@ -101,7 +101,8 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
       return {
         ...baseEvent,
         $event: "CrcV2_RegisterHuman",
-        avatar: values.avatar
+        avatar: values.avatar,
+        inviter: values.inviter
       };
     case 'CrcV2_RegisterOrganization':
       return {
@@ -199,20 +200,20 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
         id: values.id ? hexToBigInt(values.id) : undefined,
         amount: values.amount ? hexToBigInt(values.amount) : undefined
       };
-    case "CrcV2_GroupMintBatch":
+    case "CrcV2_CollateralLockedBatch":
       return {
         ...baseEvent,
-        $event: "CrcV2_GroupMintBatch",
+        $event: "CrcV2_CollateralLockedBatch",
         batchIndex: parseInt(values.batchIndex),
         group: values.group,
         id: values.id ? hexToBigInt(values.id) : undefined,
         value: values.value ? hexToBigInt(values.value) : undefined,
         userData: values.userData ? hexToUint8Array(values.userData) : undefined
       };
-    case "CrcV2_GroupMintSingle":
+    case "CrcV2_CollateralLockedSingle":
       return {
         ...baseEvent,
-        $event: "CrcV2_GroupMintSingle",
+        $event: "CrcV2_CollateralLockedSingle",
         group: values.group,
         id: values.id ? hexToBigInt(values.id) : undefined,
         value: values.value ? hexToBigInt(values.value) : undefined,
@@ -286,10 +287,10 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
         to: values.to,
         amount: values.value ? hexToBigInt(values.value) : undefined
       }
-    case "CrcV2_Erc20WrapperDeployed":
+    case "CrcV2_ERC20WrapperDeployed":
       return {
         ...baseEvent,
-        $event: "CrcV2_Erc20WrapperDeployed",
+        $event: "CrcV2_ERC20WrapperDeployed",
         avatar: values.avatar,
         erc20Wrapper: values.erc20Wrapper,
         circlesType: values.circlesType ? hexToNumber(values.circlesType) : undefined
