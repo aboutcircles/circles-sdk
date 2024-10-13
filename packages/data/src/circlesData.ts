@@ -4,7 +4,13 @@ import {TrustListRow} from './rows/trustListRow';
 import {TokenBalanceRow} from './rows/tokenBalanceRow';
 import {CirclesRpc} from './circlesRpc';
 import {AvatarRow} from './rows/avatarRow';
-import {crcToTc, hexStringToUint8Array, tcToCrc, uint8ArrayToCidV0} from '@circles-sdk/utils';
+import {
+  attoCirclesToStaticAttoCircles,
+  crcToTc,
+  hexStringToUint8Array, staticAttoCirclesToAttoCircles,
+  tcToCrc,
+  uint8ArrayToCidV0
+} from '@circles-sdk/utils';
 import {ethers} from 'ethers';
 import {TrustRelation, TrustRelationRow} from './rows/trustRelationRow';
 import {CirclesDataInterface, GroupQueryParams} from './circlesDataInterface';
@@ -120,15 +126,15 @@ function calculateBalances(row: TransactionHistoryRow) {
       circles = crcToTc(new Date(), attoCrc);
       attoCircles = circlesToAttoCircles(circles);
 
-      staticCircles = crc * 3.0;
-      staticAttoCircles = attoCircles * 3n;
+      staticAttoCircles = attoCirclesToStaticAttoCircles(attoCircles);
+      staticCircles = attoCirclesToCircles(staticAttoCircles);
     } else {
       if (tokenInfo?.isInflationary) {
         staticAttoCircles = BigInt(rawBalance);
         staticCircles = attoCirclesToCircles(staticAttoCircles);
 
-        circles = crcToTc(new Date(), staticAttoCircles / 3n);
-        attoCircles = circlesToAttoCircles(circles);
+        attoCircles = staticAttoCirclesToAttoCircles(staticAttoCircles) ;
+        circles = attoCirclesToCircles(attoCircles);
 
         attoCrc = tcToCrc(new Date(), circles);
         crc = attoCirclesToCircles(attoCrc);
@@ -139,7 +145,7 @@ function calculateBalances(row: TransactionHistoryRow) {
         attoCrc = tcToCrc(new Date(), circles);
         crc = attoCirclesToCircles(attoCrc);
 
-        staticAttoCircles = tcToCrc(new Date(), circles) * 3n;
+        staticAttoCircles = attoCirclesToStaticAttoCircles(attoCircles);
         staticCircles = attoCirclesToCircles(staticAttoCircles);
       }
     }

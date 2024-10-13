@@ -1,26 +1,13 @@
 import { BigNumber } from 'bignumber.js';
 import { ethers, parseEther } from 'ethers';
 import multihash from 'multihashes';
-
-/**
- * Formats the token balance in time circles.
- * @param tokenBalance The token balance as a BigNumber.
- * @return The formatted token balance as a string.
- */
-function formatTimeCircles(tokenBalance: BigNumber): string {
-  const ether = tokenBalance.dividedToIntegerBy(new BigNumber(10).pow(18));
-  const remainder = tokenBalance.mod(new BigNumber(10).pow(18));
-  let remainderString = remainder.toFixed(0).padStart(18, '0').replace(/0+$/, '');
-
-  return remainderString.length > 0
-    ? `${ether.toString()}.${remainderString}`
-    : ether.toString();
-}
+import { attoCirclesToCircles, circlesToAttoCircles } from '@circles-sdk/data';
 
 const CirclesInceptionTimestamp = new Date('2020-10-15T00:00:00.000Z').getTime();
 const OneDayInMilliseconds = new BigNumber(86400).multipliedBy(1000);
 const OneCirclesYearInDays = new BigNumber(365.25);
 const OneCirclesYearInMilliseconds = OneCirclesYearInDays.multipliedBy(24).multipliedBy(60).multipliedBy(60).multipliedBy(1000);
+const Beta = 1.0001987074682146291562714890133039617432343970799554367508;
 
 function getCrcPayoutAt(timestamp: number): number {
   const daysSinceCirclesInception = new BigNumber(timestamp - CirclesInceptionTimestamp).dividedBy(OneDayInMilliseconds);
@@ -216,4 +203,30 @@ export function parseError(errorData: string): ethers.ErrorDescription | null {
   } catch (error) {
     throw new Error(`Error decoding the revert data: ${error}. Original error data: ${errorData}`);
   }
+}
+
+export function staticCirclesToCircles(value: number): number {
+  const lastUpdate = new Date();
+  const lastUpdateDay = (lastUpdate.getTime() - 1609459200000) / 86400000;
+  const f = Math.pow(Beta, lastUpdateDay);
+  return value / f;
+}
+
+export function staticAttoCirclesToAttoCircles(value: bigint): bigint {
+  const staticCircles = attoCirclesToCircles(value);
+  const circles = staticCirclesToCircles(staticCircles);
+  return circlesToAttoCircles(circles);
+}
+
+export function circlesToStaticCircles(value: number): number {
+  const lastUpdate = new Date();
+  const lastUpdateDay = (lastUpdate.getTime() - 1609459200000) / 86400000;
+  const f = Math.pow(Beta, lastUpdateDay);
+  return value * f;
+}
+
+export function attoCirclesToStaticAttoCircles(value: bigint): bigint {
+  const circles = attoCirclesToCircles(value);
+  const staticCircles = circlesToStaticCircles(circles);
+  return circlesToAttoCircles(staticCircles);
 }
