@@ -86,7 +86,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
       }
 
       const tokenBalances = await this.sdk.data.getTokenBalances(this.address);
-      const tokenBalance = tokenBalances.filter(b => b.version === 2 && b.tokenOwner.toString() === tokenInfo.token.toString())[0];
+      const tokenBalance = tokenBalances.filter(b => b.version === 2 && b.tokenAddress === tokenInfo.token)[0];
       return tokenBalance?.circles ?? 0;
     }
 
