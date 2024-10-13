@@ -37,7 +37,7 @@ describe('CirclesData', () => {
     const tokenBalanceRows = await circlesData.getTokenBalances('0xc313FE6C294A7aE1818d0e537D7Ca5Ab0ef07F63');
     expect(tokenBalanceRows).toBeDefined();
     // expect a decimal number (or '0')
-    expect(tokenBalanceRows[0].balance).toMatch(/^\d+(\.\d+)?$/);
+    expect(tokenBalanceRows[0].circles).toMatch(/^\d+(\.\d+)?$/);
 
     console.log(JSON.stringify(tokenBalanceRows, null, 2));
   });
@@ -45,10 +45,10 @@ describe('CirclesData', () => {
   it('should get the detailed V1 token balances of an address as CRC', async () => {
     const circlesData = new CirclesData(rpc);
 
-    const tokenBalanceRows = await circlesData.getTokenBalances('0xc313FE6C294A7aE1818d0e537D7Ca5Ab0ef07F63', false);
+    const tokenBalanceRows = await circlesData.getTokenBalances('0xc313FE6C294A7aE1818d0e537D7Ca5Ab0ef07F63');
     expect(tokenBalanceRows).toBeDefined();
     // expect an integer
-    expect(tokenBalanceRows[0].balance).toMatch(/^\d+$/);
+    expect(tokenBalanceRows[0].circles).toMatch(/^\d+$/);
 
     console.log(JSON.stringify(tokenBalanceRows, null, 2));
   });
@@ -78,10 +78,10 @@ describe('CirclesData', () => {
   it('should get the detailed V2 token balances of an address as Time Circles', async () => {
     const circlesData = new CirclesData(rpc);
 
-    const tokenBalanceRows = await circlesData.getTokenBalancesV2('0xae3a29a9ff24d0e936a5579bae5c4179c4dff565');
+    const tokenBalanceRows = await circlesData.getTokenBalances('0xae3a29a9ff24d0e936a5579bae5c4179c4dff565');
     expect(tokenBalanceRows).toBeDefined();
     // expect a decimal number (or '0')
-    expect(tokenBalanceRows[0].balance).toMatch(/^\d+(\.\d+)?$/);
+    expect(tokenBalanceRows[0].circles).toMatch(/^\d+(\.\d+)?$/);
 
     console.log(JSON.stringify(tokenBalanceRows, null, 2));
   });
@@ -89,10 +89,10 @@ describe('CirclesData', () => {
   it('should get the detailed V2 token balances of an address as CRC', async () => {
     const circlesData = new CirclesData(rpc);
 
-    const tokenBalanceRows = await circlesData.getTokenBalancesV2('0xae3a29a9ff24d0e936a5579bae5c4179c4dff565', false);
+    const tokenBalanceRows = await circlesData.getTokenBalances('0xae3a29a9ff24d0e936a5579bae5c4179c4dff565');
     expect(tokenBalanceRows).toBeDefined();
     // expect an integer
-    expect(tokenBalanceRows[0].balance).toMatch(/^\d+$/);
+    expect(tokenBalanceRows[0].circles).toMatch(/^\d+$/);
 
     console.log(JSON.stringify(tokenBalanceRows, null, 2));
   });
