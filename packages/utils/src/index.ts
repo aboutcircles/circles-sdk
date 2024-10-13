@@ -1,7 +1,6 @@
 import { BigNumber } from 'bignumber.js';
 import { ethers, parseEther } from 'ethers';
 import multihash from 'multihashes';
-import { attoCirclesToCircles, circlesToAttoCircles } from '@circles-sdk/data';
 
 const CirclesInceptionTimestamp = new Date('2020-10-15T00:00:00.000Z').getTime();
 const OneDayInMilliseconds = new BigNumber(86400).multipliedBy(1000);
@@ -40,10 +39,7 @@ export function crcToTc(timestamp: Date, amount: bigint): number {
   const amountFloat = parseFloat(ethers.formatEther(amount ?? '0'));
   const ts = timestamp.getTime();
   const payoutAtTimestamp = getCrcPayoutAt(ts);
-  const value = amountFloat / payoutAtTimestamp * 24;
-
-  return value;
-  // return Math.floor(value * 100) / 100;
+  return amountFloat / payoutAtTimestamp * 24;
 }
 
 /**
@@ -55,6 +51,44 @@ export function tcToCrc(timestamp: Date, amount: number): bigint {
   const ts = timestamp.getTime();
   const payoutAtTimestamp = getCrcPayoutAt(ts);
   return parseEther((amount / 24 * payoutAtTimestamp).toString());
+}
+
+export function staticCirclesToCircles(value: number): number {
+  const lastUpdate = new Date();
+  const lastUpdateDay = (lastUpdate.getTime() - CirclesInceptionTimestamp) / 86400000;
+  const f = Math.pow(Beta, lastUpdateDay);
+  return value / f;
+}
+
+export function attoCirclesToCircles(weiBalance: bigint): number {
+  return parseFloat(ethers.formatEther(weiBalance.toString()));
+}
+
+export function circlesToAttoCircles(circlesBalance: number): bigint {
+  return BigInt(ethers.parseEther(circlesBalance.toFixed(18)).toString());
+}
+
+export function staticCirclesToAttoCircles(value: number): bigint {
+  const circles = staticCirclesToCircles(value);
+  return circlesToAttoCircles(circles);
+}
+
+export function staticAttoCirclesToAttoCircles(value: bigint): bigint {
+  const staticCircles = attoCirclesToCircles(value);
+  return staticCirclesToAttoCircles(staticCircles);
+}
+
+export function circlesToStaticCircles(value: number): number {
+  const lastUpdate = new Date();
+  const lastUpdateDay = (lastUpdate.getTime() - CirclesInceptionTimestamp) / 86400000;
+  const f = Math.pow(Beta, lastUpdateDay);
+  return value * f;
+}
+
+export function attoCirclesToStaticAttoCircles(value: bigint): bigint {
+  const circles = attoCirclesToCircles(value);
+  const staticCircles = circlesToStaticCircles(circles);
+  return circlesToAttoCircles(staticCircles);
 }
 
 /**
@@ -203,30 +237,4 @@ export function parseError(errorData: string): ethers.ErrorDescription | null {
   } catch (error) {
     throw new Error(`Error decoding the revert data: ${error}. Original error data: ${errorData}`);
   }
-}
-
-export function staticCirclesToCircles(value: number): number {
-  const lastUpdate = new Date();
-  const lastUpdateDay = (lastUpdate.getTime() - 1609459200000) / 86400000;
-  const f = Math.pow(Beta, lastUpdateDay);
-  return value / f;
-}
-
-export function staticAttoCirclesToAttoCircles(value: bigint): bigint {
-  const staticCircles = attoCirclesToCircles(value);
-  const circles = staticCirclesToCircles(staticCircles);
-  return circlesToAttoCircles(circles);
-}
-
-export function circlesToStaticCircles(value: number): number {
-  const lastUpdate = new Date();
-  const lastUpdateDay = (lastUpdate.getTime() - 1609459200000) / 86400000;
-  const f = Math.pow(Beta, lastUpdateDay);
-  return value * f;
-}
-
-export function attoCirclesToStaticAttoCircles(value: bigint): bigint {
-  const circles = attoCirclesToCircles(value);
-  const staticCircles = circlesToStaticCircles(circles);
-  return circlesToAttoCircles(staticCircles);
 }

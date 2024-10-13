@@ -8,14 +8,13 @@ import {
 } from 'ethers';
 import {Sdk} from '../sdk';
 import {
-  attoCirclesToCircles,
   AvatarRow,
   CirclesQuery,
   TokenBalanceRow,
   TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
-import {addressToUInt256, cidV0ToUint8Array} from '@circles-sdk/utils';
+import { addressToUInt256, attoCirclesToCircles, cidV0ToUint8Array } from '@circles-sdk/utils';
 import {Pathfinder} from './pathfinderV2';
 import {Profile} from "@circles-sdk/profiles";
 import {TokenType} from "@circles-sdk/data/dist/rows/tokenInfoRow";

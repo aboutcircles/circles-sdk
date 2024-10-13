@@ -5,13 +5,13 @@ import {TokenBalanceRow} from './rows/tokenBalanceRow';
 import {CirclesRpc} from './circlesRpc';
 import {AvatarRow} from './rows/avatarRow';
 import {
-  attoCirclesToStaticAttoCircles,
+  attoCirclesToCircles,
+  attoCirclesToStaticAttoCircles, circlesToAttoCircles,
   crcToTc,
   hexStringToUint8Array, staticAttoCirclesToAttoCircles,
   tcToCrc,
   uint8ArrayToCidV0
 } from '@circles-sdk/utils';
-import {ethers} from 'ethers';
 import {TrustRelation, TrustRelationRow} from './rows/trustRelationRow';
 import {CirclesDataInterface, GroupQueryParams} from './circlesDataInterface';
 import {Observable} from './observable';
@@ -43,14 +43,6 @@ export type TokenInfo = {
   isInflationary: boolean,
   isGroup: boolean
 };
-
-export function attoCirclesToCircles(weiBalance: bigint): number {
-  return parseFloat(ethers.formatEther(weiBalance.toString()));
-}
-
-export function circlesToAttoCircles(circlesBalance: number): bigint {
-  return BigInt(ethers.parseEther(circlesBalance.toFixed(18)).toString());
-}
 
 export const TokenTypes: Record<string, TokenInfo> = {
   "CrcV1_Signup": {

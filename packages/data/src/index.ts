@@ -1,5 +1,3 @@
-import {attoCirclesToCircles} from "./circlesData";
-
 export {PagedQueryResult} from './pagedQuery/pagedQueryResult';
 export {Cursor} from './pagedQuery/cursor';
 export {CirclesQuery} from './pagedQuery/circlesQuery';
@@ -53,5 +51,3 @@ export {
 export {TrustEvent} from "./circlesData";
 export {TokenType} from './rows/tokenInfoRow';
 export {TrustRelation} from './rows/trustRelationRow';
-export {attoCirclesToCircles} from './circlesData';
-export {circlesToAttoCircles} from './circlesData';
