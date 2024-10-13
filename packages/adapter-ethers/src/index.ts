@@ -12,6 +12,7 @@ import {
   TransactionRequest as SdkTransactionRequest, TransactionResponse,
   TransactionResponse as SdkTransactionResponse
 } from '@circles-sdk/adapter';
+import { parseError } from '@circles-sdk/utils';
 
 export abstract class EthersContractRunner implements SdkContractRunner {
   sendBatchTransaction?: (() => BatchRun) | undefined;
@@ -24,6 +25,26 @@ export abstract class EthersContractRunner implements SdkContractRunner {
 
   abstract init(): Promise<void>;
 }
+
+function handleTransactionError(e: any): never {
+  if (e.data) {
+    const parsedError = parseError(e.data);
+    if (parsedError) {
+      const bigIntReplacer = (key: string, value: any) => {
+        if (typeof value === 'bigint') {
+          return value.toString();
+        }
+        return value;
+      };
+      throw new Error(JSON.stringify(parsedError, bigIntReplacer, 2));
+    } else {
+      throw e;
+    }
+  } else {
+    throw e;
+  }
+}
+
 
 export class PrivateKeyContractRunner implements EthersContractRunner {
   constructor(public provider: Provider, private privateKey: string) {
@@ -54,8 +75,13 @@ export class PrivateKeyContractRunner implements EthersContractRunner {
     return this.ensureWallet().resolveName(name);
   };
   sendTransaction?: ((tx: SdkTransactionRequest) => Promise<SdkTransactionResponse>) | undefined = async (tx) => {
-    return <SdkTransactionResponse><unknown>{...await this.ensureWallet().sendTransaction({...tx})};
+    try {
+      return <SdkTransactionResponse><unknown>{ ...await this.ensureWallet().sendTransaction({ ...tx }) };
+    } catch (e: any) {
+      handleTransactionError(e);
+    }
   };
+
 }
 
 export class BrowserProviderContractRunner implements EthersContractRunner {
@@ -78,8 +104,12 @@ export class BrowserProviderContractRunner implements EthersContractRunner {
   call?: ((tx: SdkTransactionRequest) => Promise<string>) | undefined = async (tx) => this.provider.call(tx);
   resolveName?: ((name: string) => Promise<string | null>) | undefined = async (name) => this.provider.resolveName(name);
   sendTransaction?: ((tx: SdkTransactionRequest) => Promise<SdkTransactionResponse>) | undefined = async (tx) => {
-    const signer = await (<BrowserProvider>this.provider).getSigner();
-    return <SdkTransactionResponse><unknown>{...await signer.sendTransaction(tx)};
+    try {
+      const signer = await (<BrowserProvider>this.provider).getSigner();
+      return <SdkTransactionResponse><unknown>{ ...await signer.sendTransaction(tx) };
+    } catch (e: any) {
+      handleTransactionError(e);
+    }
   };
   sendBatchTransaction?: (() => BatchRun) | undefined = () => new BrowserProviderBatchRun(<BrowserProvider>this.provider);
 }
@@ -192,20 +222,24 @@ export class SdkContractRunnerWrapper implements EthersContractRunner {
     if (!tx.data && !tx.value) {
       throw new Error('data or value is required');
     }
+    try {
+      const response = await this.sdkContractRunner.sendTransaction({
+        to: await this.addressLikeToString(tx.to),
+        data: tx.data ?? '0x',
+        value: this.bignumberishToBigInt(tx.value)
+      });
 
-    const response = await this.sdkContractRunner.sendTransaction({
-      to: await this.addressLikeToString(tx.to),
-      data: tx.data ?? '0x',
-      value: this.bignumberishToBigInt(tx.value)
-    });
+      const transactionResponse = await this.provider.getTransaction(response.hash);
+      if (!transactionResponse) {
+        throw new Error('Transaction not found');
+      }
 
-    const transactionResponse = await this.provider.getTransaction(response.hash);
-    if (!transactionResponse) {
-      throw new Error('Transaction not found');
+      return <SdkTransactionResponse><unknown>{ ...transactionResponse };
+    } catch (e: any) {
+      handleTransactionError(e);
     }
-
-    return <SdkTransactionResponse><unknown>{...transactionResponse};
   };
+
   sendBatchTransaction() {
     if (!this.sdkContractRunner.sendBatchTransaction) {
       throw new Error('sendBatchTransaction not supported');

@@ -147,3 +147,73 @@ export function uint256ToAddress(uint256: bigint): string {
   // Add the '0x' prefix
   return '0x' + hexString;
 }
+
+export const errorAbis = [
+  'error Create2InsufficientBalance(uint256 balance, uint256 needed)',
+  'error Create2EmptyBytecode()',
+  'error Create2FailedDeployment()',
+  'error ReentrancyGuardReentrantCall()',
+  'error AddressInsufficientBalance(address account)',
+  'error AddressEmptyCode(address target)',
+  'error FailedInnerCall()',
+  'error ERC20InsufficientBalance(address sender, uint256 balance, uint256 needed)',
+  'error ERC20InvalidSender(address sender)',
+  'error ERC20InvalidReceiver(address receiver)',
+  'error ERC20InsufficientAllowance(address spender, uint256 allowance, uint256 needed)',
+  'error ERC20InvalidApprover(address approver)',
+  'error ERC20InvalidSpender(address spender)',
+  'error ERC721InvalidOwner(address owner)',
+  'error ERC721NonexistentToken(uint256 tokenId)',
+  'error ERC721IncorrectOwner(address sender, uint256 tokenId, address owner)',
+  'error ERC721InvalidSender(address sender)',
+  'error ERC721InvalidReceiver(address receiver)',
+  'error ERC721InsufficientApproval(address operator, uint256 tokenId)',
+  'error ERC721InvalidApprover(address approver)',
+  'error ERC721InvalidOperator(address operator)',
+  'error ERC1155InsufficientBalance(address sender, uint256 balance, uint256 needed, uint256 tokenId)',
+  'error ERC1155InvalidSender(address sender)',
+  'error ERC1155InvalidReceiver(address receiver)',
+  'error ERC1155MissingApprovalForAll(address operator, address owner)',
+  'error ERC1155InvalidApprover(address approver)',
+  'error ERC1155InvalidOperator(address operator)',
+  'error ERC1155InvalidArrayLength(uint256 idsLength, uint256 valuesLength)',
+  'error OwnableUnauthorizedAccount(address account)',
+  'error OwnableInvalidOwner(address owner)',
+  'error CirclesErrorNoArgs(uint8)',
+  'error CirclesErrorOneAddressArg(address, uint8)',
+  'error CirclesErrorAddressUintArgs(address, uint256, uint8)',
+  'error CirclesHubFlowEdgeStreamMismatch(uint256 flowEdgeId, uint256 streamId, uint8 code)',
+  'error CirclesHubStreamMismatch(uint256 streamId)',
+  'error CirclesHubNettedFlowMismatch(uint256 vertexPosition, int256 matrixNettedFlow, int256 streamNettedFlow)',
+  'error CirclesERC1155CannotReceiveBatch(uint8 code)',
+  'error CirclesInvalidCirclesId(uint256 id, uint8 code)',
+  'error CirclesInvalidParameter(uint256 parameter, uint8 code)',
+  'error CirclesAmountOverflow(uint256 amount, uint8 code)',
+  'error CirclesProxyAlreadyInitialized()',
+  'error CirclesIdMustBeDerivedFromAddress(uint256 providedId, uint8 code)',
+  'error CirclesReentrancyGuard(uint8 code)',
+  'error CirclesStandardTreasuryGroupHasNoVault(address group)',
+  'error CirclesStandardTreasuryInvalidMetadataType(bytes32 metadataType, uint8 code)',
+  'error CirclesStandardTreasuryInvalidMetadata(bytes metadata, uint8 code)',
+  'error CirclesNamesInvalidName(address avatar, string name, uint8 code)',
+  'error CirclesNamesShortNameAlreadyAssigned(address avatar, uint72 shortName, uint8 code)',
+  'error CirclesNamesShortNameWithNonceTaken(address avatar, uint256 nonce, uint72 shortName, address takenByAvatar)',
+  'error CirclesNamesAvatarAlreadyHasCustomNameOrSymbol(address avatar, string nameOrSymbol, uint8 code)',
+  'error CirclesNamesOrganizationHasNoSymbol(address organization, uint8 code)',
+  'error CirclesNamesShortNameZero(address avatar, uint256 nonce)',
+  'error CirclesMigrationAmountMustBeGreaterThanZero()',
+  'error InflationaryCirclesOperatorOnlyActOnBalancesOfSender(address sender, address from)',
+  'error CirclesOperatorInvalidStreamSource(uint256 streamIndex, uint256 singleSourceCoordinate, uint256 streamSourceCoordinate)',
+  'error CirclesStandardTreasuryRedemptionCollateralMismatch(uint256 circlesId, uint256[] redemptionIds, uint256[] redemptionValues, uint256[] burnIds, uint256[] burnValues)'
+];
+
+const errorInterface = new ethers.Interface(errorAbis);
+
+// Parsing the error data using the updated ABI definitions
+export function parseError(errorData: string): ethers.ErrorDescription | null {
+  try {
+    return errorInterface.parseError(errorData);
+  } catch (error) {
+    throw new Error(`Error decoding the revert data: ${error}. Original error data: ${errorData}`);
+  }
+}
