@@ -4,8 +4,55 @@ import {
   TransactionRequest, TransactionResponse as SdkTransactionResponse
 } from '@circles-sdk/adapter';
 import Safe, {SafeConfig} from "@safe-global/protocol-kit";
-import {BrowserProvider, Eip1193Provider, Provider} from "ethers";
+import {BrowserProvider, Eip1193Provider, ethers, Provider} from "ethers";
 import {MetaTransaction, OperationType} from "ethers-multisend";
+
+export class SafeSdkPrivateKeyContractRunner implements SdkContractRunner {
+  address?: string;
+  safe?: Safe;
+  private rpcUrl: string;
+  private privateKey: string;
+
+  constructor(privateKey: string, rpcUrl: string) {
+    this.privateKey = privateKey;
+    this.rpcUrl = rpcUrl;
+    this.provider = new ethers.JsonRpcProvider(this.rpcUrl);
+  }
+
+  async init(safeAddress: string): Promise<void> {
+    this.address = safeAddress;
+    this.safe = await Safe.init({
+      provider: this.rpcUrl,
+      signer: this.privateKey,
+      safeAddress: safeAddress
+    });
+  }
+
+  provider: Provider;
+  estimateGas?: ((tx: SdkTransactionRequest) => Promise<bigint>) | undefined = async (tx) => this.provider.estimateGas(tx);
+  call?: ((tx: SdkTransactionRequest) => Promise<string>) | undefined = async (tx) => this.provider.call(tx);
+  resolveName?: ((name: string) => Promise<string | null>) | undefined = async (name) => this.provider.resolveName(name);
+  sendTransaction?: ((tx: SdkTransactionRequest) => Promise<SdkTransactionResponse>) | undefined = async (tx) => {
+    if (!this.safe) {
+      throw new Error("Safe not initialized")
+    }
+    const txs = await this.safe.createTransaction({
+      transactions: [{
+        to: tx.to,
+        value: (tx.value?.toString() ?? "0"),
+        data: tx.data
+      }]
+    });
+    const txResponse = await this.safe.executeTransaction(txs);
+    return <SdkTransactionResponse><unknown>txResponse.transactionResponse;
+  };
+  sendBatchTransaction?: () => BatchRun = () => {
+    if (!this.safe) {
+      throw new Error("Not initialized");
+    }
+    return new SafeBatchRun(this.safe);
+  }
+}
 
 export class SafeSdkBrowserContractRunner implements SdkContractRunner {
   address?: string;
