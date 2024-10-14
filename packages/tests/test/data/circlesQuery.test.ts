@@ -63,7 +63,7 @@ describe('CirclesQuery', () => {
     expect(pagedQuery.currentPage?.size).toBe(10);
     expect(pagedQuery.currentPage?.limit).toBe(10);
 
-    const page1 = pagedQuery.currentPage.results;
+    const page1 = pagedQuery.currentPage?.results;
     console.log('page1', page1);
 
     const requestYieldedData2 = await pagedQuery.queryNextPage();
@@ -78,7 +78,7 @@ describe('CirclesQuery', () => {
     expect(pagedQuery.currentPage?.size).toBe(10);
     expect(pagedQuery.currentPage?.limit).toBe(10);
 
-    const page2 = pagedQuery.currentPage.results;
+    const page2 = pagedQuery.currentPage?.results;
     console.log('page2', page2);
 
     const requestYieldedData3 = await pagedQuery.queryNextPage();
@@ -88,7 +88,7 @@ describe('CirclesQuery', () => {
     expect(pagedQuery.currentPage?.results).toBeDefined();
     expect(pagedQuery.currentPage?.results.length).toBe(10);
 
-    const page3 = pagedQuery.currentPage.results;
+    const page3 = pagedQuery.currentPage?.results;
     console.log('page3', page3);
 
     const requestYieldedData4 = await pagedQuery.queryNextPage();
@@ -98,7 +98,7 @@ describe('CirclesQuery', () => {
     expect(pagedQuery.currentPage?.results).toBeDefined();
     expect(pagedQuery.currentPage?.results.length).toBe(3);
 
-    const page4 = pagedQuery.currentPage.results;
+    const page4 = pagedQuery.currentPage?.results;
     console.log('page4', page4);
 
     const requestYieldedData5 = await pagedQuery.queryNextPage();
@@ -126,7 +126,7 @@ describe('CirclesQuery', () => {
     expect(pagedQuery.currentPage?.size).toBe(1);
     expect(pagedQuery.currentPage?.limit).toBe(1);
 
-    const page1 = pagedQuery.currentPage.results;
+    const page1 = pagedQuery.currentPage?.results;
     console.log('page1', page1);
 
     const requestYieldedData2 = await pagedQuery.queryNextPage();
@@ -141,8 +141,11 @@ describe('CirclesQuery', () => {
     expect(pagedQuery.currentPage?.size).toBe(1);
     expect(pagedQuery.currentPage?.limit).toBe(1);
 
-    const page2 = pagedQuery.currentPage.results;
+    const page2 = pagedQuery.currentPage?.results;
     console.log('page2', page2);
+    if (!page1 || !page2) {
+      throw new Error('page1 or page2 is undefined');
+    }
 
     expect(page1[0]).not.toEqual(page2[0]);
     expect(page1[0].blockNumber).toBeGreaterThan(page2[0].blockNumber);
@@ -189,8 +192,12 @@ describe('CirclesQuery', () => {
     expect(pagedQuery.currentPage?.size).toBe(1);
     expect(pagedQuery.currentPage?.limit).toBe(1);
 
-    const page1 = pagedQuery.currentPage.results;
+    const page1 = pagedQuery.currentPage?.results;
     console.log('page1', page1);
+
+    if (!page1) {
+      throw new Error('page1 is undefined');
+    }
 
     // Make sure the results contain only data that matches the filter:
     page1.forEach(result => {
@@ -201,8 +208,12 @@ describe('CirclesQuery', () => {
     const requestYieldedData2 = await pagedQuery.queryNextPage();
     expect(requestYieldedData2).toBe(true);
 
-    const page2 = pagedQuery.currentPage.results;
+    const page2 = pagedQuery.currentPage?.results;
     console.log('page2', page2);
+
+    if (!page2) {
+      throw new Error('page2 is undefined');
+    }
 
     page2.forEach(result => {
       expect(result.user).toBe('0xa318d01a47e200a89691484164ede4504e270cd7');

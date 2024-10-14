@@ -8,4 +8,5 @@ export interface CirclesConfig {
   readonly nameRegistryAddress?: string;
   readonly migrationAddress?: string;
   readonly baseGroupMintPolicy?: string;
+  readonly standardTreasuryPolicy?: string;
 }

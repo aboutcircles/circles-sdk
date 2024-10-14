@@ -2,25 +2,11 @@ import { BigNumber } from 'bignumber.js';
 import { ethers, parseEther } from 'ethers';
 import multihash from 'multihashes';
 
-/**
- * Formats the token balance in time circles.
- * @param tokenBalance The token balance as a BigNumber.
- * @return The formatted token balance as a string.
- */
-function formatTimeCircles(tokenBalance: BigNumber): string {
-  const ether = tokenBalance.dividedToIntegerBy(new BigNumber(10).pow(18));
-  const remainder = tokenBalance.mod(new BigNumber(10).pow(18));
-  let remainderString = remainder.toFixed(0).padStart(18, '0').replace(/0+$/, '');
-
-  return remainderString.length > 0
-    ? `${ether.toString()}.${remainderString}`
-    : ether.toString();
-}
-
 const CirclesInceptionTimestamp = new Date('2020-10-15T00:00:00.000Z').getTime();
 const OneDayInMilliseconds = new BigNumber(86400).multipliedBy(1000);
 const OneCirclesYearInDays = new BigNumber(365.25);
 const OneCirclesYearInMilliseconds = OneCirclesYearInDays.multipliedBy(24).multipliedBy(60).multipliedBy(60).multipliedBy(1000);
+const Beta = 1.0001987074682146291562714890133039617432343970799554367508;
 
 function getCrcPayoutAt(timestamp: number): number {
   const daysSinceCirclesInception = new BigNumber(timestamp - CirclesInceptionTimestamp).dividedBy(OneDayInMilliseconds);
@@ -53,10 +39,7 @@ export function crcToTc(timestamp: Date, amount: bigint): number {
   const amountFloat = parseFloat(ethers.formatEther(amount ?? '0'));
   const ts = timestamp.getTime();
   const payoutAtTimestamp = getCrcPayoutAt(ts);
-  const value = amountFloat / payoutAtTimestamp * 24;
-
-  return value;
-  // return Math.floor(value * 100) / 100;
+  return amountFloat / payoutAtTimestamp * 24;
 }
 
 /**
@@ -68,6 +51,44 @@ export function tcToCrc(timestamp: Date, amount: number): bigint {
   const ts = timestamp.getTime();
   const payoutAtTimestamp = getCrcPayoutAt(ts);
   return parseEther((amount / 24 * payoutAtTimestamp).toString());
+}
+
+export function staticCirclesToCircles(value: number): number {
+  const lastUpdate = new Date();
+  const lastUpdateDay = (lastUpdate.getTime() - CirclesInceptionTimestamp) / 86400000;
+  const f = Math.pow(Beta, lastUpdateDay);
+  return value / f;
+}
+
+export function attoCirclesToCircles(weiBalance: bigint): number {
+  return parseFloat(ethers.formatEther(weiBalance.toString()));
+}
+
+export function circlesToAttoCircles(circlesBalance: number): bigint {
+  return BigInt(ethers.parseEther(circlesBalance.toFixed(18)).toString());
+}
+
+export function staticCirclesToAttoCircles(value: number): bigint {
+  const circles = staticCirclesToCircles(value);
+  return circlesToAttoCircles(circles);
+}
+
+export function staticAttoCirclesToAttoCircles(value: bigint): bigint {
+  const staticCircles = attoCirclesToCircles(value);
+  return staticCirclesToAttoCircles(staticCircles);
+}
+
+export function circlesToStaticCircles(value: number): number {
+  const lastUpdate = new Date();
+  const lastUpdateDay = (lastUpdate.getTime() - CirclesInceptionTimestamp) / 86400000;
+  const f = Math.pow(Beta, lastUpdateDay);
+  return value * f;
+}
+
+export function attoCirclesToStaticAttoCircles(value: bigint): bigint {
+  const circles = attoCirclesToCircles(value);
+  const staticCircles = circlesToStaticCircles(circles);
+  return circlesToAttoCircles(staticCircles);
 }
 
 /**
@@ -146,4 +167,74 @@ export function uint256ToAddress(uint256: bigint): string {
 
   // Add the '0x' prefix
   return '0x' + hexString;
+}
+
+export const errorAbis = [
+  'error Create2InsufficientBalance(uint256 balance, uint256 needed)',
+  'error Create2EmptyBytecode()',
+  'error Create2FailedDeployment()',
+  'error ReentrancyGuardReentrantCall()',
+  'error AddressInsufficientBalance(address account)',
+  'error AddressEmptyCode(address target)',
+  'error FailedInnerCall()',
+  'error ERC20InsufficientBalance(address sender, uint256 balance, uint256 needed)',
+  'error ERC20InvalidSender(address sender)',
+  'error ERC20InvalidReceiver(address receiver)',
+  'error ERC20InsufficientAllowance(address spender, uint256 allowance, uint256 needed)',
+  'error ERC20InvalidApprover(address approver)',
+  'error ERC20InvalidSpender(address spender)',
+  'error ERC721InvalidOwner(address owner)',
+  'error ERC721NonexistentToken(uint256 tokenId)',
+  'error ERC721IncorrectOwner(address sender, uint256 tokenId, address owner)',
+  'error ERC721InvalidSender(address sender)',
+  'error ERC721InvalidReceiver(address receiver)',
+  'error ERC721InsufficientApproval(address operator, uint256 tokenId)',
+  'error ERC721InvalidApprover(address approver)',
+  'error ERC721InvalidOperator(address operator)',
+  'error ERC1155InsufficientBalance(address sender, uint256 balance, uint256 needed, uint256 tokenId)',
+  'error ERC1155InvalidSender(address sender)',
+  'error ERC1155InvalidReceiver(address receiver)',
+  'error ERC1155MissingApprovalForAll(address operator, address owner)',
+  'error ERC1155InvalidApprover(address approver)',
+  'error ERC1155InvalidOperator(address operator)',
+  'error ERC1155InvalidArrayLength(uint256 idsLength, uint256 valuesLength)',
+  'error OwnableUnauthorizedAccount(address account)',
+  'error OwnableInvalidOwner(address owner)',
+  'error CirclesErrorNoArgs(uint8)',
+  'error CirclesErrorOneAddressArg(address, uint8)',
+  'error CirclesErrorAddressUintArgs(address, uint256, uint8)',
+  'error CirclesHubFlowEdgeStreamMismatch(uint256 flowEdgeId, uint256 streamId, uint8 code)',
+  'error CirclesHubStreamMismatch(uint256 streamId)',
+  'error CirclesHubNettedFlowMismatch(uint256 vertexPosition, int256 matrixNettedFlow, int256 streamNettedFlow)',
+  'error CirclesERC1155CannotReceiveBatch(uint8 code)',
+  'error CirclesInvalidCirclesId(uint256 id, uint8 code)',
+  'error CirclesInvalidParameter(uint256 parameter, uint8 code)',
+  'error CirclesAmountOverflow(uint256 amount, uint8 code)',
+  'error CirclesProxyAlreadyInitialized()',
+  'error CirclesIdMustBeDerivedFromAddress(uint256 providedId, uint8 code)',
+  'error CirclesReentrancyGuard(uint8 code)',
+  'error CirclesStandardTreasuryGroupHasNoVault(address group)',
+  'error CirclesStandardTreasuryInvalidMetadataType(bytes32 metadataType, uint8 code)',
+  'error CirclesStandardTreasuryInvalidMetadata(bytes metadata, uint8 code)',
+  'error CirclesNamesInvalidName(address avatar, string name, uint8 code)',
+  'error CirclesNamesShortNameAlreadyAssigned(address avatar, uint72 shortName, uint8 code)',
+  'error CirclesNamesShortNameWithNonceTaken(address avatar, uint256 nonce, uint72 shortName, address takenByAvatar)',
+  'error CirclesNamesAvatarAlreadyHasCustomNameOrSymbol(address avatar, string nameOrSymbol, uint8 code)',
+  'error CirclesNamesOrganizationHasNoSymbol(address organization, uint8 code)',
+  'error CirclesNamesShortNameZero(address avatar, uint256 nonce)',
+  'error CirclesMigrationAmountMustBeGreaterThanZero()',
+  'error InflationaryCirclesOperatorOnlyActOnBalancesOfSender(address sender, address from)',
+  'error CirclesOperatorInvalidStreamSource(uint256 streamIndex, uint256 singleSourceCoordinate, uint256 streamSourceCoordinate)',
+  'error CirclesStandardTreasuryRedemptionCollateralMismatch(uint256 circlesId, uint256[] redemptionIds, uint256[] redemptionValues, uint256[] burnIds, uint256[] burnValues)'
+];
+
+const errorInterface = new ethers.Interface(errorAbis);
+
+// Parsing the error data using the updated ABI definitions
+export function parseError(errorData: string): ethers.ErrorDescription | null {
+  try {
+    return errorInterface.parseError(errorData);
+  } catch (error) {
+    throw new Error(`Error decoding the revert data: ${error}. Original error data: ${errorData}`);
+  }
 }
