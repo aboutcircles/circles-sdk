@@ -20,6 +20,7 @@ import {cidV0ToUint8Array} from '@circles-sdk/utils';
 import {GroupProfile, Profile, Profiles} from '@circles-sdk/profiles';
 import {ContractRunner, ZeroAddress} from "ethers";
 import {SdkContractRunner, TransactionRequest} from "@circles-sdk/adapter";
+import {circlesConfig} from "./config";
 
 /**
  * The SDK interface.
@@ -142,33 +143,34 @@ export class Sdk implements SdkInterface {
 
   /**
    * Creates a new SDK instance.
-   * @param circlesConfig The chain specific Circles configuration.
    * @param contractRunner A contract runner instance and its address.
+   * @param config The optional chain specific Circles configuration.
    */
-  constructor(circlesConfig: CirclesConfig, contractRunner: SdkContractRunner) {
-    this.circlesConfig = circlesConfig;
+  constructor(contractRunner: SdkContractRunner, config?: CirclesConfig) {
+    this.circlesConfig = config ?? circlesConfig[100];
+
     this.contractRunner = contractRunner;
     if (!this.contractRunner.address) {
       throw new Error('Contract runner is not initialized');
     }
 
-    this.circlesRpc = new CirclesRpc(circlesConfig.circlesRpcUrl);
+    this.circlesRpc = new CirclesRpc(this.circlesConfig.circlesRpcUrl);
     this.data = new CirclesData(this.circlesRpc);
-    this.v1Hub = HubV1Factory.connect(circlesConfig.v1HubAddress ?? '0x29b9a7fBb8995b2423a71cC17cf9810798F6C543', <ContractRunner>this.contractRunner);
-    if (circlesConfig.v2HubAddress) {
-      this.v2Hub = HubV2Factory.connect(circlesConfig.v2HubAddress, <ContractRunner>this.contractRunner);
+    this.v1Hub = HubV1Factory.connect(this.circlesConfig.v1HubAddress ?? '0x29b9a7fBb8995b2423a71cC17cf9810798F6C543', <ContractRunner>this.contractRunner);
+    if (this.circlesConfig.v2HubAddress) {
+      this.v2Hub = HubV2Factory.connect(this.circlesConfig.v2HubAddress, <ContractRunner>this.contractRunner);
     }
-    if (circlesConfig.pathfinderUrl) {
-      this.v1Pathfinder = new Pathfinder(circlesConfig.pathfinderUrl);
+    if (this.circlesConfig.pathfinderUrl) {
+      this.v1Pathfinder = new Pathfinder(this.circlesConfig.pathfinderUrl);
     }
-    if (circlesConfig.v2PathfinderUrl) {
-      this.v2Pathfinder = new Pathfinder(circlesConfig.v2PathfinderUrl);
+    if (this.circlesConfig.v2PathfinderUrl) {
+      this.v2Pathfinder = new Pathfinder(this.circlesConfig.v2PathfinderUrl);
     }
-    if (circlesConfig.nameRegistryAddress) {
-      this.nameRegistry = NameRegistry__factory.connect(circlesConfig.nameRegistryAddress, <ContractRunner>this.contractRunner);
+    if (this.circlesConfig.nameRegistryAddress) {
+      this.nameRegistry = NameRegistry__factory.connect(this.circlesConfig.nameRegistryAddress, <ContractRunner>this.contractRunner);
     }
-    if (circlesConfig.profileServiceUrl) {
-      this.profiles = new Profiles(circlesConfig.profileServiceUrl);
+    if (this.circlesConfig.profileServiceUrl) {
+      this.profiles = new Profiles(this.circlesConfig.profileServiceUrl);
     }
   }
 

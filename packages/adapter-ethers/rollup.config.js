@@ -16,5 +16,5 @@ export default {
       tsconfig: './tsconfig.json'
     })
   ],
-  external: ["ethers"]
+  external: ["ethers", '@circles-sdk/utils']
 };

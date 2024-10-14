@@ -6,3 +6,4 @@ export { CirclesConfig } from './circlesConfig';
 export { AvatarRow, TrustListRow, TrustRelationRow } from '@circles-sdk/data';
 export { AvatarInterface, AvatarInterfaceV2 } from './AvatarInterface';
 export { Pathfinder, TransferPath, TransferStep } from './v1/pathfinder';
+export { circlesConfig } from './config';
