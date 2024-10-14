@@ -382,24 +382,39 @@ export class Sdk implements SdkInterface {
       if (avatarInfo.version === 1) {
         // Add 'registerHumanV2' to the batch
         const metadataDigest = await this.createProfileIfNecessary(profile);
-        const registerHumanData = this.v2Hub.interface.encodeFunctionData('registerHuman', [ZeroAddress, metadataDigest]);
-        const registerHumanTx: TransactionRequest = {
-          to: this.circlesConfig.v2HubAddress!,
-          data: registerHumanData,
-          value: 0n,
-        };
-        batch.addTransaction(registerHumanTx);
+
+        if (avatarInfo.type === "CrcV1_Signup") {
+          const registerHumanData = this.v2Hub.interface.encodeFunctionData('registerHuman', [ZeroAddress, metadataDigest]);
+          const registerHumanTx: TransactionRequest = {
+            to: this.circlesConfig.v2HubAddress!,
+            data: registerHumanData,
+            value: 0n,
+          };
+          batch.addTransaction(registerHumanTx);
+        } else if (avatarInfo.type === "CrcV1_OrganizationSignup") {
+          const registerOrganizationData = this.v2Hub.interface.encodeFunctionData('registerOrganization', [profile.name, metadataDigest]);
+          const registerOrganizationTx: TransactionRequest = {
+            to: this.circlesConfig.v2HubAddress!,
+            data: registerOrganizationData,
+            value: 0n,
+          };
+          batch.addTransaction(registerOrganizationTx);
+        } else {
+          throw new Error(`Avatar type ${avatarInfo.type} not supported`);
+        }
       }
 
-      // 3. Ensure the v1 token minting status is known to the v2 hub
-      // Add 'calculateIssuanceTx' to the batch
-      const calculateIssuanceData = this.v2Hub.interface.encodeFunctionData('calculateIssuanceWithCheck', [avatar]);
-      const calculateIssuanceTx: TransactionRequest = {
-        to: this.circlesConfig.v2HubAddress!,
-        data: calculateIssuanceData,
-        value: 0n,
-      };
-      batch.addTransaction(calculateIssuanceTx);
+      if (avatarInfo.isHuman) {
+        // 3. Ensure the v1 token minting status is known to the v2 hub
+        // Add 'calculateIssuanceTx' to the batch
+        const calculateIssuanceData = this.v2Hub.interface.encodeFunctionData('calculateIssuanceWithCheck', [avatar]);
+        const calculateIssuanceTx: TransactionRequest = {
+          to: this.circlesConfig.v2HubAddress!,
+          data: calculateIssuanceData,
+          value: 0n,
+        };
+        batch.addTransaction(calculateIssuanceTx);
+      }
 
       // // 4. Migrate V1 tokens
       // // Add 'migrateV1Tokens' to the batch

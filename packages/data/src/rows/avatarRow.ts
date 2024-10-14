@@ -21,7 +21,7 @@ export interface AvatarRow extends EventRow {
   /**
    * The type of the avatar.
    */
-  type: 'CrcV2_RegisterHuman' | 'CrcV2_RegisterGroup' | 'CrcV2_RegisterOrganization' | 'CrcV1_Signup';
+  type: 'CrcV2_RegisterHuman' | 'CrcV2_RegisterGroup' | 'CrcV2_RegisterOrganization' | 'CrcV1_Signup' | 'CrcV1_OrganizationSignup';
   /**
    * The address of the avatar.
    */
