@@ -1,15 +1,15 @@
-import { AvatarRow } from './rows/avatarRow';
-import { TokenBalanceRow } from './rows/tokenBalanceRow';
-import { CirclesQuery } from './pagedQuery/circlesQuery';
-import { TransactionHistoryRow } from './rows/transactionHistoryRow';
-import { TrustListRow } from './rows/trustListRow';
-import { TrustRelationRow } from './rows/trustRelationRow';
-import { Observable } from './observable';
-import { CirclesEvent } from './events/events';
-import { InvitationRow } from './rows/invitationRow';
-import { GroupRow } from './rows/groupRow';
-import { GroupMembershipRow } from './rows/groupMembershipRow';
-import { TokenInfoRow } from './rows/tokenInfoRow';
+import {AvatarRow} from './rows/avatarRow';
+import {TokenBalanceRow} from './rows/tokenBalanceRow';
+import {CirclesQuery} from './pagedQuery/circlesQuery';
+import {TransactionHistoryRow} from './rows/transactionHistoryRow';
+import {TrustListRow} from './rows/trustListRow';
+import {TrustRelationRow} from './rows/trustRelationRow';
+import {Observable} from './observable';
+import {CirclesEvent} from './events/events';
+import {InvitationRow} from './rows/invitationRow';
+import {GroupRow} from './rows/groupRow';
+import {GroupMembershipRow} from './rows/groupMembershipRow';
+import {TokenInfoRow} from './rows/tokenInfoRow';
 
 export interface GroupQueryParams {
   nameStartsWith?: string;
@@ -109,4 +109,10 @@ export interface CirclesDataInterface {
    * @param pageSize The maximum number of group memberships per page.
    */
   getGroupMemberships(avatar: string, pageSize: number): CirclesQuery<GroupMembershipRow>;
+
+  /**
+   * Gets the metadata CID for an address.
+   * @param address
+   */
+  getMetadataCidForAddress(address: string): Promise<string | undefined>;
 }

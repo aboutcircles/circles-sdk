@@ -1,6 +1,6 @@
 {
   "name": "@circles-sdk/adapter-safe",
-  "version": "0.13.3",
+  "version": "0.13.4",
   "description": "",
   "type": "module",
   "main": "./dist/index.js",

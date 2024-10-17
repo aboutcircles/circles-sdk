@@ -24,6 +24,7 @@ import {GroupRow} from './rows/groupRow';
 import {TokenInfoRow} from './rows/tokenInfoRow';
 import {parseRpcSubscriptionMessage, RcpSubscriptionEvent} from './events/parser';
 import {FilterPredicate} from "./rpcSchema/filterPredicate";
+import {EventRow} from "./pagedQuery/eventRow";
 
 export type TrustEvent = {
   blockNumber: number;
@@ -125,7 +126,7 @@ function calculateBalances(row: TransactionHistoryRow) {
         staticAttoCircles = BigInt(rawBalance);
         staticCircles = attoCirclesToCircles(staticAttoCircles);
 
-        attoCircles = staticAttoCirclesToAttoCircles(staticAttoCircles) ;
+        attoCircles = staticAttoCirclesToAttoCircles(staticAttoCircles);
         circles = attoCirclesToCircles(attoCircles);
 
         attoCrc = tcToCrc(new Date(), circles);
@@ -732,5 +733,42 @@ export class CirclesData implements CirclesDataInterface {
       sortOrder: 'DESC',
       limit: pageSize
     });
+  }
+
+  /**
+   * Gets the metadata CID for an address.
+   * @param address
+   */
+  async getMetadataCidForAddress(address: string): Promise<string | undefined> {
+    // Get the newest CID for the given address
+    const query = new CirclesQuery<EventRow & {
+      metadataDigest: string
+    }>(this.rpc, {
+      namespace: 'CrcV2',
+      table: 'UpdateMetadataDigest',
+      columns: [
+        'metadataDigest'
+      ],
+      filter: [
+        {
+          Type: 'FilterPredicate',
+          FilterType: 'Equals',
+          Column: 'avatar',
+          Value: address.toLowerCase()
+        }
+      ],
+      sortOrder: 'DESC',
+      limit: 1
+    });
+
+    if (!await query.queryNextPage()) {
+      return undefined;
+    }
+    const cidHex = query.currentPage?.results[0].metadataDigest;
+    if (!cidHex) {
+      return undefined;
+    }
+    const cidArr = hexStringToUint8Array(cidHex.substring(2));
+    return uint8ArrayToCidV0(cidArr);
   }
 }
