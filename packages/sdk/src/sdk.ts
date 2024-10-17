@@ -18,7 +18,7 @@ import {AvatarRow, CirclesData, CirclesRpc} from '@circles-sdk/data';
 import {V1Avatar} from './v1/v1Avatar';
 import {cidV0ToUint8Array} from '@circles-sdk/utils';
 import {GroupProfile, Profile, Profiles} from '@circles-sdk/profiles';
-import {ContractRunner, ZeroAddress} from "ethers";
+import {ContractRunner, ContractTransactionReceipt, ZeroAddress} from "ethers";
 import {SdkContractRunner, TransactionRequest} from "@circles-sdk/adapter";
 import {circlesConfig} from "./config";
 
@@ -89,6 +89,14 @@ interface SdkInterface {
    * @trustRelations An optional list of trust relations to migrate.
    */
   migrateAvatar: (avatar: string, profile: Profile, trustRelations?: string[]) => Promise<void>;
+
+  /**
+   * Creates or updates a user profile.
+   *
+   * @param {Profile | string} profile - Profile object containing user information or a CID pointing to an existing profile.
+   * @returns {Promise<ContractTransactionReceipt>} - A promise that resolves to the transaction receipt of the operation.
+   */
+  createOrUpdateProfile: (profile: Profile | string) => Promise<ContractTransactionReceipt>;
 }
 
 /**
@@ -187,6 +195,34 @@ export class Sdk implements SdkInterface {
 
     return avatar;
   };
+
+  /**
+   * Creates or updates a profile and registers its CID in the NameRegistry.
+   *
+   * @param {Profile | string} profile - The profile information or profile ID to be created or updated.
+   * @returns {Promise<ContractTransactionReceipt>} - A promise that resolves to the transaction receipt.
+   * @throws {Error} - Throws an error if the Profiles service or NameRegistry is not configured,
+   *                   or if the transaction fails.
+   */
+  createOrUpdateProfile = async (profile: Profile | string): Promise<ContractTransactionReceipt> => {
+    if (!this.profiles) {
+      throw new Error('Profiles service is not configured');
+    }
+    if (!this.nameRegistry) {
+      throw new Error('NameRegistry is not configured');
+    }
+
+    const profileCid = await this.createProfileIfNecessary(profile);
+
+    // Register the profile CID in the NameRegistry
+    const tx = await this.nameRegistry.updateMetadataDigest(profileCid);
+    const receipt = await tx.wait();
+    if (!receipt) {
+      throw new Error('Transaction failed');
+    }
+
+    return receipt;
+  }
 
   /**
    * Registers the connected wallet as a human avatar.
