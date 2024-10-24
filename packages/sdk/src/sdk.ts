@@ -21,6 +21,7 @@ import {GroupProfile, Profile, Profiles} from '@circles-sdk/profiles';
 import {ContractRunner, ContractTransactionReceipt, ZeroAddress} from "ethers";
 import {SdkContractRunner, TransactionRequest} from "@circles-sdk/adapter";
 import {circlesConfig} from "./config";
+import {V2Pathfinder} from "./v2/pathfinderV2";
 
 /**
  * The SDK interface.
@@ -51,6 +52,10 @@ interface SdkInterface {
    * An instance of the v1 Pathfinder client (necessary for transfers; only available on gnosis chain with v1 Circles at the moment).
    */
   v1Pathfinder?: Pathfinder;
+  /**
+   * An instance of the v2 Pathfinder client.
+   */
+  v2Pathfinder?: V2Pathfinder;
   /**
    * Stores and retrieves profiles from the Circles profile service.
    */
@@ -143,7 +148,7 @@ export class Sdk implements SdkInterface {
   /**
    * The pathfinder client (v2).
    */
-  readonly v2Pathfinder?: Pathfinder;
+  readonly v2Pathfinder: V2Pathfinder;
   /**
    * The profiles service client.
    */
@@ -163,6 +168,7 @@ export class Sdk implements SdkInterface {
     }
 
     this.circlesRpc = new CirclesRpc(this.circlesConfig.circlesRpcUrl);
+    this.v2Pathfinder = new V2Pathfinder(this.circlesConfig.circlesRpcUrl);
     this.data = new CirclesData(this.circlesRpc);
     this.v1Hub = HubV1Factory.connect(this.circlesConfig.v1HubAddress ?? '0x29b9a7fBb8995b2423a71cC17cf9810798F6C543', <ContractRunner>this.contractRunner);
     if (this.circlesConfig.v2HubAddress) {
@@ -170,9 +176,6 @@ export class Sdk implements SdkInterface {
     }
     if (this.circlesConfig.pathfinderUrl) {
       this.v1Pathfinder = new Pathfinder(this.circlesConfig.pathfinderUrl);
-    }
-    if (this.circlesConfig.v2PathfinderUrl) {
-      this.v2Pathfinder = new Pathfinder(this.circlesConfig.v2PathfinderUrl);
     }
     if (this.circlesConfig.nameRegistryAddress) {
       this.nameRegistry = NameRegistry__factory.connect(this.circlesConfig.nameRegistryAddress, <ContractRunner>this.contractRunner);

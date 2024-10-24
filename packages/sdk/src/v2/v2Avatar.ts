@@ -14,8 +14,8 @@ import {
   TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
-import { addressToUInt256, attoCirclesToCircles, cidV0ToUint8Array } from '@circles-sdk/utils';
-import {Pathfinder} from './pathfinderV2';
+import {addressToUInt256, attoCirclesToCircles, cidV0ToUint8Array} from '@circles-sdk/utils';
+import {V2Pathfinder} from './pathfinderV2';
 import {Profile} from "@circles-sdk/profiles";
 import {TokenType} from "@circles-sdk/data/dist/rows/tokenInfoRow";
 import {BatchRun, TransactionRequest, TransactionResponse} from "@circles-sdk/adapter";
@@ -89,21 +89,8 @@ export class V2Avatar implements AvatarInterfaceV2 {
       return tokenBalance?.circles ?? 0;
     }
 
-    const largeAmount = BigInt('79228162514264337593543950335');
-    const transferPath = await this.sdk.v2Pathfinder!.getTransferPath(
-      this.address,
-      to,
-      largeAmount);
-
-    if (transferPath.transferSteps.length == 0) {
-      return 0;
-    }
-
-    if (!transferPath.isValid) {
-      return 0;
-    }
-
-    return attoCirclesToCircles(transferPath.maxFlow);
+    const result = await this.sdk.v2Pathfinder.getMaxFlow(this.address, to);
+    return attoCirclesToCircles(result);
   }
 
   async getMintableAmount(): Promise<number> {
@@ -162,8 +149,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
   private async transitiveTransfer(to: string, amount: bigint, batch: BatchRun) {
     this.throwIfV2IsNotAvailable();
 
-    const pathfinder = new Pathfinder(this.sdk.circlesConfig.v2PathfinderUrl!);
-    const flowMatrix = await pathfinder.getArgsForPath(this.address, to, amount.toString());
+    const flowMatrix = await this.sdk.v2Pathfinder.getArgsForPath(this.address, to, amount.toString());
 
     if (!this.sdk.v2Hub) {
       throw new Error('V2Hub not available');
