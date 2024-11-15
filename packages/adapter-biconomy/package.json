@@ -1,0 +1,26 @@
+{
+  "name": "@circles-sdk/adapter-biconomy",
+  "version": "0.14.0",
+  "description": "",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "package.json"
+  ],
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  },
+  "scripts": {
+    "build": "rollup -c"
+  },
+  "dependencies": {
+    "@circles-sdk/adapter": "0.14.0",
+    "@biconomy/account": "^4.5.7"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT"
+}

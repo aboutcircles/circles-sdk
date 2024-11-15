@@ -11,6 +11,7 @@
     "packages/adapter-cometh",
     "packages/adapter-ethers",
     "packages/adapter-safe",
+    "packages/adapter-biconomy",
     "packages/adapter-safe-app"
   ],
   "scripts": {
