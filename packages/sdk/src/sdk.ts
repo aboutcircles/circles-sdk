@@ -89,11 +89,12 @@ interface SdkInterface {
   /**
    * Migrates a v1 avatar and all its Circles holdings to v2.
    * [[ Currently only works for human avatars. ]]
+   * @param inviter The address of the avatar that invited the user to v2. Can be 'ZeroAddress' during migration period.
    * @param avatar The avatar's address.
    * @param profile The profile data of the avatar.
    * @trustRelations An optional list of trust relations to migrate.
    */
-  migrateAvatar: (avatar: string, profile: Profile, trustRelations?: string[]) => Promise<void>;
+  migrateAvatar: (inviter: string, avatar: string, profile: Profile, trustRelations?: string[]) => Promise<void>;
 
   /**
    * Creates or updates a user profile.
@@ -359,16 +360,16 @@ export class Sdk implements SdkInterface {
 
   /**
    * Migrates a v1 avatar and all its Circles holdings to v2.
-   * @param avatar The avatar's address.
-   * @param profile The profile data of the avatar.
-   */
-  /**
-   * Migrates a v1 avatar and all its Circles holdings to v2.
+   * @param inviter The address of the avatar that invited the user to v2. Can be 'ZeroAddress' during migration period.
    * @param avatar The avatar's address.
    * @param profile The profile data of the avatar.
    * @param trustRelations An optional list of trust relations to migrate.
    */
-  migrateAvatar = async (avatar: string, profile: Profile, trustRelations?: string[]): Promise<void> => {
+  migrateAvatar = async (
+    inviter: string,
+    avatar: string,
+    profile: Profile,
+    trustRelations?: string[]): Promise<void> => {
     if (!this.v2Hub) {
       throw new Error('V2 hub not available');
     }
@@ -423,7 +424,7 @@ export class Sdk implements SdkInterface {
         const metadataDigest = await this.createProfileIfNecessary(profile);
 
         if (avatarInfo.type === "CrcV1_Signup") {
-          const registerHumanData = this.v2Hub.interface.encodeFunctionData('registerHuman', [ZeroAddress, metadataDigest]);
+          const registerHumanData = this.v2Hub.interface.encodeFunctionData('registerHuman', [inviter, metadataDigest]);
           const registerHumanTx: TransactionRequest = {
             to: this.circlesConfig.v2HubAddress!,
             data: registerHumanData,
