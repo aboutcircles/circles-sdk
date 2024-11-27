@@ -356,11 +356,24 @@ export class CirclesData implements CirclesDataInterface {
   /**
    * Gets all trust relations of an avatar and groups mutual trust relations together.
    * @param avatarAddress The address to get the trust relations for.
+   * @param version The version of the trust relations to get (default: undefined - queries both).
    */
-  async getAggregatedTrustRelations(avatarAddress: string): Promise<TrustRelationRow[]> {
+  /**
+   * Retrieves and aggregates trust relations for a given avatar.
+   *
+   * - Fetches all trust relations involving the avatar.
+   * - Groups trust relations based on the counterpart (truster/trustee).
+   * - Determines the type of relationship: mutual trust, trusts, or trusted by.
+   * - Handles cases where relationships differ across versions and includes detailed metadata.
+   *
+   * @param avatarAddress The address of the avatar to retrieve trust relations for.
+   * @param version Optional version filter (defaults to retrieving all versions).
+   * @returns Aggregated trust relations, including relation type, versions, and timestamp.
+   */
+  async getAggregatedTrustRelations(avatarAddress: string, version?: number): Promise<TrustRelationRow[]> {
     const pageSize = 1000;
     const trustsQuery = this.getTrustRelations(avatarAddress, pageSize);
-    const trustListRows: TrustListRow[] = [];
+    let trustListRows: TrustListRow[] = [];
 
     // Fetch all trust relations
     while (await trustsQuery.queryNextPage()) {
@@ -370,41 +383,66 @@ export class CirclesData implements CirclesDataInterface {
       if (resultRows.length < pageSize) break;
     }
 
+    // Filter by version if provided
+    if (version !== undefined) {
+      trustListRows = trustListRows.filter(row => row.version === version);
+    }
+
     // Group trust list rows by truster and trustee
-    const trustBucket: { [avatar: string]: TrustListRow[] } = {};
+    const trustBucket: { [avatar: string]: { rows: TrustListRow[]; version: Set<number> } } = {};
     trustListRows.forEach(row => {
+      const addToBucket = (key: string) => {
+        if (!trustBucket[key]) {
+          trustBucket[key] = {rows: [], version: new Set()};
+        }
+        trustBucket[key].rows.push(row);
+        trustBucket[key].version.add(row.version);
+      };
+
       if (row.truster !== avatarAddress) {
-        trustBucket[row.truster] = trustBucket[row.truster] || [];
-        trustBucket[row.truster].push(row);
+        addToBucket(row.truster);
       }
       if (row.trustee !== avatarAddress) {
-        trustBucket[row.trustee] = trustBucket[row.trustee] || [];
-        trustBucket[row.trustee].push(row);
+        addToBucket(row.trustee);
       }
     });
 
     // Determine trust relations
     return Object.entries(trustBucket)
       .filter(([avatar]) => avatar !== avatarAddress)
-      .map(([avatar, rows]) => {
+      .map(([avatar, {rows, version}]) => {
+        const versionRelations: { [key: number]: TrustRelation } = {};
         const maxTimestamp = Math.max(...rows.map(o => o.timestamp));
-        let relation: TrustRelation;
 
-        if (rows.length === 2) {
-          relation = 'mutuallyTrusts';
-        } else if (rows[0].trustee === avatarAddress) {
-          relation = 'trustedBy';
-        } else if (rows[0].truster === avatarAddress) {
-          relation = 'trusts';
-        } else {
-          throw new Error(`Unexpected trust list row. Couldn't determine trust relation.`);
-        }
+        // Process each version separately
+        Array.from(version).forEach(ver => {
+          const versionRows = rows.filter(row => row.version === ver);
+
+          if (versionRows.length === 2) {
+            versionRelations[ver] = 'mutuallyTrusts';
+          } else if (versionRows[0]?.trustee === avatarAddress) {
+            versionRelations[ver] = 'trustedBy';
+          } else if (versionRows[0]?.truster === avatarAddress) {
+            versionRelations[ver] = 'trusts';
+          } else {
+            throw new Error(`Unexpected trust list row for version ${ver}. Couldn't determine trust relation.`);
+          }
+        });
+
+        // Combine relations for all versions
+        const distinctRelations = Array.from(new Set(Object.values(versionRelations)));
+
+        // If relations differ between versions, mark as "variesByVersion"
+        const combinedRelation =
+          distinctRelations.length === 1 ? distinctRelations[0] : 'variesByVersion';
 
         return {
           subjectAvatar: avatarAddress,
-          relation: relation,
+          relation: combinedRelation,
           objectAvatar: avatar,
-          timestamp: maxTimestamp
+          timestamp: maxTimestamp,
+          versions: Array.from(version),
+          versionSpecificRelations: versionRelations
         };
       });
   }

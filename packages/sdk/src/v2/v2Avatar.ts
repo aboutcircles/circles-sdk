@@ -117,7 +117,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
   }
 
   async getTrustRelations(): Promise<TrustRelationRow[]> {
-    return this.sdk.data.getAggregatedTrustRelations(this.address);
+    return this.sdk.data.getAggregatedTrustRelations(this.address, 2);
   }
 
   async getBalances(): Promise<TokenBalanceRow[]> {

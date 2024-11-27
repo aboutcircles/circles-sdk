@@ -74,8 +74,9 @@ export interface CirclesDataInterface {
   /**
    * Gets all trust relations of an avatar and groups mutual trust relations together.
    * @param avatar The address to get the trust relations for.
+   * @param version The version of the trust relations to get (default: undefined - queries both).
    */
-  getAggregatedTrustRelations(avatar: string): Promise<TrustRelationRow[]>;
+  getAggregatedTrustRelations(avatar: string, version?: number): Promise<TrustRelationRow[]>;
 
   /**
    * Subscribes to Circles events.

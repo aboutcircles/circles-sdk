@@ -250,7 +250,7 @@ export class V1Avatar implements AvatarInterface {
   }
 
   async getTrustRelations(): Promise<TrustRelationRow[]> {
-    return this.sdk.data.getAggregatedTrustRelations(this.address);
+    return this.sdk.data.getAggregatedTrustRelations(this.address, 1);
   }
 
   async getTransactionHistory(pageSize: number): Promise<CirclesQuery<TransactionHistoryRow>> {

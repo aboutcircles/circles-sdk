@@ -5,27 +5,41 @@ export type TrustRelation =
   'trusts'
   | 'trustedBy'
   | 'mutuallyTrusts'
-  | 'selfTrusts';
+  | 'selfTrusts'
+  | 'variesByVersion';
 
 /**
- * A single avatar to avatar trust relation that can be either one-way or mutual.
+ * A single avatar-to-avatar trust relation that can be either one-way, mutual, or version-specific.
  */
 export interface TrustRelationRow {
   /**
    * The avatar.
    */
   subjectAvatar: string;
+
   /**
    * The trust relation.
+   * Can be one of the defined TrustRelation values or "variesByVersion" for mixed states across versions.
    */
   relation: TrustRelation;
+
   /**
    * Who's trusted by or is trusting the avatar.
    */
   objectAvatar: string;
 
   /**
-   * When the last trust relation (in either direction) was last established.
+   * When the last trust relation (in either direction) was established.
    */
   timestamp: number;
+
+  /**
+   * The versions involved in this trust relation.
+   */
+  versions: number[];
+
+  /**
+   * A map of version-specific trust relations, providing granular details per version.
+   */
+  versionSpecificRelations?: { [version: number]: TrustRelation };
 }
