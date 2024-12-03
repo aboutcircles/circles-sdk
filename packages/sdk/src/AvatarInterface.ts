@@ -117,6 +117,11 @@ export interface AvatarInterface {
    * Gets the total supply of either this avatar's Personal or Group Circles.
    */
   getTotalSupply(): Promise<bigint>;
+
+  /**
+   * Gets all inviters of the avatar (for v1).
+   */
+  getInviters(): Promise<TrustRelationRow[]>;
 }
 
 /**

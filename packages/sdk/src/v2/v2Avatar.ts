@@ -434,4 +434,9 @@ export class V2Avatar implements AvatarInterfaceV2 {
       throw new Error('Name registry is not available');
     }
   }
+
+  // We don't return any inviter if avatar is already in v2
+  async getInviters(): Promise<TrustRelationRow[]> {
+    return [];
+  }
 }

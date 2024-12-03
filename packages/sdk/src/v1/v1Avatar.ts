@@ -2,9 +2,9 @@ import {
   ContractRunner,
   ContractTransactionReceipt, ethers, TransactionReceipt
 } from 'ethers';
-import {Sdk} from '../sdk';
-import {AvatarInterface} from '../AvatarInterface';
-import {Token, Token__factory} from '@circles-sdk/abi-v1';
+import { Sdk } from '../sdk';
+import { AvatarInterface } from '../AvatarInterface';
+import { Token, Token__factory } from '@circles-sdk/abi-v1';
 import {
   AvatarRow,
   CirclesQuery,
@@ -12,8 +12,8 @@ import {
   TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
-import {crcToTc} from '@circles-sdk/utils';
-import {TransactionResponse} from "@circles-sdk/adapter";
+import { crcToTc } from '@circles-sdk/utils';
+import { TransactionResponse } from "@circles-sdk/adapter";
 
 export class V1Avatar implements AvatarInterface {
   public readonly sdk: Sdk;
@@ -291,5 +291,22 @@ export class V1Avatar implements AvatarInterface {
     if (!this.sdk.v1Pathfinder) {
       throw new Error('Pathfinder is not available');
     }
+  }
+
+  async getInviters(): Promise<TrustRelationRow[]> {
+    const v2Relations = await this.sdk.data.getAggregatedTrustRelations(this.address, 2);
+
+    const humanInviters: TrustRelationRow[] = [];
+
+    for (const relation of v2Relations) {
+      const inviterInfo = await this.sdk.data.getAvatarInfo(relation.subjectAvatar);
+
+      if (inviterInfo?.isHuman &&
+        (relation.relation === 'trusts' || relation.relation === 'mutuallyTrusts')) {
+        humanInviters.push(relation);
+      }
+    }
+
+    return humanInviters;
   }
 }
