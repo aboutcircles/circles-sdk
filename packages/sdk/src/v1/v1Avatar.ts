@@ -292,21 +292,4 @@ export class V1Avatar implements AvatarInterface {
       throw new Error('Pathfinder is not available');
     }
   }
-
-  async getInviters(): Promise<TrustRelationRow[]> {
-    const v2Relations = await this.sdk.data.getAggregatedTrustRelations(this.address, 2);
-
-    const humanInviters: TrustRelationRow[] = [];
-
-    for (const relation of v2Relations) {
-      const inviterInfo = await this.sdk.data.getAvatarInfo(relation.subjectAvatar);
-
-      if (inviterInfo?.isHuman &&
-        (relation.relation === 'trusts' || relation.relation === 'mutuallyTrusts')) {
-        humanInviters.push(relation);
-      }
-    }
-
-    return humanInviters;
-  }
 }

@@ -89,7 +89,8 @@ export interface CirclesDataInterface {
    * @param avatar The address to get the invitations for.
    * @param pageSize The maximum number of invitations per page.
    */
-  getInvitations(avatar: string, pageSize: number): CirclesQuery<InvitationRow>;
+  // getInvitations(avatar: string, pageSize: number): CirclesQuery<InvitationRow>;
+  getInvitations(avatar: string, pageSize: number): Promise<AvatarRow[]>;
 
   /**
    * Gets the avatar that invited the given avatar.
