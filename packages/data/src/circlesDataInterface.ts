@@ -28,6 +28,14 @@ export interface CirclesDataInterface {
   getAvatarInfo(avatar: string): Promise<AvatarRow | undefined>;
 
   /**
+   * Gets basic information about avatars.
+   * This includes the signup timestamp, circles version, avatar type and token address/id.
+   * @param avatar The addresses to check.
+   * @returns The avatar information or undefined if the address is not an avatar.
+   */
+  getAvatarInfoBatch(avatar: string[]): Promise<AvatarRow[]>;
+
+  /**
    * Gets the token info for a given token address.
    * @param address The address of the token.
    * @returns The token info or undefined if the token is not found.

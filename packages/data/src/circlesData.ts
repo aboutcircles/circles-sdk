@@ -1,9 +1,9 @@
-import { CirclesQuery } from './pagedQuery/circlesQuery';
-import { TransactionHistoryRow } from './rows/transactionHistoryRow';
-import { TrustListRow } from './rows/trustListRow';
-import { TokenBalanceRow } from './rows/tokenBalanceRow';
-import { CirclesRpc } from './circlesRpc';
-import { AvatarRow } from './rows/avatarRow';
+import {CirclesQuery} from './pagedQuery/circlesQuery';
+import {TransactionHistoryRow} from './rows/transactionHistoryRow';
+import {TrustListRow} from './rows/trustListRow';
+import {TokenBalanceRow} from './rows/tokenBalanceRow';
+import {CirclesRpc} from './circlesRpc';
+import {AvatarRow} from './rows/avatarRow';
 import {
   attoCirclesToCircles,
   attoCirclesToStaticAttoCircles, circlesToAttoCircles,
@@ -12,19 +12,19 @@ import {
   tcToCrc,
   uint8ArrayToCidV0
 } from '@circles-sdk/utils';
-import { TrustRelation, TrustRelationRow } from './rows/trustRelationRow';
-import { CirclesDataInterface, GroupQueryParams } from './circlesDataInterface';
-import { Observable } from './observable';
-import { CirclesEvent } from './events/events';
-import { InvitationRow } from './rows/invitationRow';
-import { PagedQueryParams } from './pagedQuery/pagedQueryParams';
-import { Filter } from './rpcSchema/filter';
-import { GroupMembershipRow } from './rows/groupMembershipRow';
-import { GroupRow } from './rows/groupRow';
-import { TokenInfoRow } from './rows/tokenInfoRow';
-import { parseRpcSubscriptionMessage, RcpSubscriptionEvent } from './events/parser';
-import { FilterPredicate } from "./rpcSchema/filterPredicate";
-import { EventRow } from "./pagedQuery/eventRow";
+import {TrustRelation, TrustRelationRow} from './rows/trustRelationRow';
+import {CirclesDataInterface, GroupQueryParams} from './circlesDataInterface';
+import {Observable} from './observable';
+import {CirclesEvent} from './events/events';
+import {InvitationRow} from './rows/invitationRow';
+import {PagedQueryParams} from './pagedQuery/pagedQueryParams';
+import {Filter} from './rpcSchema/filter';
+import {GroupMembershipRow} from './rows/groupMembershipRow';
+import {GroupRow} from './rows/groupRow';
+import {TokenInfoRow} from './rows/tokenInfoRow';
+import {parseRpcSubscriptionMessage, RcpSubscriptionEvent} from './events/parser';
+import {FilterPredicate} from "./rpcSchema/filterPredicate";
+import {EventRow} from "./pagedQuery/eventRow";
 
 export type TrustEvent = {
   blockNumber: number;
@@ -393,7 +393,7 @@ export class CirclesData implements CirclesDataInterface {
     trustListRows.forEach(row => {
       const addToBucket = (key: string) => {
         if (!trustBucket[key]) {
-          trustBucket[key] = { rows: [], version: new Set() };
+          trustBucket[key] = {rows: [], version: new Set()};
         }
         trustBucket[key].rows.push(row);
         trustBucket[key].version.add(row.version);
@@ -410,7 +410,7 @@ export class CirclesData implements CirclesDataInterface {
     // Determine trust relations
     return Object.entries(trustBucket)
       .filter(([avatar]) => avatar !== avatarAddress)
-      .map(([avatar, { rows, version }]) => {
+      .map(([avatar, {rows, version}]) => {
         const versionRelations: { [key: number]: TrustRelation } = {};
         const maxTimestamp = Math.max(...rows.map(o => o.timestamp));
 
@@ -454,7 +454,7 @@ export class CirclesData implements CirclesDataInterface {
    * @returns The avatar info or undefined if the avatar is not found.
    */
   async getAvatarInfo(avatar: string): Promise<AvatarRow | undefined> {
-    const avatarInfos = await this.getAvatarInfos([avatar]);
+    const avatarInfos = await this.getAvatarInfoBatch([avatar]);
     return avatarInfos.length > 0 ? avatarInfos[0] : undefined;
   }
 
@@ -463,7 +463,7 @@ export class CirclesData implements CirclesDataInterface {
    * @param avatars The addresses to check.
    * @returns An array of avatar info objects.
    */
-  async getAvatarInfos(avatars: string[]): Promise<AvatarRow[]> {
+  async getAvatarInfoBatch(avatars: string[]): Promise<AvatarRow[]> {
     if (avatars.length === 0) {
       return [];
     }
@@ -604,60 +604,47 @@ export class CirclesData implements CirclesDataInterface {
   }
 
   /**
-   * TODO: update this comment if implemented
-   * Gets the invitations sent by an avatar.
+   * Checks if an avatar has been invited to circles by another avatar.
    * @param avatar The avatar to get the invitations for.
-   * @param pageSize The maximum number of invitations per page.
-   * @returns A CirclesQuery object to fetch the invitations.
+   * @returns A list of inviters or an empty list if no invitations are found (or the inviter doesn't have enough balance to pay for the invitation fees).
    */
   async getInvitations(avatar: string): Promise<AvatarRow[]> {
     const MIN_TOKENS_REQUIRED = 96;
-    const avatarInfo = await this.getAvatarInfo(avatar);
-    if (avatarInfo?.version == 2) return [];
 
+    // Check if the avatar is still on v1 (else not interesting for invitations)
+    const avatarInfo = await this.getAvatarInfo(avatar);
+    if (avatarInfo?.version == 2) {
+      return [];
+    }
+
+    // Find all avatars trusting the given avatar.
+    // (mutual trust cannot exist in invitation state - to trust back, the avatar must be on v2 already)
     const v2Relations = await this.getAggregatedTrustRelations(avatar, 2);
+    const v2Trusters = v2Relations
+      .filter(o => o.relation == "trusts")
+      .map(o => o.subjectAvatar);
 
     const humanInviters: AvatarRow[] = [];
+    const trusterInfoBatch = await this.getAvatarInfoBatch(v2Trusters);
 
-    for (const relation of v2Relations) {
-      const inviterInfo = await this.getAvatarInfo(relation.subjectAvatar);
+    for (const trusterInfo of trusterInfoBatch) {
+      // Only humans can inviter other humans
+      if (!trusterInfo?.isHuman) {
+        continue;
+      }
 
-      if (inviterInfo?.isHuman &&
-        (relation.relation === 'trusts' || relation.relation === 'mutuallyTrusts')) {
-        const balance = await this.getTotalBalanceV2(relation.subjectAvatar);
-        if (parseFloat(balance) >= MIN_TOKENS_REQUIRED) {
-          humanInviters.push(inviterInfo);
-        }
+      // If the inviter doesn't have enough tokens, the user cannot accept their invitation.
+      // Invitation fees must be paid in the inviter's own token.
+      const balances = await this.getTokenBalances(trusterInfo.avatar);
+      const inviterOwnToken = balances.find(o => o.tokenAddress == trusterInfo.avatar);
+      if (inviterOwnToken && inviterOwnToken.circles >= MIN_TOKENS_REQUIRED) {
+        // The inviter has enough tokens to pay for the invitation
+        humanInviters.push(trusterInfo);
       }
     }
 
     return humanInviters;
   }
-  // getInvitations(avatar: string, pageSize: number): CirclesQuery<InvitationRow> {
-  //   return new CirclesQuery<InvitationRow>(this.rpc, {
-  //     namespace: 'CrcV2',
-  //     table: 'InviteHuman',
-  //     columns: [
-  //       'blockNumber',
-  //       'transactionIndex',
-  //       'logIndex',
-  //       'timestamp',
-  //       'transactionHash',
-  //       'inviter',
-  //       'invited'
-  //     ],
-  //     filter: [
-  //       {
-  //         Type: 'FilterPredicate',
-  //         FilterType: 'Equals',
-  //         Column: 'inviter',
-  //         Value: avatar.toLowerCase()
-  //       }
-  //     ],
-  //     sortOrder: 'DESC',
-  //     limit: pageSize
-  //   });
-  // }
 
   /**
    * Gets the avatar that invited the given avatar.
