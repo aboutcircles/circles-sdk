@@ -89,11 +89,12 @@ interface SdkInterface {
   /**
    * Migrates a v1 avatar and all its Circles holdings to v2.
    * [[ Currently only works for human avatars. ]]
+   * @param inviter The address of the avatar that invited the user to v2. Can be 'ZeroAddress' during migration period.
    * @param avatar The avatar's address.
    * @param profile The profile data of the avatar.
    * @trustRelations An optional list of trust relations to migrate.
    */
-  migrateAvatar: (avatar: string, profile: Profile, trustRelations?: string[]) => Promise<void>;
+  migrateAvatar: (inviter: string, avatar: string, profile: Profile, trustRelations?: string[]) => Promise<void>;
 
   /**
    * Creates or updates a user profile.
@@ -102,6 +103,12 @@ interface SdkInterface {
    * @returns {Promise<ContractTransactionReceipt>} - A promise that resolves to the transaction receipt of the operation.
    */
   createOrUpdateProfile: (profile: Profile | string) => Promise<ContractTransactionReceipt>;
+
+  /**
+   * Checks if an avatar can self-migrate to v2.
+   * @param avatarInfo The avatar's info.
+   */
+  canSelfMigrate: (avatarInfo: AvatarRow) => Promise<boolean>;
 }
 
 /**
@@ -153,6 +160,14 @@ export class Sdk implements SdkInterface {
    * The profiles service client.
    */
   readonly profiles?: Profiles;
+
+  /**
+   * Contains the bootstrap periods for each known hub contract.
+   */
+  readonly bootstrapPeriods: { [contract: string]: number } = {
+    "0xc12c1e50abb450d6205ea2c3fa861b3b834d13e8": /*deployedAt:*/ 1728824950 + /*bootsrapTime:*/ 2883058,
+    "0x3d61f0a272ec69d65f5cff097212079aafde8267": /*deployedAt:*/ 1730401610 + /*bootsrapTime:*/ 1313598,
+  }
 
   /**
    * Creates a new SDK instance.
@@ -358,17 +373,17 @@ export class Sdk implements SdkInterface {
   };
 
   /**
-   * Migrates a v1 avatar and all its Circles holdings to v2.
-   * @param avatar The avatar's address.
-   * @param profile The profile data of the avatar.
-   */
-  /**
-   * Migrates a v1 avatar and all its Circles holdings to v2.
+   * Migrates a v1 avatar, and optionally it's trust relations to v2.
+   * @param inviter The address of the avatar that invited the user to v2. Can be 'ZeroAddress' during migration period or if the account that's migrating stopped minting in v1 during the migration period.
    * @param avatar The avatar's address.
    * @param profile The profile data of the avatar.
    * @param trustRelations An optional list of trust relations to migrate.
    */
-  migrateAvatar = async (avatar: string, profile: Profile, trustRelations?: string[]): Promise<void> => {
+  migrateAvatar = async (
+    inviter: string,
+    avatar: string,
+    profile: Profile,
+    trustRelations?: string[]): Promise<void> => {
     if (!this.v2Hub) {
       throw new Error('V2 hub not available');
     }
@@ -423,7 +438,15 @@ export class Sdk implements SdkInterface {
         const metadataDigest = await this.createProfileIfNecessary(profile);
 
         if (avatarInfo.type === "CrcV1_Signup") {
-          const registerHumanData = this.v2Hub.interface.encodeFunctionData('registerHuman', [ZeroAddress, metadataDigest]);
+
+          // Check if the account that's migrating stopped minting in v1 during the migration period.
+          // Throw an error otherwise.
+          if (inviter === ZeroAddress && !(await this.canSelfMigrate(avatarInfo))) {
+            throw new Error(`Self registration not allowed for avatar ${avatar} because it did not stop minting in v1 during the migration period`);
+          }
+
+          // Add 'registerHuman' to the batch
+          const registerHumanData = this.v2Hub.interface.encodeFunctionData('registerHuman', [inviter, metadataDigest]);
           const registerHumanTx: TransactionRequest = {
             to: this.circlesConfig.v2HubAddress!,
             data: registerHumanData,
@@ -431,6 +454,7 @@ export class Sdk implements SdkInterface {
           };
           batch.addTransaction(registerHumanTx);
         } else if (avatarInfo.type === "CrcV1_OrganizationSignup") {
+          // Add 'registerOrganization' to the batch
           const registerOrganizationData = this.v2Hub.interface.encodeFunctionData('registerOrganization', [profile.name, metadataDigest]);
           const registerOrganizationTx: TransactionRequest = {
             to: this.circlesConfig.v2HubAddress!,
@@ -476,6 +500,38 @@ export class Sdk implements SdkInterface {
       throw new Error('Avatar is not a V1 avatar');
     }
   };
+
+  /**
+   * Checks if an avatar can self-migrate to v2.
+   * This is possible either during the migration period or if the avatar stopped minting in v1 before or during that period.
+   * @param avatarInfo The avatar's info.
+   * @private
+   */
+  public async canSelfMigrate(avatarInfo: AvatarRow) {
+    if (!this.circlesConfig.v2HubAddress) {
+      throw new Error('V2 hub address not set');
+    }
+
+    const v1Avatar = new V1Avatar(this, avatarInfo);
+    const v1Token = v1Avatar.v1Token;
+    if (!v1Token) {
+      return false;
+    }
+
+    const migrationPeriodEnd = this.bootstrapPeriods[this.circlesConfig.v2HubAddress.toLowerCase()];
+    if (Date.now() / 1000 < migrationPeriodEnd) {
+      // Allow to self migrate anyone with a v1 token during the migration period
+      return true;
+    }
+
+    // Once the migration period is over, verify that minting stopped before or during the migration period
+    const [isStopped, lastMint] = await Promise.all([
+      v1Token.stopped(),
+      v1Token.lastTouched(),
+    ]);
+
+    return isStopped && lastMint <= migrationPeriodEnd;
+  }
 
   /**
    * Migrates all V1 token holdings of an avatar to V2 using batch transactions.
