@@ -455,10 +455,6 @@ export class Sdk implements SdkInterface {
         batch.addTransaction(calculateIssuanceTx);
       }
 
-      // // 4. Migrate V1 tokens
-      // // Add 'migrateV1Tokens' to the batch
-      await this.migrateV1TokensBatch(avatar, undefined, batch);
-
       // 4. Migrate trust relations
       if (trustRelations) {
         // Add 'trust' to the batch
