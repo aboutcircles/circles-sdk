@@ -28,6 +28,14 @@ export interface CirclesDataInterface {
   getAvatarInfo(avatar: string): Promise<AvatarRow | undefined>;
 
   /**
+   * Gets basic information about avatars.
+   * This includes the signup timestamp, circles version, avatar type and token address/id.
+   * @param avatar The addresses to check.
+   * @returns The avatar information or undefined if the address is not an avatar.
+   */
+  getAvatarInfoBatch(avatar: string[]): Promise<AvatarRow[]>;
+
+  /**
    * Gets the token info for a given token address.
    * @param address The address of the token.
    * @returns The token info or undefined if the token is not found.
@@ -74,8 +82,9 @@ export interface CirclesDataInterface {
   /**
    * Gets all trust relations of an avatar and groups mutual trust relations together.
    * @param avatar The address to get the trust relations for.
+   * @param version The version of the trust relations to get (default: undefined - queries both).
    */
-  getAggregatedTrustRelations(avatar: string): Promise<TrustRelationRow[]>;
+  getAggregatedTrustRelations(avatar: string, version?: number): Promise<TrustRelationRow[]>;
 
   /**
    * Subscribes to Circles events.
@@ -88,7 +97,8 @@ export interface CirclesDataInterface {
    * @param avatar The address to get the invitations for.
    * @param pageSize The maximum number of invitations per page.
    */
-  getInvitations(avatar: string, pageSize: number): CirclesQuery<InvitationRow>;
+  // getInvitations(avatar: string, pageSize: number): CirclesQuery<InvitationRow>;
+  getInvitations(avatar: string, pageSize: number): Promise<AvatarRow[]>;
 
   /**
    * Gets the avatar that invited the given avatar.

@@ -2,9 +2,9 @@ import {
   ContractRunner,
   ContractTransactionReceipt, ethers, TransactionReceipt
 } from 'ethers';
-import {Sdk} from '../sdk';
-import {AvatarInterface} from '../AvatarInterface';
-import {Token, Token__factory} from '@circles-sdk/abi-v1';
+import { Sdk } from '../sdk';
+import { AvatarInterface } from '../AvatarInterface';
+import { Token, Token__factory } from '@circles-sdk/abi-v1';
 import {
   AvatarRow,
   CirclesQuery,
@@ -12,8 +12,8 @@ import {
   TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
-import {crcToTc} from '@circles-sdk/utils';
-import {TransactionResponse} from "@circles-sdk/adapter";
+import { crcToTc } from '@circles-sdk/utils';
+import { TransactionResponse } from "@circles-sdk/adapter";
 
 export class V1Avatar implements AvatarInterface {
   public readonly sdk: Sdk;
@@ -250,7 +250,7 @@ export class V1Avatar implements AvatarInterface {
   }
 
   async getTrustRelations(): Promise<TrustRelationRow[]> {
-    return this.sdk.data.getAggregatedTrustRelations(this.address);
+    return this.sdk.data.getAggregatedTrustRelations(this.address, 1);
   }
 
   async getTransactionHistory(pageSize: number): Promise<CirclesQuery<TransactionHistoryRow>> {

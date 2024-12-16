@@ -356,11 +356,24 @@ export class CirclesData implements CirclesDataInterface {
   /**
    * Gets all trust relations of an avatar and groups mutual trust relations together.
    * @param avatarAddress The address to get the trust relations for.
+   * @param version The version of the trust relations to get (default: undefined - queries both).
    */
-  async getAggregatedTrustRelations(avatarAddress: string): Promise<TrustRelationRow[]> {
+  /**
+   * Retrieves and aggregates trust relations for a given avatar.
+   *
+   * - Fetches all trust relations involving the avatar.
+   * - Groups trust relations based on the counterpart (truster/trustee).
+   * - Determines the type of relationship: mutual trust, trusts, or trusted by.
+   * - Handles cases where relationships differ across versions and includes detailed metadata.
+   *
+   * @param avatarAddress The address of the avatar to retrieve trust relations for.
+   * @param version Optional version filter (defaults to retrieving all versions).
+   * @returns Aggregated trust relations, including relation type, versions, and timestamp.
+   */
+  async getAggregatedTrustRelations(avatarAddress: string, version?: number): Promise<TrustRelationRow[]> {
     const pageSize = 1000;
     const trustsQuery = this.getTrustRelations(avatarAddress, pageSize);
-    const trustListRows: TrustListRow[] = [];
+    let trustListRows: TrustListRow[] = [];
 
     // Fetch all trust relations
     while (await trustsQuery.queryNextPage()) {
@@ -370,41 +383,66 @@ export class CirclesData implements CirclesDataInterface {
       if (resultRows.length < pageSize) break;
     }
 
+    // Filter by version if provided
+    if (version !== undefined) {
+      trustListRows = trustListRows.filter(row => row.version === version);
+    }
+
     // Group trust list rows by truster and trustee
-    const trustBucket: { [avatar: string]: TrustListRow[] } = {};
+    const trustBucket: { [avatar: string]: { rows: TrustListRow[]; version: Set<number> } } = {};
     trustListRows.forEach(row => {
+      const addToBucket = (key: string) => {
+        if (!trustBucket[key]) {
+          trustBucket[key] = {rows: [], version: new Set()};
+        }
+        trustBucket[key].rows.push(row);
+        trustBucket[key].version.add(row.version);
+      };
+
       if (row.truster !== avatarAddress) {
-        trustBucket[row.truster] = trustBucket[row.truster] || [];
-        trustBucket[row.truster].push(row);
+        addToBucket(row.truster);
       }
       if (row.trustee !== avatarAddress) {
-        trustBucket[row.trustee] = trustBucket[row.trustee] || [];
-        trustBucket[row.trustee].push(row);
+        addToBucket(row.trustee);
       }
     });
 
     // Determine trust relations
     return Object.entries(trustBucket)
       .filter(([avatar]) => avatar !== avatarAddress)
-      .map(([avatar, rows]) => {
+      .map(([avatar, {rows, version}]) => {
+        const versionRelations: { [key: number]: TrustRelation } = {};
         const maxTimestamp = Math.max(...rows.map(o => o.timestamp));
-        let relation: TrustRelation;
 
-        if (rows.length === 2) {
-          relation = 'mutuallyTrusts';
-        } else if (rows[0].trustee === avatarAddress) {
-          relation = 'trustedBy';
-        } else if (rows[0].truster === avatarAddress) {
-          relation = 'trusts';
-        } else {
-          throw new Error(`Unexpected trust list row. Couldn't determine trust relation.`);
-        }
+        // Process each version separately
+        Array.from(version).forEach(ver => {
+          const versionRows = rows.filter(row => row.version === ver);
+
+          if (versionRows.length === 2) {
+            versionRelations[ver] = 'mutuallyTrusts';
+          } else if (versionRows[0]?.trustee === avatarAddress) {
+            versionRelations[ver] = 'trustedBy';
+          } else if (versionRows[0]?.truster === avatarAddress) {
+            versionRelations[ver] = 'trusts';
+          } else {
+            throw new Error(`Unexpected trust list row for version ${ver}. Couldn't determine trust relation.`);
+          }
+        });
+
+        // Combine relations for all versions
+        const distinctRelations = Array.from(new Set(Object.values(versionRelations)));
+
+        // If relations differ between versions, mark as "variesByVersion"
+        const combinedRelation =
+          distinctRelations.length === 1 ? distinctRelations[0] : 'variesByVersion';
 
         return {
           subjectAvatar: avatarAddress,
-          relation: relation,
+          relation: combinedRelation,
           objectAvatar: avatar,
-          timestamp: maxTimestamp
+          timestamp: maxTimestamp,
+          versions: Array.from(version),
+          versionSpecificRelations: versionRelations
         };
       });
   }
@@ -416,7 +454,7 @@ export class CirclesData implements CirclesDataInterface {
    * @returns The avatar info or undefined if the avatar is not found.
    */
   async getAvatarInfo(avatar: string): Promise<AvatarRow | undefined> {
-    const avatarInfos = await this.getAvatarInfos([avatar]);
+    const avatarInfos = await this.getAvatarInfoBatch([avatar]);
     return avatarInfos.length > 0 ? avatarInfos[0] : undefined;
   }
 
@@ -425,7 +463,7 @@ export class CirclesData implements CirclesDataInterface {
    * @param avatars The addresses to check.
    * @returns An array of avatar info objects.
    */
-  async getAvatarInfos(avatars: string[]): Promise<AvatarRow[]> {
+  async getAvatarInfoBatch(avatars: string[]): Promise<AvatarRow[]> {
     if (avatars.length === 0) {
       return [];
     }
@@ -566,35 +604,46 @@ export class CirclesData implements CirclesDataInterface {
   }
 
   /**
-   * Gets the invitations sent by an avatar.
+   * Checks if an avatar has been invited to circles by another avatar.
    * @param avatar The avatar to get the invitations for.
-   * @param pageSize The maximum number of invitations per page.
-   * @returns A CirclesQuery object to fetch the invitations.
+   * @returns A list of inviters or an empty list if no invitations are found (or the inviter doesn't have enough balance to pay for the invitation fees).
    */
-  getInvitations(avatar: string, pageSize: number): CirclesQuery<InvitationRow> {
-    return new CirclesQuery<InvitationRow>(this.rpc, {
-      namespace: 'CrcV2',
-      table: 'InviteHuman',
-      columns: [
-        'blockNumber',
-        'transactionIndex',
-        'logIndex',
-        'timestamp',
-        'transactionHash',
-        'inviter',
-        'invited'
-      ],
-      filter: [
-        {
-          Type: 'FilterPredicate',
-          FilterType: 'Equals',
-          Column: 'inviter',
-          Value: avatar.toLowerCase()
-        }
-      ],
-      sortOrder: 'DESC',
-      limit: pageSize
-    });
+  async getInvitations(avatar: string): Promise<AvatarRow[]> {
+    const MIN_TOKENS_REQUIRED = 96;
+
+    // Check if the avatar is still on v1 (else not interesting for invitations)
+    const avatarInfo = await this.getAvatarInfo(avatar);
+    if (avatarInfo?.version == 2) {
+      return [];
+    }
+
+    // Find all avatars trusting the given avatar.
+    // (mutual trust cannot exist in invitation state - to trust back, the avatar must be on v2 already)
+    const v2Relations = await this.getAggregatedTrustRelations(avatar, 2);
+    const v2Trusters = v2Relations
+      .filter(o => o.relation == "trusts")
+      .map(o => o.subjectAvatar);
+
+    const humanInviters: AvatarRow[] = [];
+    const trusterInfoBatch = await this.getAvatarInfoBatch(v2Trusters);
+
+    for (const trusterInfo of trusterInfoBatch) {
+      // Only humans can inviter other humans
+      if (!trusterInfo?.isHuman) {
+        continue;
+      }
+
+      // If the inviter doesn't have enough tokens, the user cannot accept their invitation.
+      // Invitation fees must be paid in the inviter's own token.
+      const balances = await this.getTokenBalances(trusterInfo.avatar);
+      const inviterOwnToken = balances.find(o => o.tokenAddress == trusterInfo.avatar);
+      if (inviterOwnToken && inviterOwnToken.circles >= MIN_TOKENS_REQUIRED) {
+        // The inviter has enough tokens to pay for the invitation
+        humanInviters.push(trusterInfo);
+      }
+    }
+
+    return humanInviters;
   }
 
   /**
