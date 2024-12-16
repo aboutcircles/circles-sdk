@@ -111,10 +111,6 @@ interface SdkInterface {
   canSelfMigrate: (avatarInfo: AvatarRow) => Promise<boolean>;
 }
 
-/**
- * Wraps a contract runner with its address.
- */
-
 
 /**
  * The SDK provides a high-level interface to interact with the Circles protocol.
@@ -479,7 +475,23 @@ export class Sdk implements SdkInterface {
         batch.addTransaction(calculateIssuanceTx);
       }
 
-      // 4. Migrate trust relations
+      // 4. Migrate v1 balances of the avatar. But only if the tokenOwner of the migrated token is already on v2 or if it's the own token.
+      const balances = await this.data.getTokenBalances(avatar);
+      const v1Balances = balances.filter(o => o.version === 1);
+      const tokenOwners = v1Balances.map(o => o.tokenOwner);
+      const tokenOwnerInfo = await this.data.getAvatarInfoBatch(tokenOwners);
+      const tokenOwnerInfoMap = tokenOwnerInfo.reduce((acc: Record<string, AvatarRow>, o) => {
+        acc[o.avatar] = o;
+        return acc;
+      }, {});
+
+      const tokensToMigrate = v1Balances.filter(o => o.tokenOwner == avatar || tokenOwnerInfoMap[o.tokenOwner]?.version === 2);
+      if (tokensToMigrate.length > 0) {
+        // Add 'migrate' to the batch
+        await this.migrateV1TokensBatch(avatar, tokensToMigrate.map(o => o.tokenAddress), batch);
+      }
+
+      // 5. Migrate trust relations
       if (trustRelations) {
         // Add 'trust' to the batch
         for (const trustRelation of trustRelations) {
