@@ -1,9 +1,9 @@
-import {CirclesQuery} from './pagedQuery/circlesQuery';
-import {TransactionHistoryRow} from './rows/transactionHistoryRow';
-import {TrustListRow} from './rows/trustListRow';
-import {TokenBalanceRow} from './rows/tokenBalanceRow';
-import {CirclesRpc} from './circlesRpc';
-import {AvatarRow} from './rows/avatarRow';
+import { CirclesQuery } from './pagedQuery/circlesQuery';
+import { TransactionHistoryRow } from './rows/transactionHistoryRow';
+import { TrustListRow } from './rows/trustListRow';
+import { TokenBalanceRow } from './rows/tokenBalanceRow';
+import { CirclesRpc } from './circlesRpc';
+import { AvatarRow } from './rows/avatarRow';
 import {
   attoCirclesToCircles,
   attoCirclesToStaticAttoCircles, circlesToAttoCircles,
@@ -12,19 +12,19 @@ import {
   tcToCrc,
   uint8ArrayToCidV0
 } from '@circles-sdk/utils';
-import {TrustRelation, TrustRelationRow} from './rows/trustRelationRow';
-import {CirclesDataInterface, GroupQueryParams} from './circlesDataInterface';
-import {Observable} from './observable';
-import {CirclesEvent} from './events/events';
-import {InvitationRow} from './rows/invitationRow';
-import {PagedQueryParams} from './pagedQuery/pagedQueryParams';
-import {Filter} from './rpcSchema/filter';
-import {GroupMembershipRow} from './rows/groupMembershipRow';
-import {GroupRow} from './rows/groupRow';
-import {TokenInfoRow} from './rows/tokenInfoRow';
-import {parseRpcSubscriptionMessage, RcpSubscriptionEvent} from './events/parser';
-import {FilterPredicate} from "./rpcSchema/filterPredicate";
-import {EventRow} from "./pagedQuery/eventRow";
+import { TrustRelation, TrustRelationRow } from './rows/trustRelationRow';
+import { CirclesDataInterface, GroupQueryParams } from './circlesDataInterface';
+import { Observable } from './observable';
+import { CirclesEvent } from './events/events';
+import { InvitationRow } from './rows/invitationRow';
+import { PagedQueryParams } from './pagedQuery/pagedQueryParams';
+import { Filter } from './rpcSchema/filter';
+import { GroupMembershipRow } from './rows/groupMembershipRow';
+import { GroupRow } from './rows/groupRow';
+import { TokenInfoRow } from './rows/tokenInfoRow';
+import { parseRpcSubscriptionMessage, RcpSubscriptionEvent } from './events/parser';
+import { FilterPredicate } from "./rpcSchema/filterPredicate";
+import { EventRow } from "./pagedQuery/eventRow";
 
 export type TrustEvent = {
   blockNumber: number;
@@ -393,7 +393,7 @@ export class CirclesData implements CirclesDataInterface {
     trustListRows.forEach(row => {
       const addToBucket = (key: string) => {
         if (!trustBucket[key]) {
-          trustBucket[key] = {rows: [], version: new Set()};
+          trustBucket[key] = { rows: [], version: new Set() };
         }
         trustBucket[key].rows.push(row);
         trustBucket[key].version.add(row.version);
@@ -410,7 +410,7 @@ export class CirclesData implements CirclesDataInterface {
     // Determine trust relations
     return Object.entries(trustBucket)
       .filter(([avatar]) => avatar !== avatarAddress)
-      .map(([avatar, {rows, version}]) => {
+      .map(([avatar, { rows, version }]) => {
         const versionRelations: { [key: number]: TrustRelation } = {};
         const maxTimestamp = Math.max(...rows.map(o => o.timestamp));
 
@@ -621,8 +621,8 @@ export class CirclesData implements CirclesDataInterface {
     // (mutual trust cannot exist in invitation state - to trust back, the avatar must be on v2 already)
     const v2Relations = await this.getAggregatedTrustRelations(avatar, 2);
     const v2Trusters = v2Relations
-      .filter(o => o.relation == "trusts")
-      .map(o => o.subjectAvatar);
+      .filter(o => o.relation == "trustedBy")
+      .map(o => o.objectAvatar);
 
     const humanInviters: AvatarRow[] = [];
     const trusterInfoBatch = await this.getAvatarInfoBatch(v2Trusters);
