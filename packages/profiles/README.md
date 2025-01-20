@@ -1,4 +1,4 @@
-# @circles/profiles
+# @circles-sdk/profiles
 
 A TypeScript package for managing user profiles in the Circles ecosystem. This package provides methods to create, retrieve, and search profiles stored on IPFS through the Circles Profile Service.
 
