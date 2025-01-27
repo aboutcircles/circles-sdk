@@ -75,6 +75,12 @@ const cidResults = await profiles.searchByCID('QmYourCID');
 console.log('Profile for CID:', cidResults);
 ```
 
+Search by registeredName (exact match):
+```typescript
+const cidResults = await profiles.searchByRegisteredName('Jo');
+console.log('Profile for registeredName:', cidResults);
+```
+
 Search with multiple criteria:
 ```typescript
 const results = await profiles.search({
