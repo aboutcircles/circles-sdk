@@ -198,6 +198,7 @@ export class CirclesData implements CirclesDataInterface {
    * @param avatar The address to get the token balances for.
    */
   async getTokenBalances(avatar: Address): Promise<TokenBalanceRow[]> {
+    avatar = avatar.toLowerCase() as Address;
     const response = await this.rpc.call<TokenBalanceRow[]>('circles_getTokenBalances', [avatar]);
     return response.result;
   }
@@ -209,6 +210,7 @@ export class CirclesData implements CirclesDataInterface {
    * @param pageSize The maximum number of transactions per page.
    */
   getTransactionHistory(avatar: Address, pageSize: number): CirclesQuery<TransactionHistoryRow> {
+    avatar = avatar.toLowerCase() as Address;
     return new CirclesQuery<any>(this.rpc, {
       namespace: 'V_Crc',
       table: 'Transfers',
@@ -239,13 +241,13 @@ export class CirclesData implements CirclesDataInterface {
               Type: 'FilterPredicate',
               FilterType: 'Equals',
               Column: 'from',
-              Value: avatar.toLowerCase()
+              Value: avatar
             },
             {
               Type: 'FilterPredicate',
               FilterType: 'Equals',
               Column: 'to',
-              Value: avatar.toLowerCase()
+              Value: avatar
             }
           ]
         }
@@ -272,6 +274,7 @@ export class CirclesData implements CirclesDataInterface {
   }
 
   getIncomingTrustEvents(avatar: Address, pageSize: number): CirclesQuery<TrustEvent> {
+    avatar = avatar.toLowerCase() as Address;
     return new CirclesQuery<TrustEvent>(this.rpc, {
       namespace: 'V_Crc',
       table: 'TrustRelations',
@@ -295,7 +298,7 @@ export class CirclesData implements CirclesDataInterface {
             Type: 'FilterPredicate',
             FilterType: 'Equals',
             Column: 'trustee',
-            Value: avatar.toLowerCase()
+            Value: avatar
           }, {
             Type: 'FilterPredicate',
             FilterType: 'IsNotNull',
@@ -314,6 +317,7 @@ export class CirclesData implements CirclesDataInterface {
    * @param pageSize The maximum number of trust relations per page.
    */
   getTrustRelations(avatar: Address, pageSize: number): CirclesQuery<TrustListRow> {
+    avatar = avatar.toLowerCase() as Address;
     return new CirclesQuery<any>(this.rpc, {
       namespace: 'V_Crc',
       table: 'TrustRelations',
@@ -340,13 +344,13 @@ export class CirclesData implements CirclesDataInterface {
               Type: 'FilterPredicate',
               FilterType: 'Equals',
               Column: 'trustee',
-              Value: avatar.toLowerCase()
+              Value: avatar
             },
             {
               Type: 'FilterPredicate',
               FilterType: 'Equals',
               Column: 'truster',
-              Value: avatar.toLowerCase()
+              Value: avatar
             }
           ]
         }
@@ -372,6 +376,7 @@ export class CirclesData implements CirclesDataInterface {
    * @returns Aggregated trust relations, including relation type, versions, and timestamp.
    */
   async getAggregatedTrustRelations(avatarAddress: Address, version?: number): Promise<TrustRelationRow[]> {
+    avatarAddress = avatarAddress.toLowerCase() as Address;
     const pageSize = 1000;
     const trustsQuery = this.getTrustRelations(avatarAddress, pageSize);
     let trustListRows: TrustListRow[] = [];
@@ -455,6 +460,7 @@ export class CirclesData implements CirclesDataInterface {
    * @returns The avatar info or undefined if the avatar is not found.
    */
   async getAvatarInfo(avatar: Address): Promise<AvatarRow | undefined> {
+    avatar = avatar.toLowerCase() as Address;
     const avatarInfos = await this.getAvatarInfoBatch([avatar]);
     return avatarInfos.length > 0 ? avatarInfos[0] : undefined;
   }
@@ -468,6 +474,7 @@ export class CirclesData implements CirclesDataInterface {
     if (avatars.length === 0) {
       return [];
     }
+    avatars = avatars.map(a => a.toLowerCase() as Address);
 
     const circlesQuery = new CirclesQuery<AvatarRow>(this.rpc, {
       namespace: 'V_Crc',
@@ -490,7 +497,7 @@ export class CirclesData implements CirclesDataInterface {
           Type: 'FilterPredicate',
           FilterType: 'In',
           Column: 'avatar',
-          Value: avatars.map(a => a.toLowerCase())
+          Value: avatars
         }
       ],
       sortOrder: 'ASC',
@@ -541,7 +548,7 @@ export class CirclesData implements CirclesDataInterface {
       }
     });
 
-    return avatars.map(avatar => avatarMap[avatar.toLowerCase()]).filter(row => row !== undefined);
+    return avatars.map(avatar => avatarMap[avatar]).filter(row => row !== undefined);
   }
 
   /**
@@ -550,6 +557,7 @@ export class CirclesData implements CirclesDataInterface {
    * @returns The token info or undefined if the token is not found.
    */
   async getTokenInfo(address: Address): Promise<TokenInfoRow | undefined> {
+    address = address.toLowerCase() as Address;
     const circlesQuery = new CirclesQuery<TokenInfoRow>(this.rpc, {
       namespace: 'V_Crc',
       table: 'Tokens',
@@ -569,7 +577,7 @@ export class CirclesData implements CirclesDataInterface {
           Type: 'FilterPredicate',
           FilterType: 'Equals',
           Column: 'token',
-          Value: address.toLowerCase()
+          Value: address
         }
       ],
       sortOrder: 'ASC',
@@ -584,6 +592,7 @@ export class CirclesData implements CirclesDataInterface {
    * @param avatar The avatar to subscribe to. If not provided, all events are subscribed to.
    */
   subscribeToEvents(avatar?: Address): Promise<Observable<CirclesEvent>> {
+    avatar = avatar?.toLowerCase() as Address;
     return this.rpc.subscribe(avatar);
   }
 
@@ -597,6 +606,7 @@ export class CirclesData implements CirclesDataInterface {
    * @param sortAscending Whether to sort the events ascending or not.
    */
   async getEvents(avatar?: Address, fromBlock?: number, toBlock?: number, eventTypes?: string[], filters?: FilterPredicate[], sortAscending?: boolean): Promise<CirclesEvent[]> {
+    avatar = avatar?.toLowerCase() as Address;
     const response = await this.rpc.call<RcpSubscriptionEvent[]>(
       'circles_events',
       [avatar, fromBlock, toBlock, eventTypes, filters, sortAscending]
@@ -610,6 +620,7 @@ export class CirclesData implements CirclesDataInterface {
    * @returns A list of inviters or an empty list if no invitations are found (or the inviter doesn't have enough balance to pay for the invitation fees).
    */
   async getInvitations(avatar: Address): Promise<AvatarRow[]> {
+    avatar = avatar.toLowerCase() as Address;
     const MIN_TOKENS_REQUIRED = 96;
 
     // Check if the avatar is still on v1 (else not interesting for invitations)
@@ -653,6 +664,7 @@ export class CirclesData implements CirclesDataInterface {
    * @returns The address of the inviting avatar or undefined if not found.
    */
   async getInvitedBy(avatar: Address): Promise<Address | undefined> {
+    avatar = avatar.toLowerCase() as Address;
     const circlesQuery = new CirclesQuery<InvitationRow>(this.rpc, {
       namespace: 'CrcV2',
       table: 'InviteHuman',
@@ -664,7 +676,7 @@ export class CirclesData implements CirclesDataInterface {
           Type: 'FilterPredicate',
           FilterType: 'Equals',
           Column: 'invited',
-          Value: avatar.toLowerCase()
+          Value: avatar
         }
       ],
       sortOrder: 'DESC',
@@ -759,6 +771,7 @@ export class CirclesData implements CirclesDataInterface {
    * @param pageSize The maximum number of group memberships per page.
    */
   getGroupMemberships(avatar: Address, pageSize: number): CirclesQuery<GroupMembershipRow> {
+    avatar = avatar.toLowerCase() as Address;
     return new CirclesQuery<GroupMembershipRow>(this.rpc, {
       namespace: 'V_CrcV2',
       table: 'GroupMemberships',
@@ -777,7 +790,7 @@ export class CirclesData implements CirclesDataInterface {
           Type: 'FilterPredicate',
           FilterType: 'Equals',
           Column: 'member',
-          Value: avatar.toLowerCase()
+          Value: avatar
         }
       ],
       sortOrder: 'DESC',
@@ -790,6 +803,7 @@ export class CirclesData implements CirclesDataInterface {
    * @param address
    */
   async getMetadataCidForAddress(address: Address): Promise<string | undefined> {
+    address = address.toLowerCase() as Address;
     // Get the newest CID for the given address
     const query = new CirclesQuery<EventRow & {
       metadataDigest: string
@@ -804,7 +818,7 @@ export class CirclesData implements CirclesDataInterface {
           Type: 'FilterPredicate',
           FilterType: 'Equals',
           Column: 'avatar',
-          Value: address.toLowerCase()
+          Value: address
         }
       ],
       sortOrder: 'DESC',

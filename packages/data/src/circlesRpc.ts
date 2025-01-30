@@ -104,6 +104,7 @@ export class CirclesRpc {
   }
 
   public async subscribe(address?: Address): Promise<Observable<CirclesEvent>> {
+    address = address?.toLowerCase() as Address;
     if (!this.websocketConnected) {
       await this.connect();
       this.websocketConnected = true;

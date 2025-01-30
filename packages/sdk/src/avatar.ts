@@ -47,7 +47,7 @@ export class Avatar implements AvatarInterfaceV2 {
    * @param avatarAddress The address of the avatar to control.
    */
   constructor(sdk: Sdk, avatarAddress: Address) {
-    this.address = avatarAddress.toLowerCase() as Address;
+    this.address = avatarAddress;
     this._sdk = sdk;
   }
 
