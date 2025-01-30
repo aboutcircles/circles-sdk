@@ -238,3 +238,5 @@ export function parseError(errorData: string): ethers.ErrorDescription | null {
     throw new Error(`Error decoding the revert data: ${error}. Original error data: ${errorData}`);
   }
 }
+
+export type { Address } from './type';

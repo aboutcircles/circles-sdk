@@ -5,6 +5,7 @@ import { TokenBalanceRow } from './rows/tokenBalanceRow';
 import { CirclesRpc } from './circlesRpc';
 import { AvatarRow } from './rows/avatarRow';
 import {
+  Address,
   attoCirclesToCircles,
   attoCirclesToStaticAttoCircles, circlesToAttoCircles,
   crcToTc,
@@ -32,8 +33,8 @@ export type TrustEvent = {
   transactionIndex: number;
   logIndex: number;
   transactionHash: string;
-  trustee: string;
-  truster: string;
+  trustee: Address;
+  truster: Address;
   expiryTime: number;
 };
 
@@ -177,7 +178,7 @@ export class CirclesData implements CirclesDataInterface {
    * @param avatar The address to get the CRC balance for.
    * @param asTimeCircles Whether to return the balance as TimeCircles or not (default: true).
    */
-  async getTotalBalance(avatar: string, asTimeCircles: boolean = true): Promise<string> {
+  async getTotalBalance(avatar: Address, asTimeCircles: boolean = true): Promise<string> {
     const response = await this.rpc.call<string>('circles_getTotalBalance', [avatar, asTimeCircles]);
     return response.result;
   }
@@ -187,7 +188,7 @@ export class CirclesData implements CirclesDataInterface {
    * @param avatar The address to get the CRC balance for.
    * @param asTimeCircles Whether to return the balance as TimeCircles or not (default: true).
    */
-  async getTotalBalanceV2(avatar: string, asTimeCircles: boolean = true): Promise<string> {
+  async getTotalBalanceV2(avatar: Address, asTimeCircles: boolean = true): Promise<string> {
     const response = await this.rpc.call<string>('circlesV2_getTotalBalance', [avatar, asTimeCircles]);
     return response.result;
   }
@@ -196,7 +197,7 @@ export class CirclesData implements CirclesDataInterface {
    * Gets the detailed token balances of an address.
    * @param avatar The address to get the token balances for.
    */
-  async getTokenBalances(avatar: string): Promise<TokenBalanceRow[]> {
+  async getTokenBalances(avatar: Address): Promise<TokenBalanceRow[]> {
     const response = await this.rpc.call<TokenBalanceRow[]>('circles_getTokenBalances', [avatar]);
     return response.result;
   }
@@ -207,7 +208,7 @@ export class CirclesData implements CirclesDataInterface {
    * @param avatar The address to get the transaction history for.
    * @param pageSize The maximum number of transactions per page.
    */
-  getTransactionHistory(avatar: string, pageSize: number): CirclesQuery<TransactionHistoryRow> {
+  getTransactionHistory(avatar: Address, pageSize: number): CirclesQuery<TransactionHistoryRow> {
     return new CirclesQuery<any>(this.rpc, {
       namespace: 'V_Crc',
       table: 'Transfers',
@@ -270,7 +271,7 @@ export class CirclesData implements CirclesDataInterface {
     }]);
   }
 
-  getIncomingTrustEvents(avatar: string, pageSize: number): CirclesQuery<TrustEvent> {
+  getIncomingTrustEvents(avatar: Address, pageSize: number): CirclesQuery<TrustEvent> {
     return new CirclesQuery<TrustEvent>(this.rpc, {
       namespace: 'V_Crc',
       table: 'TrustRelations',
@@ -312,7 +313,7 @@ export class CirclesData implements CirclesDataInterface {
    * @param avatar The address to get the trust list for.
    * @param pageSize The maximum number of trust relations per page.
    */
-  getTrustRelations(avatar: string, pageSize: number): CirclesQuery<TrustListRow> {
+  getTrustRelations(avatar: Address, pageSize: number): CirclesQuery<TrustListRow> {
     return new CirclesQuery<any>(this.rpc, {
       namespace: 'V_Crc',
       table: 'TrustRelations',
@@ -370,7 +371,7 @@ export class CirclesData implements CirclesDataInterface {
    * @param version Optional version filter (defaults to retrieving all versions).
    * @returns Aggregated trust relations, including relation type, versions, and timestamp.
    */
-  async getAggregatedTrustRelations(avatarAddress: string, version?: number): Promise<TrustRelationRow[]> {
+  async getAggregatedTrustRelations(avatarAddress: Address, version?: number): Promise<TrustRelationRow[]> {
     const pageSize = 1000;
     const trustsQuery = this.getTrustRelations(avatarAddress, pageSize);
     let trustListRows: TrustListRow[] = [];
@@ -389,9 +390,9 @@ export class CirclesData implements CirclesDataInterface {
     }
 
     // Group trust list rows by truster and trustee
-    const trustBucket: { [avatar: string]: { rows: TrustListRow[]; version: Set<number> } } = {};
+    const trustBucket: { [avatar: Address]: { rows: TrustListRow[]; version: Set<number> } } = {};
     trustListRows.forEach(row => {
-      const addToBucket = (key: string) => {
+      const addToBucket = (key: Address) => {
         if (!trustBucket[key]) {
           trustBucket[key] = { rows: [], version: new Set() };
         }
@@ -439,7 +440,7 @@ export class CirclesData implements CirclesDataInterface {
         return {
           subjectAvatar: avatarAddress,
           relation: combinedRelation,
-          objectAvatar: avatar,
+          objectAvatar: avatar as Address,
           timestamp: maxTimestamp,
           versions: Array.from(version),
           versionSpecificRelations: versionRelations
@@ -453,7 +454,7 @@ export class CirclesData implements CirclesDataInterface {
    * @param avatar The address to check.
    * @returns The avatar info or undefined if the avatar is not found.
    */
-  async getAvatarInfo(avatar: string): Promise<AvatarRow | undefined> {
+  async getAvatarInfo(avatar: Address): Promise<AvatarRow | undefined> {
     const avatarInfos = await this.getAvatarInfoBatch([avatar]);
     return avatarInfos.length > 0 ? avatarInfos[0] : undefined;
   }
@@ -463,7 +464,7 @@ export class CirclesData implements CirclesDataInterface {
    * @param avatars The addresses to check.
    * @returns An array of avatar info objects.
    */
-  async getAvatarInfoBatch(avatars: string[]): Promise<AvatarRow[]> {
+  async getAvatarInfoBatch(avatars: Address[]): Promise<AvatarRow[]> {
     if (avatars.length === 0) {
       return [];
     }
@@ -531,7 +532,7 @@ export class CirclesData implements CirclesDataInterface {
 
       if (avatarRow.version === 1) {
         avatarMap[avatarRow.avatar].hasV1 = true;
-        avatarMap[avatarRow.avatar].v1Token = avatarRow.tokenId;
+        avatarMap[avatarRow.avatar].v1Token = avatarRow.tokenId as Address;
       } else {
         avatarMap[avatarRow.avatar] = {
           ...avatarMap[avatarRow.avatar],
@@ -548,7 +549,7 @@ export class CirclesData implements CirclesDataInterface {
    * @param address The address of the token.
    * @returns The token info or undefined if the token is not found.
    */
-  async getTokenInfo(address: string): Promise<TokenInfoRow | undefined> {
+  async getTokenInfo(address: Address): Promise<TokenInfoRow | undefined> {
     const circlesQuery = new CirclesQuery<TokenInfoRow>(this.rpc, {
       namespace: 'V_Crc',
       table: 'Tokens',
@@ -582,7 +583,7 @@ export class CirclesData implements CirclesDataInterface {
    * Subscribes to Circles events.
    * @param avatar The avatar to subscribe to. If not provided, all events are subscribed to.
    */
-  subscribeToEvents(avatar?: string): Promise<Observable<CirclesEvent>> {
+  subscribeToEvents(avatar?: Address): Promise<Observable<CirclesEvent>> {
     return this.rpc.subscribe(avatar);
   }
 
@@ -595,7 +596,7 @@ export class CirclesData implements CirclesDataInterface {
    * @param filters Additional filters to apply (filter columns must be present in all queried event types).
    * @param sortAscending Whether to sort the events ascending or not.
    */
-  async getEvents(avatar?: string, fromBlock?: number, toBlock?: number, eventTypes?: string[], filters?: FilterPredicate[], sortAscending?: boolean): Promise<CirclesEvent[]> {
+  async getEvents(avatar?: Address, fromBlock?: number, toBlock?: number, eventTypes?: string[], filters?: FilterPredicate[], sortAscending?: boolean): Promise<CirclesEvent[]> {
     const response = await this.rpc.call<RcpSubscriptionEvent[]>(
       'circles_events',
       [avatar, fromBlock, toBlock, eventTypes, filters, sortAscending]
@@ -608,7 +609,7 @@ export class CirclesData implements CirclesDataInterface {
    * @param avatar The avatar to get the invitations for.
    * @returns A list of inviters or an empty list if no invitations are found (or the inviter doesn't have enough balance to pay for the invitation fees).
    */
-  async getInvitations(avatar: string): Promise<AvatarRow[]> {
+  async getInvitations(avatar: Address): Promise<AvatarRow[]> {
     const MIN_TOKENS_REQUIRED = 96;
 
     // Check if the avatar is still on v1 (else not interesting for invitations)
@@ -651,7 +652,7 @@ export class CirclesData implements CirclesDataInterface {
    * @param avatar The address of the invited avatar.
    * @returns The address of the inviting avatar or undefined if not found.
    */
-  async getInvitedBy(avatar: string): Promise<string | undefined> {
+  async getInvitedBy(avatar: Address): Promise<Address | undefined> {
     const circlesQuery = new CirclesQuery<InvitationRow>(this.rpc, {
       namespace: 'CrcV2',
       table: 'InviteHuman',
@@ -757,7 +758,7 @@ export class CirclesData implements CirclesDataInterface {
    * @param avatar The avatar to get the group memberships for.
    * @param pageSize The maximum number of group memberships per page.
    */
-  getGroupMemberships(avatar: string, pageSize: number): CirclesQuery<GroupMembershipRow> {
+  getGroupMemberships(avatar: Address, pageSize: number): CirclesQuery<GroupMembershipRow> {
     return new CirclesQuery<GroupMembershipRow>(this.rpc, {
       namespace: 'V_CrcV2',
       table: 'GroupMemberships',
@@ -788,7 +789,7 @@ export class CirclesData implements CirclesDataInterface {
    * Gets the metadata CID for an address.
    * @param address
    */
-  async getMetadataCidForAddress(address: string): Promise<string | undefined> {
+  async getMetadataCidForAddress(address: Address): Promise<string | undefined> {
     // Get the newest CID for the given address
     const query = new CirclesQuery<EventRow & {
       metadataDigest: string

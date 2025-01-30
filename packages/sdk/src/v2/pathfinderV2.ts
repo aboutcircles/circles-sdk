@@ -1,8 +1,9 @@
 import {CirclesRpc} from "@circles-sdk/data";
+import { Address } from "@circles-sdk/utils";
 
 export interface TransferPathStep {
-  readonly from: string;
-  readonly to: string;
+  readonly from: Address;
+  readonly to: Address;
   readonly tokenOwner: string;
   readonly value: string;
 }
@@ -32,8 +33,8 @@ export type MaxFlowResponse = {
 };
 
 export interface TransferPathStep {
-  readonly from: string;
-  readonly to: string;
+  readonly from: Address;
+  readonly to: Address;
   readonly tokenOwner: string;
   readonly value: string;
 }
@@ -45,7 +46,7 @@ export class V2Pathfinder {
     this.rpc = new CirclesRpc(circlesRpcUrl); // Using CirclesRpc class
   }
 
-  async getMaxFlow(from: string, to: string): Promise<bigint> {
+  async getMaxFlow(from: Address, to: Address): Promise<bigint> {
     const requestBody = {
       Source: from,
       Sink: to,
@@ -56,7 +57,7 @@ export class V2Pathfinder {
     return BigInt(response.result.maxFlow);
   }
 
-  async getPath(from: string, to: string, value: string): Promise<MaxFlowResponse> {
+  async getPath(from: Address, to: Address, value: string): Promise<MaxFlowResponse> {
     const requestBody = {
       Source: from,
       Sink: to,
@@ -67,7 +68,7 @@ export class V2Pathfinder {
     return response.result;
   }
 
-  async getArgsForPath(from: string, to: string, value: string): Promise<FlowMatrix> {
+  async getArgsForPath(from: Address, to: Address, value: string): Promise<FlowMatrix> {
     const requestBody = {
       Source: from,
       Sink: to,
@@ -85,7 +86,7 @@ export class V2Pathfinder {
   }
 }
 
-function transformToFlowVertices(transfers: TransferPathStep[], from: string, to: string) {
+function transformToFlowVertices(transfers: TransferPathStep[], from: Address, to: Address) {
   // Normalize and extract all unique addresses from transfers
   const addressSet = new Set<string>();
   addressSet.add(from.toLowerCase());
@@ -124,14 +125,14 @@ function packCoordinates(coordinates: number[]): Uint8Array {
   return packedCoordinates;
 }
 
-function createFlowMatrix(from: string, to: string, value: string, transfers: TransferPathStep[]): FlowMatrix {
+function createFlowMatrix(from: Address, to: Address, value: string, transfers: TransferPathStep[]): FlowMatrix {
   const expectedValue = BigInt(value);
 
   // Transform transfers to flow matrix structure with normalized addresses
   const {
     sortedAddresses,
     lookUpMap
-  } = transformToFlowVertices(transfers, from.toLowerCase(), to.toLowerCase());
+  } = transformToFlowVertices(transfers, from.toLowerCase() as Address, to.toLowerCase() as Address);
 
   // Initialize flow edges
   const flowEdges: FlowEdge[] = transfers.map((transfer) => ({

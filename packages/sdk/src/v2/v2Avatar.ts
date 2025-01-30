@@ -14,7 +14,7 @@ import {
   TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
-import {addressToUInt256, attoCirclesToCircles, cidV0ToUint8Array} from '@circles-sdk/utils';
+import {Address, addressToUInt256, attoCirclesToCircles, cidV0ToUint8Array} from '@circles-sdk/utils';
 import {V2Pathfinder} from './pathfinderV2';
 import {Profile} from "@circles-sdk/profiles";
 import {TokenType} from "@circles-sdk/data/dist/rows/tokenInfoRow";
@@ -34,7 +34,7 @@ export type Stream = {
 export class V2Avatar implements AvatarInterfaceV2 {
   public readonly sdk: Sdk;
 
-  get address(): string {
+  get address(): Address {
     return this.avatarInfo.avatar;
   }
 
@@ -52,11 +52,11 @@ export class V2Avatar implements AvatarInterfaceV2 {
     }
   }
 
-  trusts(otherAvatar: string): Promise<boolean> {
+  trusts(otherAvatar: Address): Promise<boolean> {
     return this.sdk.v2Hub!.isTrusted(this.address, otherAvatar);
   }
 
-  isTrustedBy(otherAvatar: string): Promise<boolean> {
+  isTrustedBy(otherAvatar: Address): Promise<boolean> {
     return this.sdk.v2Hub!.isTrusted(otherAvatar, this.address);
   }
 
@@ -75,7 +75,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  async getMaxTransferableAmount(to: string, tokenId?: string): Promise<number> {
+  async getMaxTransferableAmount(to: Address, tokenId?: Address): Promise<number> {
     this.throwIfV2IsNotAvailable();
 
     if (tokenId) {
@@ -146,7 +146,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  private async transitiveTransfer(to: string, amount: bigint, batch: BatchRun) {
+  private async transitiveTransfer(to: Address, amount: bigint, batch: BatchRun) {
     this.throwIfV2IsNotAvailable();
 
     const flowMatrix = await this.sdk.v2Pathfinder.getArgsForPath(this.address, to, amount.toString());
@@ -165,7 +165,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
     batch.addTransaction(personalMintTx);
   }
 
-  private async directTransfer(to: string, amount: bigint, tokenAddress: string): Promise<TransactionReceipt> {
+  private async directTransfer(to: Address, amount: bigint, tokenAddress: Address): Promise<TransactionReceipt> {
     const tokenInf = await this.sdk.data.getTokenInfo(tokenAddress);
     console.log(`Direct transfer - of: ${amount} - tokenId: ${tokenInf?.token} - to: ${to}`);
     if (!tokenInf) {
@@ -183,7 +183,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
     throw new Error(`Token type ${tokenInf.type} not supported`);
   }
 
-  private async transferErc20(to: string, amount: bigint, tokenAddress: string) {
+  private async transferErc20(to: Address, amount: bigint, tokenAddress: Address) {
     const iface = new ethers.Interface(['function transfer(address to, uint256 value)']);
     const data = iface.encodeFunctionData('transfer', [to, amount]);
 
@@ -198,7 +198,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
     });
   }
 
-  private async transferErc1155(tokenAddress: string, to: string, amount: bigint) {
+  private async transferErc1155(tokenAddress: Address, to: Address, amount: bigint) {
     const numericTokenId = addressToUInt256(tokenAddress);
     console.log(`numericTokenId: ${numericTokenId}`);
     const tx = await this.sdk.v2Hub?.safeTransferFrom(
@@ -216,7 +216,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  async transfer(to: string, amount: bigint, tokenAddress?: string): Promise<TransactionReceipt> {
+  async transfer(to: Address, amount: bigint, tokenAddress?: Address): Promise<TransactionReceipt> {
     if (!this.sdk?.contractRunner?.sendBatchTransaction) {
       throw new Error('ContractRunner (or sendBatchTransaction capability) not available');
     }
@@ -242,7 +242,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
     }
   }
 
-  async trust(avatar: string | string[]): Promise<TransactionResponse> {
+  async trust(avatar: Address | Address[]): Promise<TransactionResponse> {
     this.throwIfV2IsNotAvailable();
 
     if (!this.sdk?.contractRunner?.sendBatchTransaction) {
@@ -269,7 +269,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  async untrust(avatar: string | string[]): Promise<TransactionResponse> {
+  async untrust(avatar: Address | Address[]): Promise<TransactionResponse> {
     this.throwIfV2IsNotAvailable();
 
     if (!this.sdk?.contractRunner?.sendBatchTransaction) {
@@ -346,7 +346,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return result;
   }
 
-  async wrapDemurrageErc20(avatarAddress: string, amount: bigint): Promise<string> {
+  async wrapDemurrageErc20(avatarAddress: Address, amount: bigint): Promise<Address> {
     const wrapResult = await this.sdk.v2Hub?.wrap(avatarAddress, amount, 0n /*Demurrage*/);
     const receipt = await wrapResult?.wait();
     console.log(`wrapDemurrageErc20 receipt: ${receipt}`);
@@ -357,10 +357,10 @@ export class V2Avatar implements AvatarInterfaceV2 {
 
     // TODO: Return the address of the wrapper
     //return await this.decodeErc20WrapperDeployed(receipt);
-    return ZeroAddress;
+    return ZeroAddress as Address;
   }
 
-  async wrapInflationErc20(avatarAddress: string, amount: bigint): Promise<string> {
+  async wrapInflationErc20(avatarAddress: Address, amount: bigint): Promise<Address> {
     const wrapResult = await this.sdk.v2Hub?.wrap(avatarAddress, amount, 1n /*Inflation*/);
     const receipt = await wrapResult?.wait();
     console.log(`wrapInflationErc20 receipt: ${receipt}`);
@@ -371,10 +371,10 @@ export class V2Avatar implements AvatarInterfaceV2 {
 
     // TODO: Return the address of the wrapper
     //return await this.decodeErc20WrapperDeployed(receipt);
-    return ZeroAddress;
+    return ZeroAddress as Address;
   }
 
-  async unwrapDemurrageErc20(wrapperTokenAddress: string, amount: bigint): Promise<ContractTransactionReceipt> {
+  async unwrapDemurrageErc20(wrapperTokenAddress: Address, amount: bigint): Promise<ContractTransactionReceipt> {
     const demurragedWrapper = await this.sdk.getDemurragedWrapper(wrapperTokenAddress);
     const tx = await demurragedWrapper.unwrap(amount);
     const receipt = await tx.wait();
@@ -384,7 +384,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  async unwrapInflationErc20(wrapperTokenAddress: string, amount: bigint): Promise<ContractTransactionReceipt> {
+  async unwrapInflationErc20(wrapperTokenAddress: Address, amount: bigint): Promise<ContractTransactionReceipt> {
     const inflationWrapper = await this.sdk.getInflationaryWrapper(wrapperTokenAddress);
     const tx = await inflationWrapper.unwrap(amount);
     const receipt = await tx.wait();
@@ -398,7 +398,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
    * Invite a user to Circles.
    * @param avatar The address of the avatar to invite. Can be either a v1 address or an address that's not signed up yet.
    */
-  async inviteHuman(avatar: string): Promise<TransactionResponse> {
+  async inviteHuman(avatar: Address): Promise<TransactionResponse> {
     this.throwIfV2IsNotAvailable();
 
     const avatarInfo = await this.sdk.data.getAvatarInfo(avatar);

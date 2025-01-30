@@ -1,3 +1,4 @@
+import { Address } from '@circles-sdk/utils';
 import { EventRow } from '../pagedQuery/eventRow';
 
 /**
@@ -25,7 +26,7 @@ export interface AvatarRow extends EventRow {
   /**
    * The address of the avatar.
    */
-  avatar: string;
+  avatar: Address;
   /**
    * The personal or group token address.
    *
@@ -40,7 +41,7 @@ export interface AvatarRow extends EventRow {
   /**
    * If the avatar has a v1 token, this is the token address.
    */
-  v1Token?: string;
+  v1Token?: Address;
   /**
    * The bytes of the avatar's metadata cidv0.
    */

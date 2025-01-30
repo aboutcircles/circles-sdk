@@ -14,6 +14,7 @@ import {tcToCrc} from '@circles-sdk/utils';
 import {Profile} from "@circles-sdk/profiles";
 import {TokenBalanceRow} from "../../data";
 import {TransactionResponse} from "@circles-sdk/adapter";
+import { Address } from '@circles-sdk/utils';
 
 /**
  * An Avatar represents a user registered at Circles.
@@ -21,7 +22,7 @@ import {TransactionResponse} from "@circles-sdk/adapter";
  */
 export class Avatar implements AvatarInterfaceV2 {
 
-  public readonly address: string;
+  public readonly address: Address;
 
   /**
    * The actual avatar implementation to use behind this facade.
@@ -45,8 +46,8 @@ export class Avatar implements AvatarInterfaceV2 {
    * @param sdk The SDK instance to use.
    * @param avatarAddress The address of the avatar to control.
    */
-  constructor(sdk: Sdk, avatarAddress: string) {
-    this.address = avatarAddress.toLowerCase();
+  constructor(sdk: Sdk, avatarAddress: Address) {
+    this.address = avatarAddress.toLowerCase() as Address;
     this._sdk = sdk;
   }
 
@@ -155,7 +156,7 @@ export class Avatar implements AvatarInterfaceV2 {
    * @param tokenId The token ID to transfer. If not specified, a transitve transfer is calculated.
    * @returns The maximum Circles amount that can be transferred.
    */
-  getMaxTransferableAmount = (to: string, tokenId?: string): Promise<number> => this.onlyIfInitialized(() => this._avatar!.getMaxTransferableAmount(to, tokenId));
+  getMaxTransferableAmount = (to: Address, tokenId?: Address): Promise<number> => this.onlyIfInitialized(() => this._avatar!.getMaxTransferableAmount(to, tokenId));
 
   /**
    * Transfers Circles to another avatar.
@@ -166,9 +167,9 @@ export class Avatar implements AvatarInterfaceV2 {
    * @param amount The amount to transfer.
    * @param token The token to transfer. Leave empty to allow transitive transfers.
    */
-  transfer(to: string, amount: number, token?: string): Promise<TransactionReceipt>;
-  transfer(to: string, amount: bigint, token?: string): Promise<TransactionReceipt>;
-  transfer(to: string, amount: number | bigint, token?: string): Promise<TransactionReceipt> {
+  transfer(to: Address, amount: number, token?: Address): Promise<TransactionReceipt>;
+  transfer(to: Address, amount: bigint, token?: Address): Promise<TransactionReceipt>;
+  transfer(to: Address, amount: number | bigint, token?: Address): Promise<TransactionReceipt> {
     if (typeof amount === 'number') {
       const sendValue = this?.avatarInfo?.version === 1
         ? tcToCrc(new Date(), amount)
@@ -184,27 +185,27 @@ export class Avatar implements AvatarInterfaceV2 {
    * @param avatar The address of the avatar to trust.
    * @returns The transaction receipt.
    */
-  trust = (avatar: string | string[]): Promise<TransactionResponse> => this.onlyIfInitialized(() => this._avatar!.trust(avatar));
+  trust = (avatar: Address | Address[]): Promise<TransactionResponse> => this.onlyIfInitialized(() => this._avatar!.trust(avatar));
   /**
    * Revokes trust from another avatar. This means you will no longer accept Circles issued by this avatar. This will not affect already received Circles.
    * @param avatar The address of the avatar to untrust.
    * @returns The transaction receipt.
    */
-  untrust = (avatar: string | string[]): Promise<TransactionResponse> => this.onlyIfInitialized(() => this._avatar!.untrust(avatar));
+  untrust = (avatar: Address | Address[]): Promise<TransactionResponse> => this.onlyIfInitialized(() => this._avatar!.untrust(avatar));
 
   /**
    * Can be used to check if this avatar trusts the other avatar.
    * @param otherAvatar The address of the other avatar.
    * @return `true` if this avatar trusts the other avatar.
    */
-  trusts = (otherAvatar: string): Promise<boolean> => this.onlyIfInitialized(() => this._avatar!.trusts(otherAvatar));
+  trusts = (otherAvatar: Address): Promise<boolean> => this.onlyIfInitialized(() => this._avatar!.trusts(otherAvatar));
 
   /**
    * Can be used to check if this avatar is trusted by the other avatar.
    * @param otherAvatar The address of the other avatar.
    * @return `true` if this avatar is trusted by the other avatar.
    */
-  isTrustedBy = (otherAvatar: string): Promise<boolean> => this.onlyIfInitialized(() => this._avatar!.isTrustedBy(otherAvatar));
+  isTrustedBy = (otherAvatar: Address): Promise<boolean> => this.onlyIfInitialized(() => this._avatar!.isTrustedBy(otherAvatar));
 
   /**
    * Gets the trust relations of the avatar.
@@ -248,38 +249,38 @@ export class Avatar implements AvatarInterfaceV2 {
    * @param data Additional data for the minting operation.
    * @returns The transaction receipt.
    */
-  groupMint = (group: string, collateral: string[], amounts: bigint[], data: Uint8Array): Promise<ContractTransactionReceipt> => this.onlyIfV2((avatar) => avatar.groupMint(group, collateral, amounts, data));
+  groupMint = (group: Address, collateral: Address[], amounts: bigint[], data: Uint8Array): Promise<ContractTransactionReceipt> => this.onlyIfV2((avatar) => avatar.groupMint(group, collateral, amounts, data));
   /**
    * Wraps the specified amount of personal Circles into demurraged ERC20 tokens for use outside the Circles protocol.
    * Note: This kind of token can be incompatible with services since it's demurraged and thus the balance changes over time.
    * @param avatarAddress The address of the avatar whose Circles should be wrapped.
    * @param amount The amount of Circles to wrap.
    */
-  wrapDemurrageErc20 = (avatarAddress: string, amount: bigint): Promise<string> => this.onlyIfV2((avatar) => avatar.wrapDemurrageErc20(avatarAddress, amount));
+  wrapDemurrageErc20 = (avatarAddress: Address, amount: bigint): Promise<Address> => this.onlyIfV2((avatar) => avatar.wrapDemurrageErc20(avatarAddress, amount));
   /**
    * Wraps the specified amount of inflation Circles into ERC20 tokens for use outside the Circles protocol.
    * In contrast to demurraged tokens, these token's balance does not change over time.
    * @param avatarAddress The address of the avatar whose Circles should be wrapped.
    * @param amount The amount of Circles to wrap.
    */
-  wrapInflationErc20 = (avatarAddress: string, amount: bigint): Promise<string> => this.onlyIfV2((avatar) => avatar.wrapInflationErc20(avatarAddress, amount));
+  wrapInflationErc20 = (avatarAddress: Address, amount: bigint): Promise<Address> => this.onlyIfV2((avatar) => avatar.wrapInflationErc20(avatarAddress, amount));
   /**
    * Unwraps the specified amount of demurraged ERC20 Circles back to personal Circles.
    * @param tokenAddress The token address of the ERC20 Circles.
    * @param amount The amount of ERC20 Circles to unwrap.
    */
-  unwrapDemurrageErc20 = (tokenAddress: string, amount: bigint): Promise<ContractTransactionReceipt> => this.onlyIfV2((avatar) => avatar.unwrapDemurrageErc20(tokenAddress, amount));
+  unwrapDemurrageErc20 = (tokenAddress: Address, amount: bigint): Promise<ContractTransactionReceipt> => this.onlyIfV2((avatar) => avatar.unwrapDemurrageErc20(tokenAddress, amount));
   /**
    * Unwraps the specified amount of inflation ERC20 Circles back to personal Circles.
    * @param avatarAddress The address of the avatar whose Circles should be unwrapped.
    * @param amount The amount of ERC20 Circles to unwrap.
    */
-  unwrapInflationErc20 = (avatarAddress: string, amount: bigint): Promise<ContractTransactionReceipt> => this.onlyIfV2((avatar) => avatar.unwrapInflationErc20(avatarAddress, amount));
+  unwrapInflationErc20 = (avatarAddress: Address, amount: bigint): Promise<ContractTransactionReceipt> => this.onlyIfV2((avatar) => avatar.unwrapInflationErc20(avatarAddress, amount));
   /**
    * Invite a human avatar to join Circles.
    * @param avatar The address of any human controlled wallet.
    */
-  inviteHuman = (avatar: string): Promise<TransactionResponse> => this.onlyIfV2((_avatar) => _avatar.inviteHuman(avatar));
+  inviteHuman = (avatar: Address): Promise<TransactionResponse> => this.onlyIfV2((_avatar) => _avatar.inviteHuman(avatar));
   /**
    * Updates the avatar's metadata (profile).
    * @param cid The IPFS content identifier of the metadata (Qm....).

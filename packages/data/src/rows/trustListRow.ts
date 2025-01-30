@@ -1,11 +1,12 @@
+import { Address } from '@circles-sdk/utils';
 import { EventRow } from '../pagedQuery/eventRow';
 
 export interface TrustListRow extends EventRow {
   timestamp: number;
   transactionHash: string;
   version: number;
-  trustee: string;
-  truster: string;
+  trustee: Address;
+  truster: Address;
   expiryTime: number;
   limit: number;
 }

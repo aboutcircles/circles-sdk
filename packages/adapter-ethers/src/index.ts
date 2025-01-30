@@ -12,11 +12,11 @@ import {
   TransactionRequest as SdkTransactionRequest, TransactionResponse,
   TransactionResponse as SdkTransactionResponse
 } from '@circles-sdk/adapter';
-import { parseError } from '@circles-sdk/utils';
+import { Address, parseError } from '@circles-sdk/utils';
 
 export abstract class EthersContractRunner implements SdkContractRunner {
   sendBatchTransaction?: (() => BatchRun) | undefined;
-  address?: string;
+  address?: Address;
   abstract provider: Provider | null;
   abstract estimateGas?: ((tx: SdkTransactionRequest) => Promise<bigint>) | undefined;
   abstract call?: ((tx: SdkTransactionRequest) => Promise<string>) | undefined;
@@ -54,7 +54,7 @@ export class PrivateKeyContractRunner implements EthersContractRunner {
 
   async init(): Promise<void> {
     this._wallet = new Wallet(this.privateKey, this.provider);
-    this.address = await this._wallet.getAddress();
+    this.address = await this._wallet.getAddress() as Address;
   }
 
   private ensureWallet(): Wallet {
@@ -64,7 +64,7 @@ export class PrivateKeyContractRunner implements EthersContractRunner {
     return this._wallet;
   }
 
-  address?: string;
+  address?: Address;
   estimateGas?: ((tx: SdkTransactionRequest) => Promise<bigint>) | undefined = async (tx) => {
     return this.ensureWallet().estimateGas(tx);
   };
@@ -95,10 +95,10 @@ export class BrowserProviderContractRunner implements EthersContractRunner {
   }
 
   async init(): Promise<void> {
-    this.address = await (<BrowserProvider>this.provider).getSigner().then(signer => signer.getAddress());
+    this.address = await (<BrowserProvider>this.provider).getSigner().then(signer => signer.getAddress()) as Address;
   }
 
-  address?: string;
+  address?: Address;
   provider: Provider;
   estimateGas?: ((tx: SdkTransactionRequest) => Promise<bigint>) | undefined = async (tx) => this.provider.estimateGas(tx);
   call?: ((tx: SdkTransactionRequest) => Promise<string>) | undefined = async (tx) => this.provider.call(tx);
@@ -147,7 +147,7 @@ export class SdkContractRunnerWrapper implements EthersContractRunner {
    * @param address The address of the account that signs transactions
    * @param sdkContractRunner The sdk contract runner
    */
-  constructor(public provider: Provider, public address: string, private sdkContractRunner: SdkContractRunner) {
+  constructor(public provider: Provider, public address: Address, private sdkContractRunner: SdkContractRunner) {
   }
 
   async init(): Promise<void> {
@@ -186,7 +186,7 @@ export class SdkContractRunnerWrapper implements EthersContractRunner {
     }
 
     return this.sdkContractRunner.estimateGas({
-      to: await this.addressLikeToString(tx.to),
+      to: await this.addressLikeToString(tx.to) as Address,
       data: tx.data ?? '0x',
       value: this.bignumberishToBigInt(tx.value)
     });
@@ -205,7 +205,7 @@ export class SdkContractRunnerWrapper implements EthersContractRunner {
     }
 
     return this.sdkContractRunner.call({
-      to: await this.addressLikeToString(tx.to),
+      to: await this.addressLikeToString(tx.to) as Address,
       data: tx.data ?? '0x',
       value: this.bignumberishToBigInt(tx.value)
     });
@@ -224,7 +224,7 @@ export class SdkContractRunnerWrapper implements EthersContractRunner {
     }
     try {
       const response = await this.sdkContractRunner.sendTransaction({
-        to: await this.addressLikeToString(tx.to),
+        to: await this.addressLikeToString(tx.to) as Address,
         data: tx.data ?? '0x',
         value: this.bignumberishToBigInt(tx.value)
       });

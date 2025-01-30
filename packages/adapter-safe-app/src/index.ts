@@ -1,16 +1,17 @@
 import {SdkContractRunner, TransactionRequest, TransactionResponse} from '@circles-sdk/adapter';
 import SafeAppsSDK from "@safe-global/safe-apps-sdk";
+import { Address } from '@circles-sdk/utils';
 
 export class SafeSdkContractRunner implements SdkContractRunner {
     private safeSdk: SafeAppsSDK;
-    address?: string;
+    address?: Address;
 
     constructor(safeSdk: SafeAppsSDK) {
         this.safeSdk = safeSdk;
     }
 
     init = async () => {
-        this.address = await this.safeSdk.safe.getInfo().then((safe) => safe.safeAddress);
+        this.address = await this.safeSdk.safe.getInfo().then((safe) => safe.safeAddress as Address);
     }
 
     async estimateGas(tx: TransactionRequest): Promise<bigint> {
@@ -52,8 +53,8 @@ export class SafeSdkContractRunner implements SdkContractRunner {
             hash: txObj.hash,
             index: txObj.transactionIndex!,
             type: 0,
-            to: txObj.to!,
-            from: txObj.from,
+            to: txObj.to! as Address,
+            from: txObj.from as Address,
             gasLimit: BigInt(txObj.gas),
             gasPrice: BigInt(txObj.gasPrice),
             data: tx.data,
