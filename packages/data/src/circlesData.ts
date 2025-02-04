@@ -179,6 +179,7 @@ export class CirclesData implements CirclesDataInterface {
    * @param asTimeCircles Whether to return the balance as TimeCircles or not (default: true).
    */
   async getTotalBalance(avatar: Address, asTimeCircles: boolean = true): Promise<string> {
+    avatar = avatar.toLowerCase() as Address;
     const response = await this.rpc.call<string>('circles_getTotalBalance', [avatar, asTimeCircles]);
     return response.result;
   }
@@ -189,6 +190,7 @@ export class CirclesData implements CirclesDataInterface {
    * @param asTimeCircles Whether to return the balance as TimeCircles or not (default: true).
    */
   async getTotalBalanceV2(avatar: Address, asTimeCircles: boolean = true): Promise<string> {
+    avatar = avatar.toLowerCase() as Address;
     const response = await this.rpc.call<string>('circlesV2_getTotalBalance', [avatar, asTimeCircles]);
     return response.result;
   }

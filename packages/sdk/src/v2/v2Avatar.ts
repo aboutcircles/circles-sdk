@@ -15,7 +15,6 @@ import {
   TrustRelationRow
 } from '@circles-sdk/data';
 import {Address, addressToUInt256, attoCirclesToCircles, cidV0ToUint8Array} from '@circles-sdk/utils';
-import {V2Pathfinder} from './pathfinderV2';
 import {Profile} from "@circles-sdk/profiles";
 import {TokenType} from "@circles-sdk/data/dist/rows/tokenInfoRow";
 import {BatchRun, TransactionRequest, TransactionResponse} from "@circles-sdk/adapter";
@@ -77,6 +76,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
 
   async getMaxTransferableAmount(to: Address, tokenId?: Address): Promise<number> {
     this.throwIfV2IsNotAvailable();
+    to = to.toLowerCase() as Address;
 
     if (tokenId) {
       const tokenInfo = await this.sdk.data.getTokenInfo(tokenId);
@@ -148,6 +148,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
 
   private async transitiveTransfer(to: Address, amount: bigint, batch: BatchRun) {
     this.throwIfV2IsNotAvailable();
+    to = to.toLowerCase() as Address;
 
     const flowMatrix = await this.sdk.v2Pathfinder.getArgsForPath(this.address, to, amount.toString());
 

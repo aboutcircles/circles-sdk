@@ -34,7 +34,7 @@ export class ComethSdkContractRunner implements SdkContractRunner {
 
   init = async () => {
     this.address = await this.comethWallet.connect(this.address)
-      .then(() => this.comethWallet.getAddress())
+      .then(() => this.comethWallet.getAddress().toLowerCase() as Address)
       .catch((error) => Promise.reject(error));
   }
 
