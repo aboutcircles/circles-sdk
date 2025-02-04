@@ -3,6 +3,7 @@ import { JsonRpcResponse } from './rpcSchema/jsonRpcResponse';
 import { Observable } from './observable';
 import { CirclesEvent } from './events/events';
 import { parseRpcSubscriptionMessage } from './events/parser';
+import { Address } from '@circles-sdk/utils';
 
 export class CirclesRpc {
   private readonly rpcUrl: string;
@@ -102,7 +103,8 @@ export class CirclesRpc {
     });
   }
 
-  public async subscribe(address?: string): Promise<Observable<CirclesEvent>> {
+  public async subscribe(address?: Address): Promise<Observable<CirclesEvent>> {
+    address = address?.toLowerCase() as Address;
     if (!this.websocketConnected) {
       await this.connect();
       this.websocketConnected = true;

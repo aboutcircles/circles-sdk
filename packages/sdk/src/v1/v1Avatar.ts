@@ -12,13 +12,13 @@ import {
   TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
-import { crcToTc } from '@circles-sdk/utils';
+import { Address, crcToTc } from '@circles-sdk/utils';
 import { TransactionResponse } from "@circles-sdk/adapter";
 
 export class V1Avatar implements AvatarInterface {
   public readonly sdk: Sdk;
 
-  get address(): string {
+  get address(): Address {
     if (!this.avatarInfo) {
       throw new Error('Avatar is not initialized');
     }
@@ -56,7 +56,7 @@ export class V1Avatar implements AvatarInterface {
    * @param tokenId The token to transfer (address). Leave empty to allow transitive transfers.
    * @returns The max. transferable amount at the time.
    */
-  async getMaxTransferableAmount(to: string, tokenId?: string): Promise<number> {
+  async getMaxTransferableAmount(to: Address, tokenId?: Address): Promise<number> {
     this.throwIfNotInitialized();
 
     if (tokenId) {
@@ -91,7 +91,7 @@ export class V1Avatar implements AvatarInterface {
    * @param amount The amount to send
    * @param token The token to transfer (address). Leave empty to allow transitive transfers.
    */
-  async transfer(to: string, amount: bigint, token?: string): Promise<TransactionReceipt> {
+  async transfer(to: Address, amount: bigint, token?: Address): Promise<TransactionReceipt> {
     this.throwIfNotInitialized();
     let receipt: TransactionReceipt | null = null;
     if (!token) {
@@ -140,7 +140,7 @@ export class V1Avatar implements AvatarInterface {
     return receipt;
   }
 
-  async trust(avatar: string | string[]): Promise<TransactionResponse> {
+  async trust(avatar: Address | Address[]): Promise<TransactionResponse> {
     this.throwIfNotInitialized();
 
     if (!this.sdk?.contractRunner?.sendBatchTransaction) {
@@ -167,7 +167,7 @@ export class V1Avatar implements AvatarInterface {
     return receipt;
   }
 
-  async untrust(avatar: string | string[]): Promise<TransactionResponse> {
+  async untrust(avatar: Address | Address[]): Promise<TransactionResponse> {
     this.throwIfNotInitialized();
 
     if (!this.sdk?.contractRunner?.sendBatchTransaction) {
@@ -270,11 +270,11 @@ export class V1Avatar implements AvatarInterface {
     return 0n;
   }
 
-  async trusts(otherAvatar: string): Promise<boolean> {
+  async trusts(otherAvatar: Address): Promise<boolean> {
     return (await this.sdk.v1Hub.limits(this.address, otherAvatar)) > 0n;
   }
 
-  async isTrustedBy(otherAvatar: string): Promise<boolean> {
+  async isTrustedBy(otherAvatar: Address): Promise<boolean> {
     return (await this.sdk.v1Hub.limits(otherAvatar, this.address)) > 0n;
   }
 

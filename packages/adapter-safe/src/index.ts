@@ -6,9 +6,10 @@ import {
 import Safe, {SafeConfig} from "@safe-global/protocol-kit";
 import {BrowserProvider, Eip1193Provider, ethers, Provider} from "ethers";
 import {MetaTransaction, OperationType} from "ethers-multisend";
+import { Address } from '@circles-sdk/utils';
 
 export class SafeSdkPrivateKeyContractRunner implements SdkContractRunner {
-  address?: string;
+  address?: Address;
   safe?: Safe;
   private rpcUrl: string;
   private privateKey: string;
@@ -19,7 +20,7 @@ export class SafeSdkPrivateKeyContractRunner implements SdkContractRunner {
     this.provider = new ethers.JsonRpcProvider(this.rpcUrl);
   }
 
-  async init(safeAddress: string): Promise<void> {
+  async init(safeAddress: Address): Promise<void> {
     this.address = safeAddress;
     this.safe = await Safe.init({
       provider: this.rpcUrl,
@@ -55,7 +56,7 @@ export class SafeSdkPrivateKeyContractRunner implements SdkContractRunner {
 }
 
 export class SafeSdkBrowserContractRunner implements SdkContractRunner {
-  address?: string;
+  address?: Address;
   browserProvider: BrowserProvider;
   safe?: Safe;
   eip1193Provider: Eip1193Provider;
@@ -71,7 +72,7 @@ export class SafeSdkBrowserContractRunner implements SdkContractRunner {
     this.provider = this.browserProvider;
   }
 
-  async init(safeAddress: string): Promise<void> {
+  async init(safeAddress: Address): Promise<void> {
     this.address = safeAddress;
     this.safe = await Safe.init(<SafeConfig>{
       provider: {

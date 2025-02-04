@@ -11,13 +11,14 @@ import {
   SupportedNetworks
 } from '@cometh/connect-sdk';
 import {MetaTransaction, OperationType} from 'ethers-multisend';
+import { Address } from '@circles-sdk/utils';
 
 export class ComethSdkContractRunner implements SdkContractRunner {
   private comethWallet: ComethWallet;
   private walletAdaptor: ConnectAdaptor;
-  address?: string;
+  address?: Address;
 
-  constructor(apiKey: string, chainId: SupportedNetworks, walletAddress?: string) {
+  constructor(apiKey: string, chainId: SupportedNetworks, walletAddress?: Address) {
     this.walletAdaptor = new ConnectAdaptor({
       chainId,
       apiKey
@@ -33,7 +34,7 @@ export class ComethSdkContractRunner implements SdkContractRunner {
 
   init = async () => {
     this.address = await this.comethWallet.connect(this.address)
-      .then(() => this.comethWallet.getAddress())
+      .then(() => this.comethWallet.getAddress().toLowerCase() as Address)
       .catch((error) => Promise.reject(error));
   }
 
@@ -62,7 +63,7 @@ export class ComethSdkContractRunner implements SdkContractRunner {
       hash: txReceipt.transactionHash,
       type: txReceipt.type,
       to: tx.to,
-      from: txReceipt.from,
+      from: txReceipt.from as Address,
       gasLimit: BigInt(txReceipt.gasUsed.toString()),
       gasPrice: BigInt(txReceipt.effectiveGasPrice.toString()),
       data: '',

@@ -1,3 +1,4 @@
+import { Address } from '@circles-sdk/utils';
 import { EventRow } from '../pagedQuery/eventRow';
 
 export interface TransactionHistoryRow extends EventRow {
@@ -5,11 +6,11 @@ export interface TransactionHistoryRow extends EventRow {
   transactionHash: string;
   version: number;
   operator: string;
-  from: string;
-  to: string;
+  from: Address;
+  to: Address;
   id: string;
   value: string;
-  tokenAddress?: string;
+  tokenAddress?: Address;
   type: string;
   tokenType: string;
   circles: number;

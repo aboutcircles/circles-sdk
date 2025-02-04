@@ -1,5 +1,7 @@
+import { Address } from '@circles-sdk/utils';
+
 export type TransactionRequest = {
-  readonly to: string;
+  readonly to: Address;
   readonly value: bigint;
   readonly data: string;
 }
@@ -10,8 +12,8 @@ export type TransactionResponse = {
   index: number;
   hash: string;
   type: number;
-  to: string;
-  from: string;
+  to: Address;
+  from: Address;
   gasLimit: bigint;
   gasPrice: bigint;
   data: string;
@@ -42,7 +44,7 @@ export type SdkContractRunner = {
   /**
    * The address of the account that signs transactions.
    */
-  address?: string,
+  address?: Address,
   /**
    * A function that, when provided, handles sending a batch transaction.
    * The function should return an instance of `BatchRun`, which encapsulates

@@ -1,15 +1,16 @@
-import {AvatarRow} from './rows/avatarRow';
-import {TokenBalanceRow} from './rows/tokenBalanceRow';
-import {CirclesQuery} from './pagedQuery/circlesQuery';
-import {TransactionHistoryRow} from './rows/transactionHistoryRow';
-import {TrustListRow} from './rows/trustListRow';
-import {TrustRelationRow} from './rows/trustRelationRow';
-import {Observable} from './observable';
-import {CirclesEvent} from './events/events';
-import {InvitationRow} from './rows/invitationRow';
-import {GroupRow} from './rows/groupRow';
-import {GroupMembershipRow} from './rows/groupMembershipRow';
-import {TokenInfoRow} from './rows/tokenInfoRow';
+import { AvatarRow } from './rows/avatarRow';
+import { TokenBalanceRow } from './rows/tokenBalanceRow';
+import { CirclesQuery } from './pagedQuery/circlesQuery';
+import { TransactionHistoryRow } from './rows/transactionHistoryRow';
+import { TrustListRow } from './rows/trustListRow';
+import { TrustRelationRow } from './rows/trustRelationRow';
+import { Observable } from './observable';
+import { CirclesEvent } from './events/events';
+import { InvitationRow } from './rows/invitationRow';
+import { GroupRow } from './rows/groupRow';
+import { GroupMembershipRow } from './rows/groupMembershipRow';
+import { TokenInfoRow } from './rows/tokenInfoRow';
+import { Address } from '@circles-sdk/utils';
 
 export interface GroupQueryParams {
   nameStartsWith?: string;
@@ -25,7 +26,7 @@ export interface CirclesDataInterface {
    * @param avatar The address to check.
    * @returns The avatar information or undefined if the address is not an avatar.
    */
-  getAvatarInfo(avatar: string): Promise<AvatarRow | undefined>;
+  getAvatarInfo(avatar: Address): Promise<AvatarRow | undefined>;
 
   /**
    * Gets basic information about avatars.
@@ -33,14 +34,14 @@ export interface CirclesDataInterface {
    * @param avatar The addresses to check.
    * @returns The avatar information or undefined if the address is not an avatar.
    */
-  getAvatarInfoBatch(avatar: string[]): Promise<AvatarRow[]>;
+  getAvatarInfoBatch(avatar: Address[]): Promise<AvatarRow[]>;
 
   /**
    * Gets the token info for a given token address.
    * @param address The address of the token.
    * @returns The token info or undefined if the token is not found.
    */
-  getTokenInfo(address: string): Promise<TokenInfoRow | undefined>;
+  getTokenInfo(address: Address): Promise<TokenInfoRow | undefined>;
 
   /**
    * Gets the total CRC v1 balance of an address.
@@ -48,21 +49,21 @@ export interface CirclesDataInterface {
    * @param asTimeCircles Whether to return the balance as TimeCircles or not (default: true).
    * @returns The total CRC balance (either as TC 'number' or as CRC in 'wei').
    */
-  getTotalBalance(avatar: string, asTimeCircles: boolean): Promise<string>;
+  getTotalBalance(avatar: Address, asTimeCircles: boolean): Promise<string>;
 
   /**
    * Gets the total CRC v2 balance of an address.
    * @param avatar The address to get the CRC balance for.
    * @param asTimeCircles Whether to return the balance as TimeCircles or not (default: true).
    */
-  getTotalBalanceV2(avatar: string, asTimeCircles: boolean): Promise<string>;
+  getTotalBalanceV2(avatar: Address, asTimeCircles: boolean): Promise<string>;
 
   /**
    * Gets the detailed CRC v1 token balances of an address.
    * @param avatar The address to get the token balances for.
    * @param asTimeCircles Whether to return the balances as TimeCircles or not (default: true).
    */
-  getTokenBalances(avatar: string, asTimeCircles: boolean): Promise<TokenBalanceRow[]>;
+  getTokenBalances(avatar: Address, asTimeCircles: boolean): Promise<TokenBalanceRow[]>;
 
   /**
    * Gets the transaction history of an address.
@@ -70,41 +71,40 @@ export interface CirclesDataInterface {
    * @param avatar The address to get the transaction history for.
    * @param pageSize The maximum number of transactions per page.
    */
-  getTransactionHistory(avatar: string, pageSize: number): CirclesQuery<TransactionHistoryRow>;
+  getTransactionHistory(avatar: Address, pageSize: number): CirclesQuery<TransactionHistoryRow>;
 
   /**
    * Gets the current incoming and outgoing trust relations of an address (in v1 and v2).
    * @param avatar The address to get the trust list for.
    * @param pageSize The maximum number of trust relations per page.
    */
-  getTrustRelations(avatar: string, pageSize: number): CirclesQuery<TrustListRow>;
+  getTrustRelations(avatar: Address, pageSize: number): CirclesQuery<TrustListRow>;
 
   /**
    * Gets all trust relations of an avatar and groups mutual trust relations together.
    * @param avatar The address to get the trust relations for.
    * @param version The version of the trust relations to get (default: undefined - queries both).
    */
-  getAggregatedTrustRelations(avatar: string, version?: number): Promise<TrustRelationRow[]>;
+  getAggregatedTrustRelations(avatar: Address, version?: number): Promise<TrustRelationRow[]>;
 
   /**
    * Subscribes to Circles events.
    * @param avatar The address to subscribe to events for. If not provided, subscribes to all events.
    */
-  subscribeToEvents(avatar?: string): Promise<Observable<CirclesEvent>>;
+  subscribeToEvents(avatar?: Address): Promise<Observable<CirclesEvent>>;
 
   /**
    * Gets the list of avatars that have invited the given avatar.
    * @param avatar The address to get the invitations for.
    * @param pageSize The maximum number of invitations per page.
    */
-  // getInvitations(avatar: string, pageSize: number): CirclesQuery<InvitationRow>;
-  getInvitations(avatar: string, pageSize: number): Promise<AvatarRow[]>;
+  getInvitations(avatar: Address, pageSize: number): Promise<AvatarRow[]>;
 
   /**
    * Gets the avatar that invited the given avatar.
    * @param avatar The address to get the inviter for.
    */
-  getInvitedBy(avatar: string): Promise<string | undefined>;
+  getInvitedBy(avatar: Address): Promise<Address | undefined>;
 
   /**
    * Gets the list of groups.
@@ -118,11 +118,11 @@ export interface CirclesDataInterface {
    * @param avatar The address to get the group memberships for.
    * @param pageSize The maximum number of group memberships per page.
    */
-  getGroupMemberships(avatar: string, pageSize: number): CirclesQuery<GroupMembershipRow>;
+  getGroupMemberships(avatar: Address, pageSize: number): CirclesQuery<GroupMembershipRow>;
 
   /**
    * Gets the metadata CID for an address.
    * @param address
    */
-  getMetadataCidForAddress(address: string): Promise<string | undefined>;
+  getMetadataCidForAddress(address: Address): Promise<string | undefined>;
 }

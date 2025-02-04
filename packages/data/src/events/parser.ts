@@ -1,3 +1,4 @@
+import { Address } from '@circles-sdk/utils';
 import { CirclesEvent, CirclesEventType } from './events';
 
 type EventValues = {
@@ -37,46 +38,46 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
       return {
         ...baseEvent,
         $event: 'CrcV1_HubTransfer',
-        from: values.from,
-        to: values.to,
+        from: values.from as Address,
+        to: values.to as Address,
         amount: values.amount ? hexToBigInt(values.amount) : undefined
       };
     case 'CrcV1_Signup':
       return {
         ...baseEvent,
         $event: 'CrcV1_Signup',
-        user: values.user,
-        token: values.token
+        user: values.user as Address,
+        token: values.token as Address
       };
     case 'CrcV1_OrganizationSignup':
       return {
         ...baseEvent,
         $event: 'CrcV1_OrganizationSignup',
-        organization: values.organization
+        organization: values.organization as Address
       };
     case 'CrcV1_Trust':
       return {
         ...baseEvent,
         $event: 'CrcV1_Trust',
-        canSendTo: values.canSendTo,
-        user: values.user,
+        canSendTo: values.canSendTo as Address,
+        user: values.user as Address,
         limit: values.limit ? hexToBigInt(values.limit) : undefined
       };
     case 'CrcV1_Transfer':
       return {
         ...baseEvent,
         $event: 'CrcV1_Transfer',
-        tokenAddress: values.tokenAddress,
-        from: values.from,
-        to: values.to,
+        tokenAddress: values.tokenAddress as Address,
+        from: values.from as Address,
+        to: values.to as Address,
         amount: values.amount ? hexToBigInt(values.amount) : undefined
       };
     case 'CrcV2_InviteHuman':
       return {
         ...baseEvent,
         $event: 'CrcV2_InviteHuman',
-        inviter: values.inviter,
-        invited: values.invited
+        inviter: values.inviter as Address,
+        invited: values.invited as Address
       };
     case 'CrcV2_PersonalMint':
       return {
@@ -91,9 +92,9 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
       return {
         ...baseEvent,
         $event: 'CrcV2_RegisterGroup',
-        group: values.group,
+        group: values.group as Address,
         mint: values.mint,
-        treasury: values.treasury,
+        treasury: values.treasury as Address,
         name: values.name,
         symbol: values.symbol
       };
@@ -101,28 +102,28 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
       return {
         ...baseEvent,
         $event: 'CrcV2_RegisterHuman',
-        avatar: values.avatar,
-        inviter: values.inviter
+        avatar: values.avatar as Address,
+        inviter: values.inviter as Address
       };
     case 'CrcV2_RegisterOrganization':
       return {
         ...baseEvent,
         $event: 'CrcV2_RegisterOrganization',
-        organization: values.organization,
+        organization: values.organization as Address,
         name: values.name
       };
     case 'CrcV2_Stopped':
       return {
         ...baseEvent,
         $event: 'CrcV2_Stopped',
-        avatar: values.avatar
+        avatar: values.avatar as Address
       };
     case 'CrcV2_Trust':
       return {
         ...baseEvent,
         $event: 'CrcV2_Trust',
-        truster: values.truster,
-        trustee: values.trustee,
+        truster: values.truster as Address,
+        trustee: values.trustee as Address,
         expiryTime: values.expiryTime ? hexToBigInt(values.expiryTime) : undefined
       };
     case 'CrcV2_TransferSingle':
@@ -130,8 +131,8 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
         ...baseEvent,
         $event: 'CrcV2_TransferSingle',
         operator: values.operator,
-        from: values.from,
-        to: values.to,
+        from: values.from as Address,
+        to: values.to as Address,
         id: values.id ? hexToBigInt(values.id) : undefined,
         value: values.value ? hexToBigInt(values.value) : undefined
       };
@@ -156,8 +157,8 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
         $event: 'CrcV2_TransferBatch',
         batchIndex: hexToNumber(values.batchIndex),
         operator: values.operator,
-        from: values.from,
-        to: values.to,
+        from: values.from as Address,
+        to: values.to as Address,
         id: values.id ? hexToBigInt(values.id) : undefined,
         value: values.value ? hexToBigInt(values.value) : undefined
       };
@@ -165,7 +166,7 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
       return {
         ...baseEvent,
         $event: 'CrcV2_RegisterShortName',
-        avatar: values.avatar,
+        avatar: values.avatar as Address,
         shortName: values.shortName ? hexToBigInt(values.shortName) : undefined,
         nonce: values.nonce ? hexToBigInt(values.nonce) : undefined
       };
@@ -173,21 +174,21 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
       return {
         ...baseEvent,
         $event: 'CrcV2_UpdateMetadataDigest',
-        avatar: values.avatar,
+        avatar: values.avatar as Address,
         metadataDigest: values.metadataDigest ? hexToUint8Array(values.metadataDigest) : undefined
       };
     case 'CrcV2_CidV0':
       return {
         ...baseEvent,
         $event: 'CrcV2_CidV0',
-        avatar: values.avatar,
+        avatar: values.avatar as Address,
         cidV0Digest: values.cidV0Digest ? hexToUint8Array(values.cidV0Digest) : undefined
       };
     case 'CrcV2_CreateVault':
       return {
         ...baseEvent,
         $event: 'CrcV2_CreateVault',
-        group: values.group,
+        group: values.group as Address,
         vault: values.vault
       };
     case 'CrcV2_StreamCompleted':
@@ -195,8 +196,8 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
         ...baseEvent,
         $event: 'CrcV2_StreamCompleted',
         operator: values.operator,
-        from: values.from,
-        to: values.to,
+        from: values.from as Address,
+        to: values.to as Address,
         id: values.id ? hexToBigInt(values.id) : undefined,
         amount: values.amount ? hexToBigInt(values.amount) : undefined
       };
@@ -205,7 +206,7 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
         ...baseEvent,
         $event: 'CrcV2_CollateralLockedBatch',
         batchIndex: parseInt(values.batchIndex),
-        group: values.group,
+        group: values.group as Address,
         id: values.id ? hexToBigInt(values.id) : undefined,
         value: values.value ? hexToBigInt(values.value) : undefined,
         userData: values.userData ? hexToUint8Array(values.userData) : undefined
@@ -214,7 +215,7 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
       return {
         ...baseEvent,
         $event: 'CrcV2_CollateralLockedSingle',
-        group: values.group,
+        group: values.group as Address,
         id: values.id ? hexToBigInt(values.id) : undefined,
         value: values.value ? hexToBigInt(values.value) : undefined,
         userData: values.userData ? hexToUint8Array(values.userData) : undefined
@@ -223,7 +224,7 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
       return {
         ...baseEvent,
         $event: 'CrcV2_GroupRedeem',
-        group: values.group,
+        group: values.group as Address,
         id: values.id ? hexToBigInt(values.id) : undefined,
         value: values.value ? hexToBigInt(values.value) : undefined,
         data: values.data ? hexToUint8Array(values.data) : undefined
@@ -233,7 +234,7 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
         ...baseEvent,
         $event: 'CrcV2_GroupRedeemCollateralBurn',
         batchIndex: parseInt(values.batchIndex),
-        group: values.group,
+        group: values.group as Address,
         id: values.id ? hexToBigInt(values.id) : undefined,
         value: values.value ? hexToBigInt(values.value) : undefined
       };
@@ -242,7 +243,7 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
         ...baseEvent,
         $event: 'CrcV2_GroupRedeemCollateralReturn',
         batchIndex: parseInt(values.batchIndex),
-        group: values.group,
+        group: values.group as Address,
         id: values.id ? hexToBigInt(values.id) : undefined,
         value: values.value ? hexToBigInt(values.value) : undefined
       };
@@ -282,16 +283,16 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
       return {
         ...baseEvent,
         $event: 'CrcV2_Erc20WrapperTransfer',
-        tokenAddress: values.tokenAddress,
-        from: values.from,
-        to: values.to,
+        tokenAddress: values.tokenAddress as Address,
+        from: values.from as Address,
+        to: values.to as Address,
         amount: values.value ? hexToBigInt(values.value) : undefined
       };
     case 'CrcV2_ERC20WrapperDeployed':
       return {
         ...baseEvent,
         $event: 'CrcV2_ERC20WrapperDeployed',
-        avatar: values.avatar,
+        avatar: values.avatar as Address,
         erc20Wrapper: values.erc20Wrapper,
         circlesType: values.circlesType ? hexToNumber(values.circlesType) : undefined
       };

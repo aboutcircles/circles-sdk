@@ -1,7 +1,9 @@
+import { Address } from "@circles-sdk/utils";
+
 export type TransferStep = {
-  from: string;
-  to: string;
-  token_owner: string;
+  from: Address;
+  to: Address;
+  token_owner: Address;
   value: string;
 };
 
@@ -19,7 +21,7 @@ export class Pathfinder {
     this.pathfinderURL = pathfinderURL;
   }
 
-  async getTransferPath(from: string, to: string, value: bigint): Promise<TransferPath> {
+  async getTransferPath(from: Address, to: Address, value: bigint): Promise<TransferPath> {
     const query = {
       method: 'compute_transfer',
       params: { from, to, value: value.toString() }
