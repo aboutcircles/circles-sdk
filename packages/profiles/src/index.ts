@@ -123,6 +123,24 @@ export class Profiles {
   }
 
   /**
+   * Search for profiles by multiple addresses in a single batch request.
+   * @param addresses Array of addresses to search for.
+   * @returns Array of profiles matching the provided addresses.
+   */
+  async searchByAddresses(addresses: string[]): Promise<Profile[]> {
+    const response = await fetch(`${this.getProfileServiceUrl()}search/addresses`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ addresses })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to search profiles by addresses. Status: ${response.status} ${response.statusText}. Body: ${await response.text()}`);
+    }
+    return await response.json();
+  }
+
+  /**
    * Search for profiles using multiple criteria.
    * @param criteria Search criteria object containing any combination of name, description, address, and CID.
    * @returns Array of profiles matching all provided search criteria.
