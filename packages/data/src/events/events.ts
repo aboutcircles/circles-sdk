@@ -248,6 +248,11 @@ export type CrcV2_DiscountCost = CirclesBaseEvent & {
   cost?: bigint;
 };
 
+export type Crc_UnknownEvent = CirclesBaseEvent & {
+  $event: 'Crc_UnknownEvent';
+  originalEventType: string;
+};
+
 export type CirclesEvent =
   | CrcV1_HubTransfer
   | CrcV1_Signup
@@ -281,7 +286,8 @@ export type CirclesEvent =
   | CrcV2_DepositInflationary
   | CrcV2_WithdrawDemurraged
   | CrcV2_WithdrawInflationary
-  | CrcV2_DiscountCost;
+  | CrcV2_DiscountCost
+  | Crc_UnknownEvent;
 
 export type CirclesEventType =
   | 'CrcV1_HubTransfer'
@@ -316,4 +322,5 @@ export type CirclesEventType =
   | 'CrcV2_WithdrawDemurraged'
   | 'CrcV2_WithdrawInflationary'
   | 'CrcV2_ERC20WrapperDeployed'
-  | 'CrcV2_DiscountCost';
+  | 'CrcV2_DiscountCost'
+  | 'Crc_UnknownEvent';

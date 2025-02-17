@@ -305,7 +305,11 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
         cost: values.cost ? hexToBigInt(values.cost) : undefined
       };
     default:
-      throw new Error(`Unknown event type: ${event}`);
+      return {
+        ...baseEvent,
+        $event: 'Crc_UnknownEvent',
+        originalEventType: event
+      };
   }
 };
 
