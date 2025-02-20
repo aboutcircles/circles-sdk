@@ -1,5 +1,4 @@
 export interface Profile {
-  address: string,
   name: string;
   description?: string;
   previewImageUrl?: string;
