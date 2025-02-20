@@ -105,6 +105,13 @@ interface GroupProfile extends Profile {
 }
 ```
 
+### SearchResultProfile
+```typescript
+interface SearchResultProfile extends Profile {
+  address: string;
+}
+```
+
 ### SearchCriteria
 ```typescript
 interface SearchCriteria {
