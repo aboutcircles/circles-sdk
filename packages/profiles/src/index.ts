@@ -11,6 +11,10 @@ export interface GroupProfile extends Profile {
   symbol: string;
 }
 
+export interface SearchResultProfile extends Profile {
+  address: string;
+}
+
 export class Profiles {
   constructor(private readonly profileServiceUrl: string) {
   }
@@ -76,7 +80,7 @@ export class Profiles {
    * @param name The name to search for (partial match).
    * @returns Array of profiles matching the search criteria.
    */
-  async searchByName(name: string): Promise<Profile[]> {
+  async searchByName(name: string): Promise<SearchResultProfile[]> {
     const response = await fetch(`${this.getProfileServiceUrl()}search?name=${encodeURIComponent(name)}`);
     if (!response.ok) {
       throw new Error(`Failed to search profiles by name. Status: ${response.status} ${response.statusText}. Body: ${await response.text()}`);
@@ -89,7 +93,7 @@ export class Profiles {
    * @param description The description to search for (partial match).
    * @returns Array of profiles matching the search criteria.
    */
-  async searchByDescription(description: string): Promise<Profile[]> {
+  async searchByDescription(description: string): Promise<SearchResultProfile[]> {
     const response = await fetch(`${this.getProfileServiceUrl()}search?description=${encodeURIComponent(description)}`);
     if (!response.ok) {
       throw new Error(`Failed to search profiles by description. Status: ${response.status} ${response.statusText}. Body: ${await response.text()}`);
@@ -102,7 +106,7 @@ export class Profiles {
    * @param address The exact address to search for.
    * @returns Array of profiles matching the search criteria (usually one or zero).
    */
-  async searchByAddress(address: string): Promise<Profile[]> {
+  async searchByAddress(address: string): Promise<SearchResultProfile[]> {
     const response = await fetch(`${this.getProfileServiceUrl()}search?address=${encodeURIComponent(address)}`);
     if (!response.ok) {
       throw new Error(`Failed to search profiles by address. Status: ${response.status} ${response.statusText}. Body: ${await response.text()}`);
@@ -115,7 +119,7 @@ export class Profiles {
    * @param cid The exact CID to search for.
    * @returns Array of profiles matching the search criteria (usually one or zero).
    */
-  async searchByCID(cid: string): Promise<Profile[]> {
+  async searchByCID(cid: string): Promise<SearchResultProfile[]> {
     const response = await fetch(`${this.getProfileServiceUrl()}search?CID=${encodeURIComponent(cid)}`);
     if (!response.ok) {
       throw new Error(`Failed to search profiles by CID. Status: ${response.status} ${response.statusText}. Body: ${await response.text()}`);
@@ -133,7 +137,7 @@ export class Profiles {
     description?: string;
     address?: string;
     CID?: string;
-  }): Promise<Profile[]> {
+  }): Promise<SearchResultProfile[]> {
     const params = new URLSearchParams();
     if (criteria.name) params.append('name', criteria.name);
     if (criteria.description) params.append('description', criteria.description);
