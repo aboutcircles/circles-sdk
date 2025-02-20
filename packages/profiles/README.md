@@ -115,6 +115,7 @@ interface GroupProfile extends Profile {
 ```typescript
 interface SearchResultProfile extends Profile {
   address: string;
+  registeredName?: string;
 }
 ```
 

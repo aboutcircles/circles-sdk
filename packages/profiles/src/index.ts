@@ -12,7 +12,7 @@ export interface GroupProfile extends Profile {
 
 export interface SearchResultProfile extends Profile {
   address: string;
-  registeredName?: string,
+  registeredName?: string;
 }
 
 export class Profiles {
