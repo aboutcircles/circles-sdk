@@ -113,9 +113,11 @@ interface GroupProfile extends Profile {
 
 ### SearchResultProfile
 ```typescript
-interface SearchResultProfile extends Profile {
+export interface SearchResultProfile extends Pick<Profile, 'name' | 'description'> {
+  CID: string;
+  lastUpdatedAt: number;
   address: string;
-  registeredName?: string;
+  registeredName: string | null;
 }
 ```
 

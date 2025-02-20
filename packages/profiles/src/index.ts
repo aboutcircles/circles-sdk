@@ -10,9 +10,11 @@ export interface GroupProfile extends Profile {
   symbol: string;
 }
 
-export interface SearchResultProfile extends Profile {
+export interface SearchResultProfile extends Pick<Profile, 'name' | 'description'> {
+  CID: string;
+  lastUpdatedAt: number;
   address: string;
-  registeredName?: string;
+  registeredName: string | null;
 }
 
 export class Profiles {
