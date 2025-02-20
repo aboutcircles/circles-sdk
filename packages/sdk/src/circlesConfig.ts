@@ -1,11 +1,13 @@
+import { Address } from "@circles-sdk/utils";
+
 export interface CirclesConfig {
   readonly pathfinderUrl?: string;
   readonly circlesRpcUrl: string;
   readonly profileServiceUrl?: string;
-  readonly v1HubAddress: string;
-  readonly v2HubAddress?: string;
-  readonly nameRegistryAddress?: string;
-  readonly migrationAddress?: string;
+  readonly v1HubAddress: Address;
+  readonly v2HubAddress?: Address;
+  readonly nameRegistryAddress?: Address;
+  readonly migrationAddress?: Address;
   readonly baseGroupMintPolicy?: string;
   readonly standardTreasury?: string;
 }

@@ -1,3 +1,5 @@
+import { Address } from "@circles-sdk/utils";
+
 // Base event type
 export type CirclesBaseEvent = {
   $event: CirclesEventType,
@@ -11,41 +13,41 @@ export type CirclesBaseEvent = {
 // Event types
 export type CrcV1_HubTransfer = CirclesBaseEvent & {
   $event: 'CrcV1_HubTransfer',
-  from?: string;
-  to?: string;
+  from?: Address;
+  to?: Address;
   amount?: bigint;
 };
 
 export type CrcV1_Signup = CirclesBaseEvent & {
   $event: 'CrcV1_Signup',
-  user?: string;
-  token?: string;
+  user?: Address;
+  token?: Address;
 };
 
 export type CrcV1_OrganizationSignup = CirclesBaseEvent & {
   $event: 'CrcV1_OrganizationSignup',
-  organization?: string;
+  organization?: Address;
 };
 
 export type CrcV1_Trust = CirclesBaseEvent & {
   $event: 'CrcV1_Trust',
-  canSendTo?: string;
-  user?: string;
+  canSendTo?: Address;
+  user?: Address;
   limit?: bigint;
 };
 
 export type CrcV1_Transfer = CirclesBaseEvent & {
   $event: 'CrcV1_Transfer',
-  tokenAddress?: string;
-  from?: string;
-  to?: string;
+  tokenAddress?: Address;
+  from?: Address;
+  to?: Address;
   amount?: bigint;
 };
 
 export type CrcV2_InviteHuman = CirclesBaseEvent & {
   $event: 'CrcV2_InviteHuman',
-  inviter?: string;
-  invited?: string;
+  inviter?: Address;
+  invited?: Address;
 };
 
 export type CrcV2_PersonalMint = CirclesBaseEvent & {
@@ -58,42 +60,42 @@ export type CrcV2_PersonalMint = CirclesBaseEvent & {
 
 export type CrcV2_RegisterGroup = CirclesBaseEvent & {
   $event: 'CrcV2_RegisterGroup',
-  group?: string;
+  group?: Address;
   mint?: string;
-  treasury?: string;
+  treasury?: Address;
   name?: string;
   symbol?: string;
 };
 
 export type CrcV2_RegisterHuman = CirclesBaseEvent & {
   $event: 'CrcV2_RegisterHuman',
-  avatar?: string;
-  inviter?: string;
+  avatar?: Address;
+  inviter?: Address;
 };
 
 export type CrcV2_RegisterOrganization = CirclesBaseEvent & {
   $event: 'CrcV2_RegisterOrganization',
-  organization?: string;
+  organization?: Address;
   name?: string;
 };
 
 export type CrcV2_Stopped = CirclesBaseEvent & {
   $event: 'CrcV2_Stopped',
-  avatar?: string;
+  avatar?: Address;
 };
 
 export type CrcV2_Trust = CirclesBaseEvent & {
   $event: 'CrcV2_Trust',
-  truster?: string;
-  trustee?: string;
+  truster?: Address;
+  trustee?: Address;
   expiryTime?: bigint;
 };
 
 export type CrcV2_TransferSingle = CirclesBaseEvent & {
   $event: 'CrcV2_TransferSingle',
   operator?: string;
-  from?: string;
-  to?: string;
+  from?: Address;
+  to?: Address;
   id?: bigint;
   value?: bigint;
 };
@@ -115,49 +117,49 @@ export type CrcV2_TransferBatch = CirclesBaseEvent & {
   $event: 'CrcV2_TransferBatch',
   batchIndex: number;
   operator?: string;
-  from?: string;
-  to?: string;
+  from?: Address;
+  to?: Address;
   id?: bigint;
   value?: bigint;
 };
 
 export type CrcV2_RegisterShortName = CirclesBaseEvent & {
   $event: 'CrcV2_RegisterShortName',
-  avatar?: string;
+  avatar?: Address;
   shortName?: bigint;
   nonce?: bigint;
 };
 
 export type CrcV2_UpdateMetadataDigest = CirclesBaseEvent & {
   $event: 'CrcV2_UpdateMetadataDigest',
-  avatar?: string;
+  avatar?: Address;
   metadataDigest?: Uint8Array;
 };
 
 export type CrcV2_CidV0 = CirclesBaseEvent & {
   $event: 'CrcV2_CidV0',
-  avatar?: string;
+  avatar?: Address;
   cidV0Digest?: Uint8Array;
 };
 
 export type CrcV2_StreamCompleted = CirclesBaseEvent & {
   $event: 'CrcV2_StreamCompleted',
   operator?: string;
-  from?: string;
-  to?: string;
+  from?: Address;
+  to?: Address;
   id?: bigint;
   amount?: bigint;
 };
 
 export type CrcV2_CreateVault = CirclesBaseEvent & {
   $event: 'CrcV2_CreateVault',
-  group?: string;
+  group?: Address;
   vault?: string;
 };
 
 export type CrcV2_CollateralLockedSingle = CirclesBaseEvent & {
   $event: 'CrcV2_CollateralLockedSingle',
-  group?: string;
+  group?: Address;
   id?: bigint;
   value?: bigint;
   userData?: Uint8Array;
@@ -166,7 +168,7 @@ export type CrcV2_CollateralLockedSingle = CirclesBaseEvent & {
 export type CrcV2_CollateralLockedBatch = CirclesBaseEvent & {
   $event: 'CrcV2_CollateralLockedBatch',
   batchIndex: number;
-  group?: string;
+  group?: Address;
   id?: bigint;
   value?: bigint;
   userData?: Uint8Array;
@@ -174,7 +176,7 @@ export type CrcV2_CollateralLockedBatch = CirclesBaseEvent & {
 
 export type CrcV2_GroupRedeem = CirclesBaseEvent & {
   $event: 'CrcV2_GroupRedeem',
-  group?: string;
+  group?: Address;
   id?: bigint;
   value?: bigint;
   data?: Uint8Array;
@@ -182,8 +184,8 @@ export type CrcV2_GroupRedeem = CirclesBaseEvent & {
 export type CrcV2_GroupRedeemCollateralReturn = CirclesBaseEvent & {
   $event: 'CrcV2_GroupRedeemCollateralReturn',
   batchIndex: number;
-  group?: string;
-  to?: string;
+  group?: Address;
+  to?: Address;
   id?: bigint;
   value?: bigint;
 };
@@ -191,7 +193,7 @@ export type CrcV2_GroupRedeemCollateralReturn = CirclesBaseEvent & {
 export type CrcV2_GroupRedeemCollateralBurn = CirclesBaseEvent & {
   $event: 'CrcV2_GroupRedeemCollateralBurn',
   batchIndex: number;
-  group?: string;
+  group?: Address;
   id?: bigint;
   value?: bigint;
 };
@@ -226,15 +228,15 @@ export type CrcV2_WithdrawInflationary = CirclesBaseEvent & {
 
 export type CrcV2_Erc20WrapperTransfer = CirclesBaseEvent & {
   $event: 'CrcV2_Erc20WrapperTransfer',
-  tokenAddress?: string;
-  from?: string;
-  to?: string;
+  tokenAddress?: Address;
+  from?: Address;
+  to?: Address;
   amount?: bigint;
 };
 
 export type CrcV2_ERC20WrapperDeployed = CirclesBaseEvent & {
   $event: 'CrcV2_ERC20WrapperDeployed',
-  avatar?: string;
+  avatar?: Address;
   erc20Wrapper?: string;
   circlesType?: number;
 };
@@ -244,6 +246,11 @@ export type CrcV2_DiscountCost = CirclesBaseEvent & {
   account?: string;
   id?: bigint;
   cost?: bigint;
+};
+
+export type Crc_UnknownEvent = CirclesBaseEvent & {
+  $event: 'Crc_UnknownEvent';
+  originalEventType: string;
 };
 
 export type CirclesEvent =
@@ -279,7 +286,8 @@ export type CirclesEvent =
   | CrcV2_DepositInflationary
   | CrcV2_WithdrawDemurraged
   | CrcV2_WithdrawInflationary
-  | CrcV2_DiscountCost;
+  | CrcV2_DiscountCost
+  | Crc_UnknownEvent;
 
 export type CirclesEventType =
   | 'CrcV1_HubTransfer'
@@ -314,4 +322,5 @@ export type CirclesEventType =
   | 'CrcV2_WithdrawDemurraged'
   | 'CrcV2_WithdrawInflationary'
   | 'CrcV2_ERC20WrapperDeployed'
-  | 'CrcV2_DiscountCost';
+  | 'CrcV2_DiscountCost'
+  | 'Crc_UnknownEvent';

@@ -5,6 +5,7 @@ import {
 import {ContractTransactionReceipt, TransactionReceipt} from 'ethers';
 import {Profile} from "@circles-sdk/profiles";
 import {TransactionResponse} from "@circles-sdk/adapter";
+import { Address } from '@circles-sdk/utils';
 
 /**
  * An Avatar represents a user registered at Circles.
@@ -13,7 +14,7 @@ export interface AvatarInterface {
   /**
    * The avatar's address.
    */
-  readonly address: string;
+  readonly address: Address;
 
   /**
    * Gets basic information about an avatar.
@@ -31,7 +32,7 @@ export interface AvatarInterface {
    * @param tokenId The token to transfer (address). Leave empty to allow transitive transfers.
    * @returns The maximum amount that can be transferred.
    */
-  getMaxTransferableAmount(to: string, tokenId?: string): Promise<number>;
+  getMaxTransferableAmount(to: Address, tokenId?: Address): Promise<number>;
 
   /**
    * Transfers Circles to another avatar.
@@ -42,19 +43,19 @@ export interface AvatarInterface {
    * @param amount The amount to transfer.
    * @param token The token to transfer (address). Leave empty to allow transitive transfers.
    */
-  transfer(to: string, amount: bigint, token?: string): Promise<TransactionReceipt>;
+  transfer(to: Address, amount: bigint, token?: Address): Promise<TransactionReceipt>;
 
   /**
    * Trusts another avatar. Trusting an avatar means you're willing to accept Circles that have been issued by this avatar.
    * @param avatar The address of the avatar to trust.
    */
-  trust(avatar: string | string[]): Promise<TransactionResponse>;
+  trust(avatar: Address | Address[]): Promise<TransactionResponse>;
 
   /**
    * Revokes trust from another avatar. This means you will no longer accept Circles issued by this avatar.
    * @param avatar
    */
-  untrust(avatar: string | string[]): Promise<TransactionResponse>;
+  untrust(avatar: Address | Address[]): Promise<TransactionResponse>;
 
   /**
    * Gets the amount available to mint via `personalMint()`.
@@ -98,14 +99,14 @@ export interface AvatarInterface {
    * @param otherAvatar The address of the other avatar.
    * @return `true` if this avatar trusts the other avatar.
    */
-  trusts(otherAvatar: string) : Promise<boolean>;
+  trusts(otherAvatar: Address) : Promise<boolean>;
 
   /**
    * Can be used to check if this avatar is trusted by the other avatar.
    * @param otherAvatar The address of the other avatar.
    * @return `true` if this avatar is trusted by the other avatar.
    */
-  isTrustedBy(otherAvatar: string): Promise<boolean>;
+  isTrustedBy(otherAvatar: Address): Promise<boolean>;
 
   /**
    * Gets the token balances of the avatar.
@@ -130,7 +131,7 @@ export interface AvatarInterfaceV2 extends AvatarInterface {
    * @param amounts The amounts of the collateral tokens to use.
    * @param data Additional data for the minting operation.
    */
-  groupMint(group: string, collateral: string[], amounts: bigint[], data: Uint8Array): Promise<ContractTransactionReceipt>;
+  groupMint(group: Address, collateral: Address[], amounts: bigint[], data: Uint8Array): Promise<ContractTransactionReceipt>;
 
   /**
    * Wraps ERC115 Circles into demurraged ERC20 Circles.
@@ -138,14 +139,14 @@ export interface AvatarInterfaceV2 extends AvatarInterface {
    * @param amount The amount of ERC115 Circles to wrap.
    * @returns The token address of the ERC20 Circles.
    */
-  wrapDemurrageErc20(avatarAddress: string, amount: bigint): Promise<string>;
+  wrapDemurrageErc20(avatarAddress: Address, amount: bigint): Promise<Address>;
 
   /**
    * Unwraps demurraged ERC20 Circles into personal ERC115 Circles.
    * @param wrapperTokenAddress The token address of the ERC20 Circles.
    * @param amount The amount of ERC20 Circles to unwrap.
    */
-  unwrapDemurrageErc20(wrapperTokenAddress: string, amount: bigint): Promise<ContractTransactionReceipt>;
+  unwrapDemurrageErc20(wrapperTokenAddress: Address, amount: bigint): Promise<ContractTransactionReceipt>;
 
   /**
    * Wraps inflation ERC20 Circles into demurraged ERC20 Circles.
@@ -153,20 +154,20 @@ export interface AvatarInterfaceV2 extends AvatarInterface {
    * @param amount The amount of inflation ERC20 Circles to wrap.
    * @returns The token address of the ERC20 Circles.
    */
-  wrapInflationErc20(avatarAddress: string, amount: bigint): Promise<string>;
+  wrapInflationErc20(avatarAddress: Address, amount: bigint): Promise<Address>;
 
   /**
    * Unwraps inflation ERC20 Circles into personal ERC115 Circles.
    * @param wrapperTokenAddress The avatar address.
    * @param amount The amount of ERC20 Circles to unwrap.
    */
-  unwrapInflationErc20(wrapperTokenAddress: string, amount: bigint): Promise<ContractTransactionReceipt>;
+  unwrapInflationErc20(wrapperTokenAddress: Address, amount: bigint): Promise<ContractTransactionReceipt>;
 
   /**
    * Invites an address as human to Circles v2.
    * @param avatar The avatar's avatar.
    */
-  inviteHuman(avatar: string): Promise<TransactionResponse>;
+  inviteHuman(avatar: Address): Promise<TransactionResponse>;
 
   /**
    * Updates the avatar's metadata (profile).

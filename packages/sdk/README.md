@@ -120,7 +120,7 @@ interface SdkInterface {
    * @param avatarAddress The avatar's address.
    * @returns The Avatar instance.
    */
-  getAvatar: (avatarAddress: string) => Promise<Avatar>;
+  getAvatar: (avatarAddress: Address) => Promise<Avatar>;
   /**
    * Registers the connected wallet as a human avatar in Circles v1.
    * @returns The Avatar instance.
@@ -148,14 +148,14 @@ interface SdkInterface {
    * @param symbol The group token's symbol.
    * @param cidV0 The CIDv0 of the group token's metadata.
    */
-  registerGroupV2: (mint: string, name: string, symbol: string, cidV0: string) => Promise<AvatarInterface>;
+  registerGroupV2: (mint: Address, name: string, symbol: string, cidV0: string) => Promise<AvatarInterface>;
   /**
    * Migrates a v1 avatar and all its Circles holdings to v2.
    * [[ Currently only works for human avatars. ]]
    * @param avatar The avatar's address.
    * @param cidV0 The CIDv0 of the avatar's ERC1155 token metadata.
    */
-  migrateAvatar: (avatar: string, cidV0: string) => Promise<void>;
+  migrateAvatar: (avatar: Address, cidV0: string) => Promise<void>;
 }
 ````
 
@@ -339,7 +339,7 @@ interface CirclesDataInterface {
    * @param avatar The address to check.
    * @returns The avatar information or undefined if the address is not an avatar.
    */
-  getAvatarInfo(avatar: string): Promise<AvatarRow | undefined>;
+  getAvatarInfo(avatar: Address): Promise<AvatarRow | undefined>;
 
   /**
    * Gets the total CRC v1 balance of an address.
@@ -347,28 +347,28 @@ interface CirclesDataInterface {
    * @param asTimeCircles Whether to return the balance as TimeCircles or not (default: true).
    * @returns The total CRC balance (either as TC 'number' or as CRC in 'wei').
    */
-  getTotalBalance(avatar: string, asTimeCircles: boolean): Promise<string>;
+  getTotalBalance(avatar: Address, asTimeCircles: boolean): Promise<string>;
 
   /**
    * Gets the total CRC v2 balance of an address.
    * @param avatar The address to get the CRC balance for.
    * @param asTimeCircles Whether to return the balance as TimeCircles or not (default: true).
    */
-  getTotalBalanceV2(avatar: string, asTimeCircles: boolean): Promise<string>;
+  getTotalBalanceV2(avatar: Address, asTimeCircles: boolean): Promise<string>;
 
   /**
    * Gets the detailed CRC v1 token balances of an address.
    * @param avatar The address to get the token balances for.
    * @param asTimeCircles Whether to return the balances as TimeCircles or not (default: true).
    */
-  getTokenBalances(avatar: string, asTimeCircles: boolean): Promise<TokenBalanceRow[]>;
+  getTokenBalances(avatar: Address, asTimeCircles: boolean): Promise<TokenBalanceRow[]>;
 
   /**
    * Gets the detailed CRC v2 token balances of an address.
    * @param avatar The address to get the token balances for.
    * @param asTimeCircles Whether to return the balances as TimeCircles or not (default: true).
    */
-  getTokenBalancesV2(avatar: string, asTimeCircles: boolean): Promise<TokenBalanceRow[]>;
+  getTokenBalancesV2(avatar: Address, asTimeCircles: boolean): Promise<TokenBalanceRow[]>;
 
   /**
    * Gets the transaction history of an address.
@@ -376,39 +376,39 @@ interface CirclesDataInterface {
    * @param avatar The address to get the transaction history for.
    * @param pageSize The maximum number of transactions per page.
    */
-  getTransactionHistory(avatar: string, pageSize: number): CirclesQuery<TransactionHistoryRow>;
+  getTransactionHistory(avatar: Address, pageSize: number): CirclesQuery<TransactionHistoryRow>;
 
   /**
    * Gets the current incoming and outgoing trust relations of an address (in v1 and v2).
    * @param avatar The address to get the trust list for.
    * @param pageSize The maximum number of trust relations per page.
    */
-  getTrustRelations(avatar: string, pageSize: number): CirclesQuery<TrustListRow>;
+  getTrustRelations(avatar: Address, pageSize: number): CirclesQuery<TrustListRow>;
 
   /**
    * Gets all trust relations of an avatar and groups mutual trust relations together.
    * @param avatar The address to get the trust relations for.
    */
-  getAggregatedTrustRelations(avatar: string): Promise<TrustRelationRow[]>;
+  getAggregatedTrustRelations(avatar: Address): Promise<TrustRelationRow[]>;
 
   /**
    * Subscribes to Circles events.
    * @param avatar The address to subscribe to events for. If not provided, subscribes to all events.
    */
-  subscribeToEvents(avatar?: string): Promise<Observable<CirclesEvent>>;
+  subscribeToEvents(avatar?: Address): Promise<Observable<CirclesEvent>>;
 
   /**
    * Gets the list of avatars that have invited the given avatar.
    * @param avatar The address to get the invitations for.
    * @param pageSize The maximum number of invitations per page.
    */
-  getInvitations(avatar: string, pageSize: number): CirclesQuery<InvitationRow>;
+  getInvitations(avatar: Address, pageSize: number): CirclesQuery<InvitationRow>;
 
   /**
    * Gets the avatar that invited the given avatar.
    * @param avatar The address to get the inviter for.
    */
-  getInvitedBy(avatar: string): Promise<string | undefined>;
+  getInvitedBy(avatar: Address): Promise<Address | undefined>;
 }
 ```
 
@@ -445,8 +445,8 @@ type Invitation = {
   logIndex: number;
   timestamp: number;
   transactionHash: string;
-  inviter: string;
-  invited: string;
+  inviter: Address;
+  invited: Address;
 };
 
 const query = new CirclesQuery<Invitation>(this.rpc, {

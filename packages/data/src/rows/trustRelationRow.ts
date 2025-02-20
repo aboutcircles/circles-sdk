@@ -1,3 +1,5 @@
+import { Address } from "@circles-sdk/utils";
+
 /**
  * A trust relation between two avatars.
  */
@@ -15,7 +17,7 @@ export interface TrustRelationRow {
   /**
    * The avatar.
    */
-  subjectAvatar: string;
+  subjectAvatar: Address;
 
   /**
    * The trust relation.
@@ -26,7 +28,7 @@ export interface TrustRelationRow {
   /**
    * Who's trusted by or is trusting the avatar.
    */
-  objectAvatar: string;
+  objectAvatar: Address;
 
   /**
    * When the last trust relation (in either direction) was established.

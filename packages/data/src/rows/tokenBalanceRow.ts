@@ -1,7 +1,9 @@
+import { Address } from "@circles-sdk/utils";
+
 export interface TokenBalanceRow {
-  tokenAddress: string;
+  tokenAddress: Address;
   tokenId: string;
-  tokenOwner: string;
+  tokenOwner: Address;
   tokenType: string;
   version: number;
   attoCircles: string;

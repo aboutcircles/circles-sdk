@@ -1,8 +1,8 @@
-import {Avatar} from './avatar';
-import {CirclesConfig} from './circlesConfig';
-import {Pathfinder} from './v1/pathfinder';
-import {AvatarInterface} from './AvatarInterface';
-import {Hub as HubV1, Hub__factory as HubV1Factory, Token__factory} from '@circles-sdk/abi-v1';
+import { Avatar } from './avatar';
+import { CirclesConfig } from './circlesConfig';
+import { Pathfinder } from './v1/pathfinder';
+import { AvatarInterface } from './AvatarInterface';
+import { Hub as HubV1, Hub__factory as HubV1Factory, Token__factory } from '@circles-sdk/abi-v1';
 import {
   DemurrageCircles,
   DemurrageCircles__factory,
@@ -14,14 +14,14 @@ import {
   NameRegistry,
   NameRegistry__factory
 } from '@circles-sdk/abi-v2';
-import {AvatarRow, CirclesData, CirclesRpc} from '@circles-sdk/data';
-import {V1Avatar} from './v1/v1Avatar';
-import {cidV0ToUint8Array} from '@circles-sdk/utils';
-import {GroupProfile, Profile, Profiles} from '@circles-sdk/profiles';
-import {ContractRunner, ContractTransactionReceipt, ZeroAddress} from "ethers";
-import {SdkContractRunner, TransactionRequest} from "@circles-sdk/adapter";
-import {circlesConfig} from "./config";
-import {V2Pathfinder} from "./v2/pathfinderV2";
+import { AvatarRow, CirclesData, CirclesRpc } from '@circles-sdk/data';
+import { V1Avatar } from './v1/v1Avatar';
+import { Address, cidV0ToUint8Array } from '@circles-sdk/utils';
+import { GroupProfile, Profile, Profiles } from '@circles-sdk/profiles';
+import { ContractRunner, ContractTransactionReceipt, ZeroAddress } from "ethers";
+import { SdkContractRunner, TransactionRequest } from "@circles-sdk/adapter";
+import { circlesConfig } from "./config";
+import { V2Pathfinder } from "./v2/pathfinderV2";
 
 /**
  * The SDK interface.
@@ -65,7 +65,7 @@ interface SdkInterface {
    * @param avatarAddress The avatar's address.
    * @returns The Avatar instance.
    */
-  getAvatar: (avatarAddress: string) => Promise<Avatar>;
+  getAvatar: (avatarAddress: Address) => Promise<Avatar>;
   /**
    * Registers the connected wallet as a human avatar in Circles v1.
    * @returns The Avatar instance.
@@ -85,7 +85,7 @@ interface SdkInterface {
    * @param mint The address of the minting policy contract to use.
    * @param profile The profile data of the group.
    */
-  registerGroupV2: (mint: string, profile: GroupProfile) => Promise<AvatarInterface>;
+  registerGroupV2: (mint: Address, profile: GroupProfile) => Promise<AvatarInterface>;
   /**
    * Migrates a v1 avatar and all its Circles holdings to v2.
    * [[ Currently only works for human avatars. ]]
@@ -94,7 +94,7 @@ interface SdkInterface {
    * @param profile The profile data of the avatar.
    * @trustRelations An optional list of trust relations to migrate.
    */
-  migrateAvatar: (inviter: string, avatar: string, profile: Profile, trustRelations?: string[]) => Promise<void>;
+  migrateAvatar: (inviter: Address, avatar: Address, profile: Profile, trustRelations?: string[]) => Promise<void>;
 
   /**
    * Creates or updates a user profile.
@@ -203,7 +203,7 @@ export class Sdk implements SdkInterface {
    * @returns The avatar instance.
    * @throws If the given avatar address is not signed up at Circles.
    */
-  getAvatar = async (avatarAddress: string, subscribe: boolean = true): Promise<Avatar> => {
+  getAvatar = async (avatarAddress: Address, subscribe: boolean = true): Promise<Avatar> => {
     const avatar = new Avatar(this, avatarAddress);
     await avatar.initialize(subscribe);
 
@@ -256,18 +256,19 @@ export class Sdk implements SdkInterface {
    * @param inviter The address of the avatar that invited you.
    * @param cidV0 The CIDv0 of the avatar's ERC1155 token metadata.
    */
-  acceptInvitation(inviter: string, cidV0: string): Promise<AvatarInterface>;
+  acceptInvitation(inviter: Address, cidV0: string): Promise<AvatarInterface>;
   /**
    * If you have been invited to Circles, you can accept the invitation and join the Circles network.
    * @param inviter The address of the avatar that invited you.
    * @param profile The profile data of the avatar.
    */
-  acceptInvitation(inviter: string, profile: Profile): Promise<AvatarInterface>;
-  async acceptInvitation(inviter: string, profile: Profile | string): Promise<AvatarInterface> {
+  acceptInvitation(inviter: Address, profile: Profile): Promise<AvatarInterface>;
+  async acceptInvitation(inviter: Address, profile: Profile | string): Promise<AvatarInterface> {
+    inviter = inviter.toLowerCase() as Address;
     return this._registerHuman(inviter, profile);
   }
 
-  private async _registerHuman(inviter: string, profile: Profile | string): Promise<AvatarInterface> {
+  private async _registerHuman(inviter: Address, profile: Profile | string): Promise<AvatarInterface> {
     if (!this.v2Hub) {
       throw new Error('V2 hub not available');
     }
@@ -339,7 +340,7 @@ export class Sdk implements SdkInterface {
    * @param mint The address of the minting policy contract to use.
    * @param profile The profile data of the group.
    */
-  registerGroupV2 = async (mint: string, profile: GroupProfile): Promise<AvatarInterface> => {
+  registerGroupV2 = async (mint: Address, profile: GroupProfile): Promise<AvatarInterface> => {
     if (!this.v2Hub) {
       throw new Error('V2 hub not available');
     }
@@ -352,7 +353,7 @@ export class Sdk implements SdkInterface {
     return this.getAvatar(this.contractRunner.address!);
   };
 
-  private waitForAvatarInfo = async (address: string): Promise<AvatarRow> => {
+  private waitForAvatarInfo = async (address: Address): Promise<AvatarRow> => {
     let avatarRow: AvatarRow | undefined;
     let retries = 0;
     do {
@@ -376,10 +377,12 @@ export class Sdk implements SdkInterface {
    * @param trustRelations An optional list of trust relations to migrate.
    */
   migrateAvatar = async (
-    inviter: string,
-    avatar: string,
+    inviter: Address,
+    avatar: Address,
     profile: Profile,
     trustRelations?: string[]): Promise<void> => {
+    inviter = inviter.toLowerCase() as Address;
+    avatar = avatar.toLowerCase() as Address;
     if (!this.v2Hub) {
       throw new Error('V2 hub not available');
     }
@@ -524,6 +527,7 @@ export class Sdk implements SdkInterface {
       throw new Error('V2 hub address not set');
     }
 
+    avatarInfo.avatar = avatarInfo.avatar.toLowerCase() as Address;
     const v1Avatar = new V1Avatar(this, avatarInfo);
     const v1Token = v1Avatar.v1Token;
     if (!v1Token) {
@@ -551,7 +555,9 @@ export class Sdk implements SdkInterface {
    * @param tokens An optional list of token addresses to migrate. If not provided, all tokens will be migrated.
    * @param batch An optional batch transaction to add transactions to.
    */
-  migrateV1TokensBatch = async (avatar: string, tokens?: string[], batch?: any): Promise<void> => {
+  migrateV1TokensBatch = async (avatar: Address, tokens?: Address[], batch?: any): Promise<void> => {
+    avatar = avatar.toLowerCase() as Address;
+    tokens = tokens?.map(o => o.toLowerCase() as Address);
     if (!this.circlesConfig.migrationAddress) {
       throw new Error('Migration address not set');
     }
@@ -567,11 +573,11 @@ export class Sdk implements SdkInterface {
       ownBatch = true;
     }
 
-    const tokenSet = new Set(tokens?.map(o => o.toLowerCase()) ?? []);
+    const tokenSet = new Set(tokens?.map(o => o) ?? []);
     const balances = await this.data.getTokenBalances(avatar);
     const v1Balances = balances.filter(o =>
       o.version === 1 &&
-      (tokenSet.size > 0 ? tokenSet.has(o.tokenAddress?.toLowerCase()) : true)
+      (tokenSet.size > 0 ? tokenSet.has(o.tokenAddress) : true)
     );
 
     const tokensToMigrate = v1Balances.filter(o => BigInt(o.attoCrc) > 0n);
@@ -627,13 +633,15 @@ export class Sdk implements SdkInterface {
    * @param avatar The avatar whose tokens to migrate.
    * @param tokens An optional list of token addresses to migrate. If not provided, all tokens will be migrated.
    */
-  migrateV1Tokens = async (avatar: string, tokens?: string[]): Promise<void> => {
+  migrateV1Tokens = async (avatar: Address, tokens?: Address[]): Promise<void> => {
+    avatar = avatar.toLowerCase() as Address;
+    tokens = tokens?.map(o => o.toLowerCase() as Address);
     if (!this.circlesConfig.migrationAddress) {
       throw new Error('Migration address not set');
     }
 
     const balances = await this.data.getTokenBalances(avatar);
-    const v1Balances = balances.filter(o => o.version === 1 && (tokens ? tokens.map(o => o.toLowerCase()).includes(o.tokenAddress?.toLowerCase()) : true));
+    const v1Balances = balances.filter(o => o.version === 1 && (tokens ? tokens.includes(o.tokenAddress) : true));
     const tokensToMigrate = v1Balances.filter(o => BigInt(o.attoCrc) > 0);
     console.log(`Migrating the following v1 token:`, tokensToMigrate);
 
@@ -658,11 +666,11 @@ export class Sdk implements SdkInterface {
     await migrateTx.wait();
   };
 
-  getInflationaryWrapper = async (wrapperAddress: string): Promise<InflationaryCircles> => {
+  getInflationaryWrapper = async (wrapperAddress: Address): Promise<InflationaryCircles> => {
     return InflationaryCircles__factory.connect(wrapperAddress, <ContractRunner>this.contractRunner);
   }
 
-  getDemurragedWrapper = async (wrapperAddress: string): Promise<DemurrageCircles> => {
+  getDemurragedWrapper = async (wrapperAddress: Address): Promise<DemurrageCircles> => {
     return DemurrageCircles__factory.connect(wrapperAddress, <ContractRunner>this.contractRunner);
   }
 }
