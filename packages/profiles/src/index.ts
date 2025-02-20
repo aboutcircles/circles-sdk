@@ -134,7 +134,7 @@ export class Profiles {
    * @param addresses Array of addresses to search for.
    * @returns Array of profiles matching the provided addresses.
    */
-  async searchByAddresses(addresses: string[]): Promise<Profile[]> {
+  async searchByAddresses(addresses: string[]): Promise<SearchResultProfile[]> {
     const response = await fetch(`${this.getProfileServiceUrl()}search/addresses`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -152,7 +152,7 @@ export class Profiles {
    * @param registeredName The exact registeredName to search for.
    * @returns Array of profiles matching the search criteria (usually one or zero).
    */
-  async searchByRegisteredName(registeredName: string): Promise<Profile[]> {
+  async searchByRegisteredName(registeredName: string): Promise<SearchResultProfile[]> {
     const response = await fetch(`${this.getProfileServiceUrl()}search?registeredName=${encodeURIComponent(registeredName)}`);
     if (!response.ok) {
       throw new Error(`Failed to search profiles by registeredName. Status: ${response.status} ${response.statusText}. Body: ${await response.text()}`);
