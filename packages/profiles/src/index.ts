@@ -10,8 +10,11 @@ export interface GroupProfile extends Profile {
   symbol: string;
 }
 
-export interface SearchResultProfile extends Profile {
+export interface SearchResultProfile extends Pick<Profile, 'name' | 'description'> {
+  CID: string;
+  lastUpdatedAt: number;
   address: string;
+  registeredName: string | null;
 }
 
 export class Profiles {
@@ -131,7 +134,7 @@ export class Profiles {
    * @param addresses Array of addresses to search for.
    * @returns Array of profiles matching the provided addresses.
    */
-  async searchByAddresses(addresses: string[]): Promise<Profile[]> {
+  async searchByAddresses(addresses: string[]): Promise<SearchResultProfile[]> {
     const response = await fetch(`${this.getProfileServiceUrl()}search/addresses`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -140,6 +143,19 @@ export class Profiles {
 
     if (!response.ok) {
       throw new Error(`Failed to search profiles by addresses. Status: ${response.status} ${response.statusText}. Body: ${await response.text()}`);
+    }
+    return await response.json();
+  }
+
+  /**
+   * Search for a profile by registeredName.
+   * @param registeredName The exact registeredName to search for.
+   * @returns Array of profiles matching the search criteria (usually one or zero).
+   */
+  async searchByRegisteredName(registeredName: string): Promise<SearchResultProfile[]> {
+    const response = await fetch(`${this.getProfileServiceUrl()}search?registeredName=${encodeURIComponent(registeredName)}`);
+    if (!response.ok) {
+      throw new Error(`Failed to search profiles by registeredName. Status: ${response.status} ${response.statusText}. Body: ${await response.text()}`);
     }
     return await response.json();
   }
@@ -154,12 +170,14 @@ export class Profiles {
     description?: string;
     address?: string;
     CID?: string;
+    registeredName?: string;
   }): Promise<SearchResultProfile[]> {
     const params = new URLSearchParams();
     if (criteria.name) params.append('name', criteria.name);
     if (criteria.description) params.append('description', criteria.description);
     if (criteria.address) params.append('address', criteria.address);
     if (criteria.CID) params.append('CID', criteria.CID);
+    if (criteria.registeredName) params.append('registeredName', criteria.registeredName);
 
     const response = await fetch(`${this.getProfileServiceUrl()}search?${params.toString()}`);
     if (!response.ok) {

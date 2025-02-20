@@ -75,6 +75,12 @@ const cidResults = await profiles.searchByCID('QmYourCID');
 console.log('Profile for CID:', cidResults);
 ```
 
+Search by registeredName (exact match):
+```typescript
+const cidResults = await profiles.searchByRegisteredName('Jo');
+console.log('Profile for registeredName:', cidResults);
+```
+
 Search with multiple criteria:
 ```typescript
 const results = await profiles.search({
@@ -107,8 +113,11 @@ interface GroupProfile extends Profile {
 
 ### SearchResultProfile
 ```typescript
-interface SearchResultProfile extends Profile {
+export interface SearchResultProfile extends Pick<Profile, 'name' | 'description'> {
+  CID: string;
+  lastUpdatedAt: number;
   address: string;
+  registeredName: string | null;
 }
 ```
 
