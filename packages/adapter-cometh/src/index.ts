@@ -11,7 +11,7 @@ import {
   SupportedNetworks
 } from '@cometh/connect-sdk';
 import {MetaTransaction, OperationType} from 'ethers-multisend';
-import { Address } from '@circles-sdk/utils';
+import { Address, handleTransactionError } from '@circles-sdk/utils';
 
 export class ComethSdkContractRunner implements SdkContractRunner {
   private comethWallet: ComethWallet;
@@ -54,22 +54,26 @@ export class ComethSdkContractRunner implements SdkContractRunner {
       value: tx.value.toString(),
       data: tx.data
     });
-    const txPending = await provider.getTransaction(sendTxResponse.safeTxHash);
-    const txReceipt = await txPending.wait();
-    return {
-      blockNumber: txReceipt.blockNumber,
-      blockHash: txReceipt.blockHash,
-      index: txReceipt.transactionIndex,
-      hash: txReceipt.transactionHash,
-      type: txReceipt.type,
-      to: tx.to,
-      from: txReceipt.from as Address,
-      gasLimit: BigInt(txReceipt.gasUsed.toString()),
-      gasPrice: BigInt(txReceipt.effectiveGasPrice.toString()),
-      data: '',
-      value: BigInt(tx.value.toString()),
-      chainId: network.chainId
-    };
+    try {
+      const txPending = await provider.getTransaction(sendTxResponse.safeTxHash);
+      const txReceipt = await txPending.wait();
+      return {
+        blockNumber: txReceipt.blockNumber,
+        blockHash: txReceipt.blockHash,
+        index: txReceipt.transactionIndex,
+        hash: txReceipt.transactionHash,
+        type: txReceipt.type,
+        to: tx.to,
+        from: txReceipt.from as Address,
+        gasLimit: BigInt(txReceipt.gasUsed.toString()),
+        gasPrice: BigInt(txReceipt.effectiveGasPrice.toString()),
+        data: '',
+        value: BigInt(tx.value.toString()),
+        chainId: network.chainId
+      };
+    } catch(error) {
+      handleTransactionError(error);
+    }
   };
   sendBatchTransaction()  {
     return new ComethBatchRun(this.comethWallet);
@@ -96,23 +100,27 @@ export class ComethBatchRun implements BatchRun {
       value: tx.value.toString(),
       data: tx.data
     }));
-    const batchTxResponse = await this.comethWallet.sendBatchTransactions(metaTransactions);
-    const txPending = await provider.getTransaction(batchTxResponse.safeTxHash);
-    const txReceipt = await txPending.wait();
+    try {
+      const batchTxResponse = await this.comethWallet.sendBatchTransactions(metaTransactions);
+      const txPending = await provider.getTransaction(batchTxResponse.safeTxHash);
+      const txReceipt = await txPending.wait();
 
-    return <TransactionResponse>{
-      blockNumber: txReceipt.blockNumber,
-      blockHash: txReceipt.blockHash,
-      index: txReceipt.transactionIndex,
-      hash: txReceipt.transactionHash,
-      type: txReceipt.type,
-      to: txReceipt.to,
-      from: txReceipt.from,
-      gasLimit: BigInt(txReceipt.gasUsed.toString()),
-      gasPrice: BigInt(txReceipt.effectiveGasPrice.toString()),
-      data: '',
-      value: BigInt(0),
-      chainId: network.chainId
-    };
+      return <TransactionResponse>{
+        blockNumber: txReceipt.blockNumber,
+        blockHash: txReceipt.blockHash,
+        index: txReceipt.transactionIndex,
+        hash: txReceipt.transactionHash,
+        type: txReceipt.type,
+        to: txReceipt.to,
+        from: txReceipt.from,
+        gasLimit: BigInt(txReceipt.gasUsed.toString()),
+        gasPrice: BigInt(txReceipt.effectiveGasPrice.toString()),
+        data: '',
+        value: BigInt(0),
+        chainId: network.chainId
+      };
+    } catch(error) {
+      handleTransactionError(error);
+    }
   }
 }

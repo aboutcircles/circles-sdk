@@ -278,7 +278,7 @@ export const errorAbis = [
   'error CMGHandlerInvalidCallingParameters()',
   'error CMGHandlerLogicAssertion()',
   'error CMGPrimaryGroupMustBeHumanAndGroupToRegisterPrimaryGroup(address human, address group)',
-  // Liquidity bootstraping pool errors
+  // Liquidity bootstrapping pool factory errors
   'error OnlyFactory()',
   'error OrderNotFilledYet()',
   'error AlreadyCreated()',
@@ -305,6 +305,45 @@ export function parseError(errorData: string): ethers.ErrorDescription | null {
   } catch (error) {
     throw new Error(`Error decoding the revert data: ${error}. Original error data: ${errorData}`);
   }
+}
+
+function getCustomErrorFragment(errorText: string) {
+  const abi = [
+      "error Error(string)"
+  ];
+  
+  const iface = new ethers.Interface(abi);
+  const errorFragment = iface.getError("Error");
+  const encodedError = iface.encodeErrorResult("Error", [errorText]);
+  const decodedError = iface.decodeErrorResult("Error", encodedError);
+  
+  return {
+      fragment: errorFragment,
+      name: errorFragment?.name,
+      args: decodedError,
+      signature: errorFragment?.format(),
+      selector: iface.getFunction("Error")?.selector
+  };
+}
+
+
+export function handleTransactionError(e: any): never {
+  console.log(e);
+  // handle when data is null and `action` equals `estimateGas`
+  if (e.data) {
+    const parsedError = parseError(e.data);
+    if (parsedError) {
+      const bigIntReplacer = (key: string, value: any) => {
+        if (typeof value === 'bigint') {
+          return value.toString();
+        }
+        return value;
+      };
+      throw new Error(JSON.stringify(parsedError, bigIntReplacer, 2));
+    }
+  }
+
+  throw new Error(JSON.stringify(getCustomErrorFragment("Unknown"), null, 2));
 }
 
 export type { Address } from './type';
