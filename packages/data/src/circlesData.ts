@@ -590,6 +590,68 @@ export class CirclesData implements CirclesDataInterface {
   }
 
   /**
+   * Gets data about created core members groups by a specific group proxy contract.
+   * @param pageSize The maximum number of groups per page.
+   * @param proxy Optional address of the group proxy to filter by.
+   * @returns A CirclesQuery object with the group creation data.
+   */
+  // @todo add new row type
+  async getCreatedCMGroups(pageSize: number, proxy?: Address): Promise<{
+    blockNumber: number,
+    timestamp: number,
+    transactionIndex: number,
+    logIndex: number,
+    transactionHash: string,
+    proxy: Address,
+    owner: Address,
+    mintHandler: Address,
+    redemptionHandler: Address
+  }[]> {
+    const filter: Filter[] = [];
+    
+    if (proxy) {
+      proxy = proxy.toLowerCase() as Address;
+      filter.push({
+        Type: 'FilterPredicate',
+        FilterType: 'Equals',
+        Column: 'proxy',
+        Value: proxy
+      });
+    }
+  
+    const query = new CirclesQuery(this.rpc, {
+      namespace: 'CrcV2',
+      table: 'CMGroupCreated',
+      columns: [
+        'blockNumber',
+        'timestamp',
+        'transactionIndex',
+        'logIndex',
+        'transactionHash',
+        'proxy',
+        'owner',
+        'mintHandler',
+        'redemptionHandler'
+      ],
+      filter: filter,
+      sortOrder: 'DESC',
+      limit: pageSize
+    });
+  
+    const results: any[] = [];
+  
+    while (await query.queryNextPage()) {
+      const resultRows = query.currentPage?.results ?? [];
+      if (resultRows.length === 0) break;
+      results.push(...resultRows);
+      if (resultRows.length < pageSize) break;
+    }
+  
+    return results;
+  }
+  
+
+  /**
    * Subscribes to Circles events.
    * @param avatar The avatar to subscribe to. If not provided, all events are subscribed to.
    */

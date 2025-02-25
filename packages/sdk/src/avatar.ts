@@ -1,7 +1,7 @@
 import {V1Avatar} from './v1/v1Avatar';
 import {ContractTransactionReceipt, parseEther, TransactionReceipt} from 'ethers';
 import {Sdk} from './sdk';
-import {AvatarInterface, AvatarInterfaceV2} from './AvatarInterface';
+import {AvatarInterface, AvatarInterfaceV2, CoreMembersGroupInterface} from './AvatarInterface';
 import {
   AvatarRow,
   CirclesQuery, Observable,
@@ -14,13 +14,13 @@ import {tcToCrc} from '@circles-sdk/utils';
 import {Profile} from "@circles-sdk/profiles";
 import {TokenBalanceRow} from "../../data";
 import {TransactionResponse} from "@circles-sdk/adapter";
-import { Address } from '@circles-sdk/utils';
-
+import {Address} from '@circles-sdk/utils';
+import {CMGAvatar} from './v2/cmgAvatar';
 /**
  * An Avatar represents a user registered at Circles.
  * It provides methods to interact with the Circles protocol, such as minting, transferring and trusting other avatars.
  */
-export class Avatar implements AvatarInterfaceV2 {
+export class Avatar implements CoreMembersGroupInterface {
 
   public readonly address: Address;
 
@@ -40,6 +40,8 @@ export class Avatar implements AvatarInterfaceV2 {
   }
 
   private _tokenEventSubscription?: () => void = undefined;
+
+  private _isCoreMembersGroupAvatar: boolean = false;
 
   /**
    * Creates a new Avatar instance that controls a Circles avatar at the given address.
@@ -90,6 +92,9 @@ export class Avatar implements AvatarInterfaceV2 {
     const {version, hasV1} = this._avatarInfo;
     const v1Person = () => new V1Avatar(this._sdk, this._avatarInfo!);
     const v2Person = () => new V2Avatar(this._sdk, this._avatarInfo!);
+    const CMGroup = () => new CMGAvatar(this._sdk, this._avatarInfo!)
+
+    this._isCoreMembersGroupAvatar = await this.isCoreMembersGroup(this.address);
 
     switch (version) {
       case 1:
@@ -97,7 +102,9 @@ export class Avatar implements AvatarInterfaceV2 {
         break;
 
       case 2:
-        if (!hasV1) {
+        if(this._isCoreMembersGroupAvatar) {
+          this._avatar = CMGroup();
+        } else if (!hasV1) {
           this._avatar = v2Person();
         } else {
           const v1Avatar = v1Person();
@@ -131,6 +138,20 @@ export class Avatar implements AvatarInterfaceV2 {
       throw new Error('Avatar is not initialized or is not a v2 avatar');
     }
     return func(<AvatarInterfaceV2>this._avatar);
+  }
+
+  private onlyIfCoreMembersGroup<T>(func: (avatar: CoreMembersGroupInterface) => T) {
+    if (!this._avatar || this._avatarInfo?.version !== 2 || !this._isCoreMembersGroupAvatar) {
+      
+      throw new Error('CoreMembersGroup avatar is not initialized or is not a v2 avatar');
+    }
+    return func(<CoreMembersGroupInterface>this._avatar);
+  }
+
+  private async isCoreMembersGroup(avatar: Address): Promise<boolean> {
+    const results = await this._sdk.data.getCreatedCMGroups(1, avatar);
+
+    return results.length > 0 ? true : false;
   }
 
   /**
@@ -185,7 +206,15 @@ export class Avatar implements AvatarInterfaceV2 {
    * @param avatar The address of the avatar to trust.
    * @returns The transaction receipt.
    */
-  trust = (avatar: Address | Address[]): Promise<TransactionResponse> => this.onlyIfInitialized(() => this._avatar!.trust(avatar));
+  trust = (avatarAddress: Address | Address[], expiry?: bigint): Promise<TransactionResponse> => {
+    return this.onlyIfInitialized(() => {
+      if(this._isCoreMembersGroupAvatar) {
+        return this.onlyIfCoreMembersGroup((avatar) => avatar!.trust(avatarAddress, expiry));
+      } else {
+        return this._avatar!.trust(avatarAddress);
+      }
+    });
+  }
   /**
    * Revokes trust from another avatar. This means you will no longer accept Circles issued by this avatar. This will not affect already received Circles.
    * @param avatar The address of the avatar to untrust.
@@ -304,4 +333,15 @@ export class Avatar implements AvatarInterfaceV2 {
    * Gets the total supply of either this avatar's Personal or Group Circles.
    */
   getTotalSupply = (): Promise<bigint> => this.onlyIfInitialized(() => this._avatar!.getTotalSupply());
+
+  // @todo add comments
+  // Methods for CMGAvatar
+  trustBatch = (coreMembers: Address[], expiry: bigint): Promise<ContractTransactionReceipt> => this.onlyIfCoreMembersGroup((avatar) => avatar.trustBatch(coreMembers, expiry));
+  updateMetadataDigest = (metadataDigest: string): Promise<ContractTransactionReceipt> => this.onlyIfCoreMembersGroup((avatar) => avatar.updateMetadataDigest(metadataDigest));
+  owner = (): Promise<Address> => this.onlyIfCoreMembersGroup((avatar) => avatar.owner());
+  mintHandler = (): Promise<Address> => this.onlyIfCoreMembersGroup((avatar) => avatar.mintHandler());
+  redemptionHandler = (): Promise<Address> => this.onlyIfCoreMembersGroup((avatar) => avatar.redemptionHandler());
+  service = (): Promise<Address> => this.onlyIfCoreMembersGroup((avatar) => avatar.service());
+  minimalDeposit = (): Promise<bigint> => this.onlyIfCoreMembersGroup((avatar) => avatar.minimalDeposit());
+  
 }

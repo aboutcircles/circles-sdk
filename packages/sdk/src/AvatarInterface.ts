@@ -6,6 +6,7 @@ import {ContractTransactionReceipt, TransactionReceipt} from 'ethers';
 import {Profile} from "@circles-sdk/profiles";
 import {TransactionResponse} from "@circles-sdk/adapter";
 import { Address } from '@circles-sdk/utils';
+import {CoreMembersGroup } from '@circles-sdk/abi-v2';
 
 /**
  * An Avatar represents a user registered at Circles.
@@ -187,4 +188,60 @@ export interface AvatarInterfaceV2 extends AvatarInterface {
    * @returns The IPFS CID of the updated profile.
    */
   updateProfile(profile: Profile): Promise<string>;
+}
+
+/**
+ * // @todo add description
+ */
+export interface CoreMembersGroupInterface extends AvatarInterfaceV2 {
+  /**
+   * Establishes trust with another address until a specified expiry time.
+   * @param _trustReceiver The address to trust.
+   * @param _expiry The timestamp when the trust expires.
+   */
+  // @notice hack to avoid TS error
+  trust(trustReceiver: `0x${string}` | `0x${string}`[], expiry?: bigint): Promise<TransactionResponse>;
+
+  /**
+   * Establishes trust with multiple core members until a specified expiry time.
+   * @param _coreMembers Array of addresses to trust.
+   * @param _expiry The timestamp when the trust expires.
+   */
+  trustBatch(coreMembers: Address[], expiry: bigint): Promise<ContractTransactionReceipt>;
+
+  /**
+   * Updates the metadata digest for the group.
+   * @param _metadataDigest The new metadata digest.
+   */
+  updateMetadataDigest(metadataDigest: string): Promise<ContractTransactionReceipt>;
+
+  /**
+   * Gets the owner of the group.
+   * @returns The address of the owner.
+   */
+  owner(): Promise<Address>;
+
+  /**
+   * Gets the mint handler address.
+   * @returns The address of the mint handler.
+   */
+  mintHandler(): Promise<Address>;
+
+  /**
+   * Gets the redemption handler address.
+   * @returns The address of the redemption handler.
+   */
+  redemptionHandler(): Promise<Address>;
+
+  /**
+   * Gets the service address.
+   * @returns The address of the service.
+   */
+  service(): Promise<Address>;
+
+  /**
+   * Gets the minimal deposit required.
+   * @returns The minimal deposit amount.
+   */
+  minimalDeposit(): Promise<bigint>;
 }
