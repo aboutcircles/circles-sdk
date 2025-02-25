@@ -15,6 +15,19 @@ export interface SearchResultProfile extends Pick<Profile, 'name' | 'description
   lastUpdatedAt: number;
   address: string;
   registeredName: string | null;
+  // Optional fields for complete profiles
+  imageUrl?: string;
+  previewImageUrl?: string;
+}
+
+/**
+ * Options for search operations.
+ */
+export interface SearchOptions {
+  /**
+   * Whether to fetch complete profile data including images.
+   */
+  fetchComplete?: boolean;
 }
 
 export class Profiles {
@@ -80,10 +93,15 @@ export class Profiles {
   /**
    * Search for profiles by name.
    * @param name The name to search for (partial match).
+   * @param options Optional search options, including fetchComplete to retrieve full profile data including images.
    * @returns Array of profiles matching the search criteria.
    */
-  async searchByName(name: string): Promise<SearchResultProfile[]> {
-    const response = await fetch(`${this.getProfileServiceUrl()}search?name=${encodeURIComponent(name)}`);
+  async searchByName(name: string, options?: SearchOptions): Promise<SearchResultProfile[]> {
+    const params = new URLSearchParams();
+    params.append('name', name);
+    if (options?.fetchComplete) params.append('fetchComplete', 'true');
+    
+    const response = await fetch(`${this.getProfileServiceUrl()}search?${params.toString()}`);
     if (!response.ok) {
       throw new Error(`Failed to search profiles by name. Status: ${response.status} ${response.statusText}. Body: ${await response.text()}`);
     }
@@ -93,10 +111,15 @@ export class Profiles {
   /**
    * Search for profiles by description.
    * @param description The description to search for (partial match).
+   * @param options Optional search options, including fetchComplete to retrieve full profile data including images.
    * @returns Array of profiles matching the search criteria.
    */
-  async searchByDescription(description: string): Promise<SearchResultProfile[]> {
-    const response = await fetch(`${this.getProfileServiceUrl()}search?description=${encodeURIComponent(description)}`);
+  async searchByDescription(description: string, options?: SearchOptions): Promise<SearchResultProfile[]> {
+    const params = new URLSearchParams();
+    params.append('description', description);
+    if (options?.fetchComplete) params.append('fetchComplete', 'true');
+    
+    const response = await fetch(`${this.getProfileServiceUrl()}search?${params.toString()}`);
     if (!response.ok) {
       throw new Error(`Failed to search profiles by description. Status: ${response.status} ${response.statusText}. Body: ${await response.text()}`);
     }
@@ -106,10 +129,15 @@ export class Profiles {
   /**
    * Search for a profile by address.
    * @param address The exact address to search for.
+   * @param options Optional search options, including fetchComplete to retrieve full profile data including images.
    * @returns Array of profiles matching the search criteria (usually one or zero).
    */
-  async searchByAddress(address: string): Promise<SearchResultProfile[]> {
-    const response = await fetch(`${this.getProfileServiceUrl()}search?address=${encodeURIComponent(address)}`);
+  async searchByAddress(address: string, options?: SearchOptions): Promise<SearchResultProfile[]> {
+    const params = new URLSearchParams();
+    params.append('address', address);
+    if (options?.fetchComplete) params.append('fetchComplete', 'true');
+    
+    const response = await fetch(`${this.getProfileServiceUrl()}search?${params.toString()}`);
     if (!response.ok) {
       throw new Error(`Failed to search profiles by address. Status: ${response.status} ${response.statusText}. Body: ${await response.text()}`);
     }
@@ -119,10 +147,15 @@ export class Profiles {
   /**
    * Search for a profile by CID.
    * @param cid The exact CID to search for.
+   * @param options Optional search options, including fetchComplete to retrieve full profile data including images.
    * @returns Array of profiles matching the search criteria (usually one or zero).
    */
-  async searchByCID(cid: string): Promise<SearchResultProfile[]> {
-    const response = await fetch(`${this.getProfileServiceUrl()}search?CID=${encodeURIComponent(cid)}`);
+  async searchByCID(cid: string, options?: SearchOptions): Promise<SearchResultProfile[]> {
+    const params = new URLSearchParams();
+    params.append('CID', cid);
+    if (options?.fetchComplete) params.append('fetchComplete', 'true');
+    
+    const response = await fetch(`${this.getProfileServiceUrl()}search?${params.toString()}`);
     if (!response.ok) {
       throw new Error(`Failed to search profiles by CID. Status: ${response.status} ${response.statusText}. Body: ${await response.text()}`);
     }
@@ -132,28 +165,39 @@ export class Profiles {
   /**
    * Search for profiles by multiple addresses in a single batch request.
    * @param addresses Array of addresses to search for.
+   * @param options Optional search options, including fetchComplete to retrieve full profile data including images.
    * @returns Array of profiles matching the provided addresses.
    */
-  async searchByAddresses(addresses: string[]): Promise<SearchResultProfile[]> {
+  async searchByAddresses(addresses: string[], options?: SearchOptions): Promise<SearchResultProfile[]> {
+    const requestBody: any = { addresses };
+    if (options?.fetchComplete) requestBody.fetchComplete = true;
+    
     const response = await fetch(`${this.getProfileServiceUrl()}search/addresses`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ addresses })
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
       throw new Error(`Failed to search profiles by addresses. Status: ${response.status} ${response.statusText}. Body: ${await response.text()}`);
     }
-    return await response.json();
+    
+    const data = await response.json();
+    return Array.isArray(data) ? data : (data.results || []);
   }
 
   /**
    * Search for a profile by registeredName.
    * @param registeredName The exact registeredName to search for.
+   * @param options Optional search options, including fetchComplete to retrieve full profile data including images.
    * @returns Array of profiles matching the search criteria (usually one or zero).
    */
-  async searchByRegisteredName(registeredName: string): Promise<SearchResultProfile[]> {
-    const response = await fetch(`${this.getProfileServiceUrl()}search?registeredName=${encodeURIComponent(registeredName)}`);
+  async searchByRegisteredName(registeredName: string, options?: SearchOptions): Promise<SearchResultProfile[]> {
+    const params = new URLSearchParams();
+    params.append('registeredName', registeredName);
+    if (options?.fetchComplete) params.append('fetchComplete', 'true');
+    
+    const response = await fetch(`${this.getProfileServiceUrl()}search?${params.toString()}`);
     if (!response.ok) {
       throw new Error(`Failed to search profiles by registeredName. Status: ${response.status} ${response.statusText}. Body: ${await response.text()}`);
     }
@@ -162,7 +206,8 @@ export class Profiles {
 
   /**
    * Search for profiles using multiple criteria.
-   * @param criteria Search criteria object containing any combination of name, description, address, and CID.
+   * @param criteria Search criteria object containing any combination of name, description, address, CID, and registeredName.
+   * @param options Optional search options, including fetchComplete to retrieve full profile data including images.
    * @returns Array of profiles matching all provided search criteria.
    */
   async search(criteria: {
@@ -171,13 +216,14 @@ export class Profiles {
     address?: string;
     CID?: string;
     registeredName?: string;
-  }): Promise<SearchResultProfile[]> {
+  }, options?: SearchOptions): Promise<SearchResultProfile[]> {
     const params = new URLSearchParams();
     if (criteria.name) params.append('name', criteria.name);
     if (criteria.description) params.append('description', criteria.description);
     if (criteria.address) params.append('address', criteria.address);
     if (criteria.CID) params.append('CID', criteria.CID);
     if (criteria.registeredName) params.append('registeredName', criteria.registeredName);
+    if (options?.fetchComplete) params.append('fetchComplete', 'true');
 
     const response = await fetch(`${this.getProfileServiceUrl()}search?${params.toString()}`);
     if (!response.ok) {
