@@ -2,7 +2,7 @@ import {CirclesConfig} from "./circlesConfig";
 
 export const circlesConfig: { [chainId: number]: CirclesConfig } = {
   100: {
-    circlesRpcUrl: "https://rpc.circlesubi.network/",
+    circlesRpcUrl: "https://rpc.aboutcircles.com/",
     pathfinderUrl: "https://pathfinder.aboutcircles.com",
     profileServiceUrl: "https://rpc.aboutcircles.com/profiles/",
     v1HubAddress: "0x29b9a7fbb8995b2423a71cc17cf9810798f6c543",
