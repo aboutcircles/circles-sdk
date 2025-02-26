@@ -89,7 +89,7 @@ function calculateBalances(row: TransactionHistoryRow) {
     const rawBalance = row.value;
     let tokenInfo: TokenInfo;
 
-    if (row.version === 1 && !row.tokenType) {
+    if (row.version === 1) {
       // CrcHubTransfer
       tokenInfo = {
         isErc20: true,
@@ -99,11 +99,13 @@ function calculateBalances(row: TransactionHistoryRow) {
         isWrapped: false
       };
     } else {
-      tokenInfo = TokenTypes[row.tokenType];
-    }
-
-    if (!tokenInfo) {
-      throw new Error(`Token type ${row.tokenType} not found.`);
+      tokenInfo = {
+        isErc20: false,
+        isErc1155: true,
+        isGroup: false,
+        isInflationary: false,
+        isWrapped: false
+      };
     }
 
     let attoCircles: bigint;
@@ -215,7 +217,7 @@ export class CirclesData implements CirclesDataInterface {
     avatar = avatar.toLowerCase() as Address;
     return new CirclesQuery<any>(this.rpc, {
       namespace: 'V_Crc',
-      table: 'Transfers',
+      table: 'TransferSummary',
       sortOrder: 'DESC',
       limit: pageSize,
       columns: [
@@ -223,16 +225,12 @@ export class CirclesData implements CirclesDataInterface {
         'timestamp',
         'transactionIndex',
         'logIndex',
-        'batchIndex',
         'transactionHash',
         'version',
-        'operator',
         'from',
         'to',
-        'id',
         'value',
-        'type',
-        'tokenType'
+        'events'
       ],
       filter: [
         {
