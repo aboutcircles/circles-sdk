@@ -1,7 +1,7 @@
 import {V1Avatar} from './v1/v1Avatar';
 import {ContractTransactionReceipt, parseEther, TransactionReceipt} from 'ethers';
 import {Sdk} from './sdk';
-import {AvatarInterface, AvatarInterfaceV2, CoreMembersGroupInterface} from './AvatarInterface';
+import {AvatarInterface, AvatarInterfaceV2} from './AvatarInterface';
 import {
   AvatarRow,
   CirclesQuery, Observable,
@@ -20,7 +20,7 @@ import {CMGAvatar} from './v2/cmgAvatar';
  * An Avatar represents a user registered at Circles.
  * It provides methods to interact with the Circles protocol, such as minting, transferring and trusting other avatars.
  */
-export class Avatar implements CoreMembersGroupInterface {
+export class Avatar implements AvatarInterfaceV2 {
 
   public readonly address: Address;
 
@@ -140,12 +140,12 @@ export class Avatar implements CoreMembersGroupInterface {
     return func(<AvatarInterfaceV2>this._avatar);
   }
 
-  private onlyIfCoreMembersGroup<T>(func: (avatar: CoreMembersGroupInterface) => T) {
+  private onlyIfCoreMembersGroup<T>(func: (avatar: CMGAvatar) => T) {
     if (!this._avatar || this._avatarInfo?.version !== 2 || !this._isCoreMembersGroupAvatar) {
       
       throw new Error('CoreMembersGroup avatar is not initialized or is not a v2 avatar');
     }
-    return func(<CoreMembersGroupInterface>this._avatar);
+    return func(<CMGAvatar>this._avatar);
   }
 
   private async isCoreMembersGroup(avatar: Address): Promise<boolean> {
@@ -203,18 +203,24 @@ export class Avatar implements CoreMembersGroupInterface {
 
   /**
    * Trusts another avatar. Trusting an avatar means you're willing to accept Circles that have been issued by this avatar.
-   * @param avatar The address of the avatar to trust.
-   * @returns The transaction receipt.
+   * This method has two overloads:
+   * - If only `avatarAddress` is provided, it trusts the specified avatar(s).
+   * - (Only for core members group avatars) If `expiry` is provided, it sets an expiration time for the trust relationship.
+   * 
+   * @param avatarAddress The address of the avatar to trust. Can be a single address or an array of addresses.
+   * @param expiry (Optional) The expiration time of the trust relationship in Unix timestamp format.
+   * @returns A `TransactionResponse`, or `ContractTransactionReceipt` if the avatar is a core members group.
    */
-  trust = (avatarAddress: Address | Address[], expiry?: bigint): Promise<TransactionResponse> => {
-    return this.onlyIfInitialized(() => {
-      if(this._isCoreMembersGroupAvatar) {
-        return this.onlyIfCoreMembersGroup((avatar) => avatar!.trust(avatarAddress, expiry));
-      } else {
-        return this._avatar!.trust(avatarAddress);
-      }
-    });
+  trust(avatarAddress: Address | Address[]): Promise<TransactionResponse>;
+  trust(avatarAddress: Address, expiry: bigint): Promise<ContractTransactionReceipt>;
+  trust(avatarAddress: Address | Address[], expiry?: bigint): Promise<TransactionResponse | ContractTransactionReceipt> {
+    if(expiry !== undefined && !Array.isArray(avatarAddress)) {
+      return this.onlyIfCoreMembersGroup((avatar) => avatar!.trust(avatarAddress, expiry));
+    } else {
+      return this.onlyIfInitialized(() => this._avatar!.trust(avatarAddress));
+    }
   }
+
   /**
    * Revokes trust from another avatar. This means you will no longer accept Circles issued by this avatar. This will not affect already received Circles.
    * @param avatar The address of the avatar to untrust.
@@ -334,14 +340,50 @@ export class Avatar implements CoreMembersGroupInterface {
    */
   getTotalSupply = (): Promise<bigint> => this.onlyIfInitialized(() => this._avatar!.getTotalSupply());
 
-  // @todo add comments
-  // Methods for CMGAvatar
+  /// Methods for CMGAvatar
+
+  /**
+   * Trusts multiple members in a batch operation.
+   * @param coreMembers The addresses of the members to trust.
+   * @param expiry The expiration time of the trust relationship.
+   * @returns The transaction receipt confirming the batch operation.
+   */
   trustBatch = (coreMembers: Address[], expiry: bigint): Promise<ContractTransactionReceipt> => this.onlyIfCoreMembersGroup((avatar) => avatar.trustBatch(coreMembers, expiry));
+
+  /**
+   * Updates the group avatar's metadata digest.
+   * @param metadataDigest The new metadata digest (CID) to update.
+   * @returns The transaction receipt confirming the update.
+   */
   updateMetadataDigest = (metadataDigest: string): Promise<ContractTransactionReceipt> => this.onlyIfCoreMembersGroup((avatar) => avatar.updateMetadataDigest(metadataDigest));
+
+  /**
+   * Retrieves the owner of the group.
+   * @returns The address of the owner.
+   */
   owner = (): Promise<Address> => this.onlyIfCoreMembersGroup((avatar) => avatar.owner());
+
+  /**
+   * Retrieves the mint handler address, responsible for minting new group tokens.
+   * @returns The address of the mint handler.
+   */
   mintHandler = (): Promise<Address> => this.onlyIfCoreMembersGroup((avatar) => avatar.mintHandler());
+
+  /**
+   * Retrieves the redemption handler address, responsible for handling group token redemptions.
+   * @returns The address of the redemption handler.
+   */
   redemptionHandler = (): Promise<Address> => this.onlyIfCoreMembersGroup((avatar) => avatar.redemptionHandler());
+
+  /**
+   * Retrieves the service address associated with the group contract.
+   * @returns The address of the service.
+   */
   service = (): Promise<Address> => this.onlyIfCoreMembersGroup((avatar) => avatar.service());
+
+  /**
+   * Gets the minimum deposit required for group mint operation.
+   * @returns The minimum deposit amount as a `bigint`.
+   */
   minimalDeposit = (): Promise<bigint> => this.onlyIfCoreMembersGroup((avatar) => avatar.minimalDeposit());
-  
 }

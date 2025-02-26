@@ -1,31 +1,45 @@
+// Core Utilities and SDK Imports
+import { CirclesRpc } from './circlesRpc';
+import { CirclesDataInterface, GroupQueryParams } from './circlesDataInterface';
+import { Observable } from './observable';
+
+// Paged Queries
 import { CirclesQuery } from './pagedQuery/circlesQuery';
+import { PagedQueryParams } from './pagedQuery/pagedQueryParams';
+
+// Event Handling
+import { CirclesEvent } from './events/events';
+import { parseRpcSubscriptionMessage, RcpSubscriptionEvent } from './events/parser';
+
+// Rows - Data Models
+import { AvatarRow } from './rows/avatarRow';
 import { TransactionHistoryRow } from './rows/transactionHistoryRow';
 import { TrustListRow } from './rows/trustListRow';
 import { TokenBalanceRow } from './rows/tokenBalanceRow';
-import { CirclesRpc } from './circlesRpc';
-import { AvatarRow } from './rows/avatarRow';
-import {
-  Address,
-  attoCirclesToCircles,
-  attoCirclesToStaticAttoCircles, circlesToAttoCircles,
-  crcToTc,
-  hexStringToUint8Array, staticAttoCirclesToAttoCircles,
-  tcToCrc,
-  uint8ArrayToCidV0
-} from '@circles-sdk/utils';
 import { TrustRelation, TrustRelationRow } from './rows/trustRelationRow';
-import { CirclesDataInterface, GroupQueryParams } from './circlesDataInterface';
-import { Observable } from './observable';
-import { CirclesEvent } from './events/events';
+import { CoreMembersGroupRow } from './rows/coreMembersGroupRow';
 import { InvitationRow } from './rows/invitationRow';
-import { PagedQueryParams } from './pagedQuery/pagedQueryParams';
-import { Filter } from './rpcSchema/filter';
 import { GroupMembershipRow } from './rows/groupMembershipRow';
 import { GroupRow } from './rows/groupRow';
 import { TokenInfoRow } from './rows/tokenInfoRow';
-import { parseRpcSubscriptionMessage, RcpSubscriptionEvent } from './events/parser';
-import { FilterPredicate } from "./rpcSchema/filterPredicate";
 import { EventRow } from "./pagedQuery/eventRow";
+
+// Filtering and Schema Definitions
+import { Filter } from './rpcSchema/filter';
+import { FilterPredicate } from "./rpcSchema/filterPredicate";
+
+// Utility Functions and Type Definitions
+import { 
+  Address,
+  attoCirclesToCircles,
+  attoCirclesToStaticAttoCircles,
+  circlesToAttoCircles,
+  crcToTc,
+  hexStringToUint8Array,
+  staticAttoCirclesToAttoCircles,
+  tcToCrc,
+  uint8ArrayToCidV0
+} from '@circles-sdk/utils';
 
 export type TrustEvent = {
   blockNumber: number;
@@ -595,18 +609,7 @@ export class CirclesData implements CirclesDataInterface {
    * @param proxy Optional address of the group proxy to filter by.
    * @returns A CirclesQuery object with the group creation data.
    */
-  // @todo add new row type
-  async getCreatedCMGroups(pageSize: number, proxy?: Address): Promise<{
-    blockNumber: number,
-    timestamp: number,
-    transactionIndex: number,
-    logIndex: number,
-    transactionHash: string,
-    proxy: Address,
-    owner: Address,
-    mintHandler: Address,
-    redemptionHandler: Address
-  }[]> {
+  async getCreatedCMGroups(pageSize: number, proxy?: Address): Promise<CoreMembersGroupRow[]> {
     const filter: Filter[] = [];
     
     if (proxy) {

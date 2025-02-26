@@ -17,9 +17,9 @@ import {TransactionResponse} from "@circles-sdk/adapter";
 import {CoreMembersGroup, CoreMembersGroup__factory } from '@circles-sdk/abi-v2';
 
 import {Sdk} from '../sdk';
-import {CoreMembersGroupInterface} from '../AvatarInterface';
+import {AvatarInterfaceV2} from '../AvatarInterface';
 
-export class CMGAvatar implements CoreMembersGroupInterface {
+export class CMGAvatar implements AvatarInterfaceV2 {
   public readonly sdk: Sdk;
 
   get address(): Address {
@@ -43,30 +43,24 @@ export class CMGAvatar implements CoreMembersGroupInterface {
       throw new Error('Avatar is not a v2 avatar');
     }
   }
-  // @notice Address[] and batch transaction is used for compatibility purpose
-  async trust(trustReceiver: Address | Address[], expiry?: bigint): Promise<TransactionResponse> {
+
+  // @notice function overloading is used for compatibility with AvatarInterfaceV2
+  async trust(trustReceiver: Address | Address[]): Promise<TransactionResponse>;
+  async trust(trustReceiver: Address, expiry: bigint): Promise<ContractTransactionReceipt>;
+  async trust(trustReceiver: Address | Address[], expiry?: bigint): Promise<ContractTransactionReceipt | TransactionResponse> {
+    expiry = BigInt(expiry || 0);
+
     if(Array.isArray(trustReceiver)) {
-      throw this.NotSupportedError();
+      const receipt = await this.trustBatch(trustReceiver, expiry);
+      return receipt;
+    } else {
+      const tx = await this.coreMemberGroup.trust(trustReceiver, BigInt(expiry || 0));
+      const receipt = await tx.wait();
+      if (!receipt) {
+        throw new Error('Trust operation failed');
+      }
+      return receipt;
     }
-
-    if (!this.sdk?.contractRunner?.sendBatchTransaction) {
-      throw new Error('ContractRunner (or sendBatchTransaction capability) not available');
-    }
-    const batch = this.sdk.contractRunner.sendBatchTransaction();
-
-    const txData = this.coreMemberGroup!.interface.encodeFunctionData("trust", [trustReceiver, BigInt(expiry || 0)]);
-    batch.addTransaction({
-      to: this.address,
-      data: txData,
-      value: 0n,
-    });
-
-    const receipt = await batch.run();
-    if (!receipt) {
-      throw new Error('Trust failed');
-    }
-
-    return receipt;
   }
 
   async trustBatch(coreMembers: Address[], expiry: bigint): Promise<ContractTransactionReceipt> {
