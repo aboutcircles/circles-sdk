@@ -22,9 +22,35 @@ import type {
   TypedContractMethod,
 } from "./common";
 
+export declare namespace CirclesCoreAddresses {
+  export type CirclesCoreStruct = {
+    hub: AddressLike;
+    standardTreasury: AddressLike;
+    nameRegistry: AddressLike;
+    erc20Lift: AddressLike;
+  };
+
+  export type CirclesCoreStructOutput = [
+    hub: string,
+    standardTreasury: string,
+    nameRegistry: string,
+    erc20Lift: string
+  ] & {
+    hub: string;
+    standardTreasury: string;
+    nameRegistry: string;
+    erc20Lift: string;
+  };
+}
+
 export interface CMGroupDeployerInterface extends Interface {
   getFunction(
-    nameOrSignature: "createCMGroup" | "masterCopyCMGroup"
+    nameOrSignature:
+      | "createCMGroup"
+      | "getCirclesCore"
+      | "lpDeployer"
+      | "masterCopyCMGroup"
+      | "redemptionOperator"
   ): FunctionFragment;
 
   getEvent(
@@ -36,7 +62,19 @@ export interface CMGroupDeployerInterface extends Interface {
     values: [AddressLike, AddressLike[], string, string, BytesLike]
   ): string;
   encodeFunctionData(
+    functionFragment: "getCirclesCore",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "lpDeployer",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "masterCopyCMGroup",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "redemptionOperator",
     values?: undefined
   ): string;
 
@@ -45,7 +83,16 @@ export interface CMGroupDeployerInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "getCirclesCore",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "lpDeployer", data: BytesLike): Result;
+  decodeFunctionResult(
     functionFragment: "masterCopyCMGroup",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "redemptionOperator",
     data: BytesLike
   ): Result;
 }
@@ -55,19 +102,22 @@ export namespace CMGroupCreatedEvent {
     proxy: AddressLike,
     owner: AddressLike,
     mintHandler: AddressLike,
-    redemptionHandler: AddressLike
+    redemptionHandler: AddressLike,
+    liquidityProvider: AddressLike
   ];
   export type OutputTuple = [
     proxy: string,
     owner: string,
     mintHandler: string,
-    redemptionHandler: string
+    redemptionHandler: string,
+    liquidityProvider: string
   ];
   export interface OutputObject {
     proxy: string;
     owner: string;
     mintHandler: string;
     redemptionHandler: string;
+    liquidityProvider: string;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -138,11 +188,28 @@ export interface CMGroupDeployer extends BaseContract {
       _symbol: string,
       _metadataDigest: BytesLike
     ],
-    [string],
+    [
+      [string, string, string, string] & {
+        proxy: string;
+        mintHandler: string;
+        redemptionHandler: string;
+        liquidityProvider: string;
+      }
+    ],
     "nonpayable"
   >;
 
+  getCirclesCore: TypedContractMethod<
+    [],
+    [CirclesCoreAddresses.CirclesCoreStructOutput],
+    "view"
+  >;
+
+  lpDeployer: TypedContractMethod<[], [string], "view">;
+
   masterCopyCMGroup: TypedContractMethod<[], [string], "view">;
+
+  redemptionOperator: TypedContractMethod<[], [string], "view">;
 
   getFunction<T extends ContractMethod = ContractMethod>(
     key: string | FunctionFragment
@@ -158,11 +225,31 @@ export interface CMGroupDeployer extends BaseContract {
       _symbol: string,
       _metadataDigest: BytesLike
     ],
-    [string],
+    [
+      [string, string, string, string] & {
+        proxy: string;
+        mintHandler: string;
+        redemptionHandler: string;
+        liquidityProvider: string;
+      }
+    ],
     "nonpayable"
   >;
   getFunction(
+    nameOrSignature: "getCirclesCore"
+  ): TypedContractMethod<
+    [],
+    [CirclesCoreAddresses.CirclesCoreStructOutput],
+    "view"
+  >;
+  getFunction(
+    nameOrSignature: "lpDeployer"
+  ): TypedContractMethod<[], [string], "view">;
+  getFunction(
     nameOrSignature: "masterCopyCMGroup"
+  ): TypedContractMethod<[], [string], "view">;
+  getFunction(
+    nameOrSignature: "redemptionOperator"
   ): TypedContractMethod<[], [string], "view">;
 
   getEvent(
@@ -181,7 +268,7 @@ export interface CMGroupDeployer extends BaseContract {
   >;
 
   filters: {
-    "CMGroupCreated(address,address,address,address)": TypedContractEvent<
+    "CMGroupCreated(address,address,address,address,address)": TypedContractEvent<
       CMGroupCreatedEvent.InputTuple,
       CMGroupCreatedEvent.OutputTuple,
       CMGroupCreatedEvent.OutputObject

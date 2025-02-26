@@ -45,36 +45,10 @@ export class CMGAvatar implements AvatarInterfaceV2 {
   }
 
   // @notice function overloading is used for compatibility with AvatarInterfaceV2
-  async trust(trustReceiver: Address | Address[]): Promise<TransactionResponse>;
-  async trust(trustReceiver: Address, expiry: bigint): Promise<ContractTransactionReceipt>;
-  async trust(trustReceiver: Address | Address[], expiry?: bigint): Promise<ContractTransactionReceipt | TransactionResponse> {
+  async trust(avatar: Address | Address[]): Promise<TransactionResponse>;
+  async trust(avatar: Address, expiry: bigint): Promise<TransactionResponse>;
+  async trust(avatar: Address | Address[], expiry?: bigint): Promise<TransactionResponse> {
     expiry = BigInt(expiry || 0);
-
-    if(Array.isArray(trustReceiver)) {
-      const receipt = await this.trustBatch(trustReceiver, expiry);
-      return receipt;
-    } else {
-      const tx = await this.coreMemberGroup.trust(trustReceiver, BigInt(expiry || 0));
-      const receipt = await tx.wait();
-      if (!receipt) {
-        throw new Error('Trust operation failed');
-      }
-      return receipt;
-    }
-  }
-
-  async trustBatch(coreMembers: Address[], expiry: bigint): Promise<ContractTransactionReceipt> {
-    const tx = await this.coreMemberGroup.trustBatch(coreMembers, expiry);
-    const receipt = await tx.wait();
-    if (!receipt) {
-      throw new Error('Batch Trust operation failed');
-    }
-    return receipt;
-  }
-
-
-  async untrust(avatar: Address | Address[]): Promise<TransactionResponse> {
-    this.throwIfV2IsNotAvailable();
 
     if (!this.sdk?.contractRunner?.sendBatchTransaction) {
       throw new Error('ContractRunner (or sendBatchTransaction capability) not available');
@@ -83,12 +57,39 @@ export class CMGAvatar implements AvatarInterfaceV2 {
     const avatars = Array.isArray(avatar) ? avatar : [avatar];
     const batch = this.sdk.contractRunner.sendBatchTransaction();
 
-    const txData = this.coreMemberGroup!.interface.encodeFunctionData("trustBatch", [avatars, BigInt('0')]);
-    batch.addTransaction({
-      to: this.address!,
-      data: txData,
-      value: 0n
-    });
+    for (const av of avatars) {
+      const txData = this.coreMemberGroup!.interface.encodeFunctionData("trust", [av, expiry]);
+      batch.addTransaction({
+        to: this.address!,
+        data: txData,
+        value: 0n
+      });
+    }
+
+    const receipt = await batch.run();
+    if (!receipt) {
+      throw new Error('Trust failed');
+    }
+
+    return receipt;
+  }
+
+  async untrust(avatar: Address | Address[]): Promise<TransactionResponse> {
+    if (!this.sdk?.contractRunner?.sendBatchTransaction) {
+      throw new Error('ContractRunner (or sendBatchTransaction capability) not available');
+    }
+
+    const avatars = Array.isArray(avatar) ? avatar : [avatar];
+    const batch = this.sdk.contractRunner.sendBatchTransaction();
+
+    for (const av of avatars) {
+      const txData = this.coreMemberGroup!.interface.encodeFunctionData("trust", [av, BigInt('0')]);
+      batch.addTransaction({
+        to: this.address!,
+        data: txData,
+        value: 0n
+      });
+    }
 
     const receipt = await batch.run();
     if (!receipt) {
@@ -129,6 +130,10 @@ export class CMGAvatar implements AvatarInterfaceV2 {
 
   minimalDeposit(): Promise<bigint> {
     return this.coreMemberGroup.minimalDeposit();
+  }
+
+  getMembershipConditions(): Promise<Address[]> {
+    return this.coreMemberGroup.getMembershipConditions() as Promise<Address[]>;
   }
 
   trusts(otherAvatar: Address): Promise<boolean> {
@@ -258,10 +263,6 @@ export class CMGAvatar implements AvatarInterfaceV2 {
     throw this.NotSupportedError();
   }
 
-  /**
-   * Invite a user to Circles.
-   * @param avatar The address of the avatar to invite. Can be either a v1 address or an address that's not signed up yet.
-   */
   async inviteHuman(avatar: Address): Promise<TransactionResponse> {
     throw this.NotSupportedError();
   }

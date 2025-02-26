@@ -212,8 +212,8 @@ export class Avatar implements AvatarInterfaceV2 {
    * @returns A `TransactionResponse`, or `ContractTransactionReceipt` if the avatar is a core members group.
    */
   trust(avatarAddress: Address | Address[]): Promise<TransactionResponse>;
-  trust(avatarAddress: Address, expiry: bigint): Promise<ContractTransactionReceipt>;
-  trust(avatarAddress: Address | Address[], expiry?: bigint): Promise<TransactionResponse | ContractTransactionReceipt> {
+  trust(avatarAddress: Address, expiry: bigint): Promise<TransactionResponse>;
+  trust(avatarAddress: Address | Address[], expiry?: bigint): Promise<TransactionResponse> {
     if(expiry !== undefined && !Array.isArray(avatarAddress)) {
       return this.onlyIfCoreMembersGroup((avatar) => avatar!.trust(avatarAddress, expiry));
     } else {
@@ -343,14 +343,6 @@ export class Avatar implements AvatarInterfaceV2 {
   /// Methods for CMGAvatar
 
   /**
-   * Trusts multiple members in a batch operation.
-   * @param coreMembers The addresses of the members to trust.
-   * @param expiry The expiration time of the trust relationship.
-   * @returns The transaction receipt confirming the batch operation.
-   */
-  trustBatch = (coreMembers: Address[], expiry: bigint): Promise<ContractTransactionReceipt> => this.onlyIfCoreMembersGroup((avatar) => avatar.trustBatch(coreMembers, expiry));
-
-  /**
    * Updates the group avatar's metadata digest.
    * @param metadataDigest The new metadata digest (CID) to update.
    * @returns The transaction receipt confirming the update.
@@ -386,4 +378,10 @@ export class Avatar implements AvatarInterfaceV2 {
    * @returns The minimum deposit amount as a `bigint`.
    */
   minimalDeposit = (): Promise<bigint> => this.onlyIfCoreMembersGroup((avatar) => avatar.minimalDeposit());
+
+  /**
+   * Gets the membership conditions required to enter the group.
+   * @returns Set of addresses representing membership conditions.
+   */
+  getMembershipConditions = (): Promise<Address[]> => this.onlyIfCoreMembersGroup((avatar) => avatar.getMembershipConditions());
 }

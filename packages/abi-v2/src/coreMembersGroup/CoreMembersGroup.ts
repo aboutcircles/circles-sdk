@@ -23,6 +23,27 @@ import type {
   TypedContractMethod,
 } from "./common";
 
+export declare namespace CirclesCoreAddresses {
+  export type CirclesCoreStruct = {
+    hub: AddressLike;
+    standardTreasury: AddressLike;
+    nameRegistry: AddressLike;
+    erc20Lift: AddressLike;
+  };
+
+  export type CirclesCoreStructOutput = [
+    hub: string,
+    standardTreasury: string,
+    nameRegistry: string,
+    erc20Lift: string
+  ] & {
+    hub: string;
+    standardTreasury: string;
+    nameRegistry: string;
+    erc20Lift: string;
+  };
+}
+
 export interface CoreMembersGroupInterface extends Interface {
   getFunction(
     nameOrSignature:
@@ -32,6 +53,8 @@ export interface CoreMembersGroupInterface extends Interface {
       | "beforeMintPolicy"
       | "beforeRedeemPolicy"
       | "feeCollection"
+      | "getCirclesCore"
+      | "getMembershipConditions"
       | "minimalDeposit"
       | "mintHandler"
       | "owner"
@@ -44,11 +67,12 @@ export interface CoreMembersGroupInterface extends Interface {
       | "setMembershipCondition"
       | "setMinimalDeposit"
       | "setMintHandler"
+      | "setOwner"
       | "setRedemptionHandler"
       | "setService"
       | "setup"
       | "trust"
-      | "trustBatch"
+      | "trustBatchWithConditions"
       | "updateMetadataDigest"
   ): FunctionFragment;
 
@@ -95,6 +119,14 @@ export interface CoreMembersGroupInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "getCirclesCore",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getMembershipConditions",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "minimalDeposit",
     values?: undefined
   ): string;
@@ -137,6 +169,10 @@ export interface CoreMembersGroupInterface extends Interface {
     values: [AddressLike]
   ): string;
   encodeFunctionData(
+    functionFragment: "setOwner",
+    values: [AddressLike]
+  ): string;
+  encodeFunctionData(
     functionFragment: "setRedemptionHandler",
     values: [AddressLike]
   ): string;
@@ -154,7 +190,8 @@ export interface CoreMembersGroupInterface extends Interface {
       AddressLike[],
       string,
       string,
-      BytesLike
+      BytesLike,
+      CirclesCoreAddresses.CirclesCoreStruct
     ]
   ): string;
   encodeFunctionData(
@@ -162,7 +199,7 @@ export interface CoreMembersGroupInterface extends Interface {
     values: [AddressLike, BigNumberish]
   ): string;
   encodeFunctionData(
-    functionFragment: "trustBatch",
+    functionFragment: "trustBatchWithConditions",
     values: [AddressLike[], BigNumberish]
   ): string;
   encodeFunctionData(
@@ -192,6 +229,14 @@ export interface CoreMembersGroupInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "feeCollection",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getCirclesCore",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getMembershipConditions",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -236,6 +281,7 @@ export interface CoreMembersGroupInterface extends Interface {
     functionFragment: "setMintHandler",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "setOwner", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "setRedemptionHandler",
     data: BytesLike
@@ -243,7 +289,10 @@ export interface CoreMembersGroupInterface extends Interface {
   decodeFunctionResult(functionFragment: "setService", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "setup", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "trust", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "trustBatch", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "trustBatchWithConditions",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "updateMetadataDigest",
     data: BytesLike
@@ -433,6 +482,14 @@ export interface CoreMembersGroup extends BaseContract {
 
   feeCollection: TypedContractMethod<[], [string], "view">;
 
+  getCirclesCore: TypedContractMethod<
+    [],
+    [CirclesCoreAddresses.CirclesCoreStructOutput],
+    "view"
+  >;
+
+  getMembershipConditions: TypedContractMethod<[], [string[]], "view">;
+
   minimalDeposit: TypedContractMethod<[], [bigint], "view">;
 
   mintHandler: TypedContractMethod<[], [string], "view">;
@@ -481,6 +538,8 @@ export interface CoreMembersGroup extends BaseContract {
     "nonpayable"
   >;
 
+  setOwner: TypedContractMethod<[_owner: AddressLike], [void], "nonpayable">;
+
   setRedemptionHandler: TypedContractMethod<
     [_redemptionHandler: AddressLike],
     [void],
@@ -502,7 +561,8 @@ export interface CoreMembersGroup extends BaseContract {
       _initialConditions: AddressLike[],
       _name: string,
       _symbol: string,
-      _metadataDigest: BytesLike
+      _metadataDigest: BytesLike,
+      _circlesCore: CirclesCoreAddresses.CirclesCoreStruct
     ],
     [void],
     "nonpayable"
@@ -514,7 +574,7 @@ export interface CoreMembersGroup extends BaseContract {
     "nonpayable"
   >;
 
-  trustBatch: TypedContractMethod<
+  trustBatchWithConditions: TypedContractMethod<
     [_coreMembers: AddressLike[], _expiry: BigNumberish],
     [void],
     "nonpayable"
@@ -580,6 +640,16 @@ export interface CoreMembersGroup extends BaseContract {
     nameOrSignature: "feeCollection"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
+    nameOrSignature: "getCirclesCore"
+  ): TypedContractMethod<
+    [],
+    [CirclesCoreAddresses.CirclesCoreStructOutput],
+    "view"
+  >;
+  getFunction(
+    nameOrSignature: "getMembershipConditions"
+  ): TypedContractMethod<[], [string[]], "view">;
+  getFunction(
     nameOrSignature: "minimalDeposit"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
@@ -620,6 +690,9 @@ export interface CoreMembersGroup extends BaseContract {
     nameOrSignature: "setMintHandler"
   ): TypedContractMethod<[_mintHandler: AddressLike], [void], "nonpayable">;
   getFunction(
+    nameOrSignature: "setOwner"
+  ): TypedContractMethod<[_owner: AddressLike], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "setRedemptionHandler"
   ): TypedContractMethod<
     [_redemptionHandler: AddressLike],
@@ -640,7 +713,8 @@ export interface CoreMembersGroup extends BaseContract {
       _initialConditions: AddressLike[],
       _name: string,
       _symbol: string,
-      _metadataDigest: BytesLike
+      _metadataDigest: BytesLike,
+      _circlesCore: CirclesCoreAddresses.CirclesCoreStruct
     ],
     [void],
     "nonpayable"
@@ -653,7 +727,7 @@ export interface CoreMembersGroup extends BaseContract {
     "nonpayable"
   >;
   getFunction(
-    nameOrSignature: "trustBatch"
+    nameOrSignature: "trustBatchWithConditions"
   ): TypedContractMethod<
     [_coreMembers: AddressLike[], _expiry: BigNumberish],
     [void],
