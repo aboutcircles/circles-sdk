@@ -51,6 +51,8 @@ console.log('Profiles:', profilesMap);
 
 ### Searching Profiles
 
+#### Basic Search
+
 Search by name (partial match):
 ```typescript
 const nameResults = await profiles.searchByName('John');
@@ -77,8 +79,8 @@ console.log('Profile for CID:', cidResults);
 
 Search by registeredName (exact match):
 ```typescript
-const cidResults = await profiles.searchByRegisteredName('Jo');
-console.log('Profile for registeredName:', cidResults);
+const nameResults = await profiles.searchByRegisteredName('Jo');
+console.log('Profile for registeredName:', nameResults);
 ```
 
 Search with multiple criteria:
@@ -86,9 +88,33 @@ Search with multiple criteria:
 const results = await profiles.search({
   name: 'John',
   description: 'developer',
-  // address and CID are optional
+  // address, CID, and registeredName are optional
 });
 console.log('Search results:', results);
+```
+
+Search by multiple addresses in a batch:
+```typescript
+const addresses = ['0x123...', '0x456...', '0x789...'];
+const results = await profiles.searchByAddresses(addresses);
+console.log('Profiles for addresses:', results);
+```
+
+#### Search with Complete Profile Data
+
+All search methods accept an optional `SearchOptions` parameter with a `fetchComplete` flag to retrieve full profile data including images:
+
+```typescript
+// Search by name with complete profile data
+const completeProfiles = await profiles.searchByName('John', { fetchComplete: true });
+console.log('Complete profiles:', completeProfiles);
+
+// Search with multiple criteria and complete profile data
+const completeResults = await profiles.search({
+  name: 'John',
+  description: 'developer',
+}, { fetchComplete: true });
+console.log('Complete search results:', completeResults);
 ```
 
 ## Types
@@ -118,6 +144,19 @@ export interface SearchResultProfile extends Pick<Profile, 'name' | 'description
   lastUpdatedAt: number;
   address: string;
   registeredName: string | null;
+  // Optional fields for complete profiles
+  imageUrl?: string;
+  previewImageUrl?: string;
+}
+```
+
+### SearchOptions
+```typescript
+interface SearchOptions {
+  /**
+   * Whether to fetch complete profile data including images.
+   */
+  fetchComplete?: boolean;
 }
 ```
 
@@ -128,5 +167,6 @@ interface SearchCriteria {
   description?: string;
   address?: string;
   CID?: string;
+  registeredName?: string;
 }
 ```
