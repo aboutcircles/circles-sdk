@@ -488,6 +488,7 @@ export class Sdk implements SdkInterface {
         return acc;
       }, {});
 
+      // Filter only for own tokens or tokens of v2 avatars
       const tokensToMigrate = v1Balances.filter(o => o.tokenOwner == avatar || tokenOwnerInfoMap[o.tokenOwner]?.version === 2);
       if (tokensToMigrate.length > 0) {
         // Add 'migrate' to the batch

@@ -1,6 +1,6 @@
 {
   "name": "@circles-sdk/profiles",
-  "version": "0.15.2",
+  "version": "0.16.0-preview1",
   "description": "",
   "type": "module",
   "main": "./dist/index.js",
@@ -17,7 +17,7 @@
     "build": "rollup -c"
   },
   "dependencies": {
-    "@circles-sdk/utils": "0.15.2"
+    "@circles-sdk/utils": "0.16.0-preview1"
   },
   "keywords": [],
   "author": "",
