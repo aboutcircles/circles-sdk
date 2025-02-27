@@ -106,7 +106,8 @@ export class BrowserProviderBatchRun implements BatchRun {
   }
 
   async run() {
-    const signer = await this.provider.getSigner();
+    const signer = await (<BrowserProvider>this.provider).getSigner();
+
     let lastReceipt: TransactionReceipt | null = null;
     for (const tx of this.transactions) {
       try {

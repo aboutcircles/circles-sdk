@@ -1,6 +1,6 @@
 import {SdkContractRunner, TransactionRequest, TransactionResponse} from '@circles-sdk/adapter';
 import SafeAppsSDK from "@safe-global/safe-apps-sdk";
-import { Address, handleTransactionError } from '@circles-sdk/utils';
+import { Address } from '@circles-sdk/utils';
 
 export class SafeSdkContractRunner implements SdkContractRunner {
     private safeSdk: SafeAppsSDK;
@@ -37,8 +37,6 @@ export class SafeSdkContractRunner implements SdkContractRunner {
                 data: tx.data,
                 value: tx.value.toString()
             }]
-        }).catch(error => {
-            handleTransactionError(error);
         });
 
         const txDetails = await this.safeSdk.txs.getBySafeTxHash(sendTransactionsResponse.safeTxHash);

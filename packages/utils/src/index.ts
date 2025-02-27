@@ -329,7 +329,7 @@ function getCustomErrorFragment(errorText: string) {
 
 export function handleTransactionError(e: any): never {
   console.log(e);
-  // handle when data is null and `action` equals `estimateGas`
+  // handle when data is null
   if (e.data) {
     const parsedError = parseError(e.data);
     if (parsedError) {
@@ -341,6 +341,8 @@ export function handleTransactionError(e: any): never {
       };
       throw new Error(JSON.stringify(parsedError, bigIntReplacer, 2));
     }
+  } else if (!e.data && e.info?.error?.message) {
+    throw new Error(JSON.stringify(getCustomErrorFragment(e.info.error.message), null, 2));
   }
 
   throw new Error(JSON.stringify(getCustomErrorFragment("Unknown"), null, 2));
