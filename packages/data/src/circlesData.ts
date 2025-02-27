@@ -505,14 +505,18 @@ export class CirclesData implements CirclesDataInterface {
       sortOrder: 'ASC',
       limit: 1000
     }, [{
+        name: 'isHuman',
+        generator: async (row: AvatarRow) => {
+          return row.type === "CrcV2_RegisterHuman" || row.type === "CrcV1_Signup";
+        }
+      },
+      {
       name: 'cidV0',
       generator: async (row: AvatarRow) => {
         try {
           if (!row.cidV0Digest) {
             return undefined;
           }
-
-          row.isHuman = row.type == "CrcV2_RegisterHuman" || row.type == "CrcV1_Signup";
 
           const dataFromHexString = hexStringToUint8Array(row.cidV0Digest.substring(2));
           return uint8ArrayToCidV0(dataFromHexString);
