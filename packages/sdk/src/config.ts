@@ -11,6 +11,6 @@ export const circlesConfig: { [chainId: number]: CirclesConfig } = {
     migrationAddress: "0xD44B8dcFBaDfC78EA64c55B705BFc68199B56376",
     baseGroupMintPolicy: "0xcCa27c26CF7BAC2a9928f42201d48220F0e3a549",
     standardTreasury: "0x08F90aB73A515308f03A718257ff9887ED330C6e",
-    coreMembersGroupDeployer: "0x55785b41703728f1F1F05E77e22B13c3FCc9ce65"
+    coreMembersGroupDeployer: "0xFEca40Eb02FB1f4F5F795fC7a03c1A27819B1Ded"
   }
 }
