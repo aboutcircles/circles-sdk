@@ -9,10 +9,34 @@ import { EventRow } from './eventRow';
 import { CirclesRpc } from '../circlesRpc';
 import { CirclesQueryRpcResult } from '../circlesQueryRpcResult';
 
-export class CalculatedColumn {
-  constructor(public readonly name: string
-    , public readonly generator: (row: any) => Promise<any>) {
+/**
+ * A context object passed to each calculated column generator.
+ * Allows you to store memoized/intermediate data so you only do
+ * expensive computations once per row.
+ */
+export class CalculationContext {
+  memo: Record<string, unknown> = {};
+
+  async getOrCreateMemo<T>(key: string, generator: () => Promise<T>): Promise<T> {
+    if (this.memo[key]) {
+      return Promise.resolve(this.memo[key] as T);
+    }
+    const value = await generator();
+    this.memo[key] = value;
+    return value;
   }
+}
+
+/**
+ * A class representing a dynamically calculated column.
+ * The generator receives both the row and a context object
+ * where it can store/retrieve memoized data.
+ */
+export class CalculatedColumn<TRow extends EventRow> {
+  constructor(
+    public readonly name: string,
+    public readonly generator: (row: TRow, context: CalculationContext) => Promise<unknown>
+  ) {}
 }
 
 /**
@@ -41,10 +65,10 @@ export class CirclesQuery<TRow extends EventRow> {
   private _currentPage?: PagedQueryResult<TRow>;
 
   private _calculatedColumns: {
-    [name: string]: CalculatedColumn
+    [name: string]: CalculatedColumn<TRow>
   } = {};
 
-  constructor(rpc: CirclesRpc, params: PagedQueryParams, calculatedColumns?: CalculatedColumn[]) {
+  constructor(rpc: CirclesRpc, params: PagedQueryParams, calculatedColumns?: CalculatedColumn<TRow>[]) {
     this.params = params;
     this.rpc = rpc;
 
@@ -262,13 +286,15 @@ export class CirclesQuery<TRow extends EventRow> {
     }
 
     const rowObjects = await Promise.all(rows.map(async row => {
-      const rowObj: Record<string, any> = {};
+      const rowObj: Record<string, unknown> = {};
       row.forEach((value, index) => {
         rowObj[columns[index]] = value;
       });
 
+      const context = new CalculationContext();
+
       for (const [name, column] of calculatedColumns) {
-        rowObj[name] = await column.generator(rowObj);
+        rowObj[name] = await column.generator(rowObj as TRow, context);
       }
 
       return rowObj;

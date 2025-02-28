@@ -7,10 +7,7 @@ import { AvatarRow } from './rows/avatarRow';
 import {
   Address,
   attoCirclesToCircles,
-  attoCirclesToStaticAttoCircles, circlesToAttoCircles,
-  crcToTc,
-  hexStringToUint8Array, staticAttoCirclesToAttoCircles,
-  tcToCrc,
+  attoCirclesToStaticAttoCircles, hexStringToUint8Array, tcToCrc,
   uint8ArrayToCidV0
 } from '@circles-sdk/utils';
 import { TrustRelation, TrustRelationRow } from './rows/trustRelationRow';
@@ -24,8 +21,8 @@ import { GroupMembershipRow } from './rows/groupMembershipRow';
 import { GroupRow } from './rows/groupRow';
 import { TokenInfoRow } from './rows/tokenInfoRow';
 import { parseRpcSubscriptionMessage, RcpSubscriptionEvent } from './events/parser';
-import { FilterPredicate } from "./rpcSchema/filterPredicate";
-import { EventRow } from "./pagedQuery/eventRow";
+import { FilterPredicate } from './rpcSchema/filterPredicate';
+import { EventRow } from './pagedQuery/eventRow';
 
 export type TrustEvent = {
   blockNumber: number;
@@ -47,123 +44,59 @@ export type TokenInfo = {
 };
 
 export const TokenTypes: Record<string, TokenInfo> = {
-  "CrcV1_Signup": {
+  'CrcV1_Signup': {
     isErc20: true,
     isErc1155: false,
     isWrapped: false,
     isInflationary: true,
     isGroup: false
   },
-  "CrcV2_RegisterHuman": {
+  'CrcV2_RegisterHuman': {
     isErc20: false,
     isErc1155: true,
     isWrapped: false,
     isInflationary: false,
     isGroup: false
   },
-  "CrcV2_RegisterGroup": {
+  'CrcV2_RegisterGroup': {
     isErc20: false,
     isErc1155: true,
     isWrapped: false,
     isInflationary: false,
     isGroup: true
   },
-  "CrcV2_ERC20WrapperDeployed_Inflationary": {
+  'CrcV2_ERC20WrapperDeployed_Inflationary': {
     isErc20: true,
     isErc1155: false,
     isWrapped: true,
     isInflationary: true,
     isGroup: false
   },
-  "CrcV2_ERC20WrapperDeployed_Demurraged": {
+  'CrcV2_ERC20WrapperDeployed_Demurraged': {
     isErc20: true,
     isErc1155: false,
     isWrapped: true,
     isInflationary: false,
     isGroup: false
   }
-}
+};
 
 function calculateBalances(row: TransactionHistoryRow) {
-  try {
-    const rawBalance = row.value;
-    let tokenInfo: TokenInfo;
+  const attoCircles: bigint = BigInt((<any>row).value);
+  const circles: number = attoCirclesToCircles(attoCircles);
+  const attoCrc: bigint = tcToCrc(new Date(), circles);
+  const crc: number = attoCirclesToCircles(attoCrc);
+  const staticAttoCircles: bigint = attoCirclesToStaticAttoCircles(attoCircles);
+  const staticCircles: number = attoCirclesToCircles(staticAttoCircles);
 
-    if (row.version === 1 && !row.tokenType) {
-      // CrcHubTransfer
-      tokenInfo = {
-        isErc20: true,
-        isErc1155: false,
-        isGroup: false,
-        isInflationary: true,
-        isWrapped: false
-      };
-    } else {
-      tokenInfo = TokenTypes[row.tokenType];
-    }
-
-    if (!tokenInfo) {
-      throw new Error(`Token type ${row.tokenType} not found.`);
-    }
-
-    let attoCircles: bigint;
-    let circles: number;
-    let staticAttoCircles: bigint;
-    let staticCircles: number;
-    let attoCrc: bigint;
-    let crc: number;
-
-    if (row.version === 1) {
-      attoCrc = BigInt(rawBalance);
-      crc = attoCirclesToCircles(attoCrc);
-
-      circles = crcToTc(new Date(), attoCrc);
-      attoCircles = circlesToAttoCircles(circles);
-
-      staticAttoCircles = attoCirclesToStaticAttoCircles(attoCircles);
-      staticCircles = attoCirclesToCircles(staticAttoCircles);
-    } else {
-      if (tokenInfo?.isInflationary) {
-        staticAttoCircles = BigInt(rawBalance);
-        staticCircles = attoCirclesToCircles(staticAttoCircles);
-
-        attoCircles = staticAttoCirclesToAttoCircles(staticAttoCircles);
-        circles = attoCirclesToCircles(attoCircles);
-
-        attoCrc = tcToCrc(new Date(), circles);
-        crc = attoCirclesToCircles(attoCrc);
-      } else {
-        attoCircles = BigInt(rawBalance);
-        circles = attoCirclesToCircles(attoCircles);
-
-        attoCrc = tcToCrc(new Date(), circles);
-        crc = attoCirclesToCircles(attoCrc);
-
-        staticAttoCircles = attoCirclesToStaticAttoCircles(attoCircles);
-        staticCircles = attoCirclesToCircles(staticAttoCircles);
-      }
-    }
-
-    return {
-      attoCircles,
-      circles,
-      staticAttoCircles,
-      staticCircles,
-      attoCrc,
-      crc
-    };
-  } catch (e) {
-    // console.error(e);
-    // console.log(row);
-    return {
-      attoCircles: 0n,
-      circles: 0,
-      staticAttoCircles: 0n,
-      inflationaryCircles: 0,
-      attoCrc: 0n,
-      crc: 0
-    }
-  }
+  return Promise.resolve({
+    attoCircles,
+    circles,
+    staticAttoCircles,
+    staticCircles,
+    attoCrc,
+    crc
+  });
 }
 
 export class CirclesData implements CirclesDataInterface {
@@ -213,27 +146,12 @@ export class CirclesData implements CirclesDataInterface {
    */
   getTransactionHistory(avatar: Address, pageSize: number): CirclesQuery<TransactionHistoryRow> {
     avatar = avatar.toLowerCase() as Address;
-    return new CirclesQuery<any>(this.rpc, {
+    return new CirclesQuery<TransactionHistoryRow>(this.rpc, {
       namespace: 'V_Crc',
-      table: 'Transfers',
+      table: 'TransferSummary',
       sortOrder: 'DESC',
       limit: pageSize,
-      columns: [
-        'blockNumber',
-        'timestamp',
-        'transactionIndex',
-        'logIndex',
-        'batchIndex',
-        'transactionHash',
-        'version',
-        'operator',
-        'from',
-        'to',
-        'id',
-        'value',
-        'type',
-        'tokenType'
-      ],
+      columns: [],
       filter: [
         {
           Type: 'Conjunction',
@@ -255,23 +173,23 @@ export class CirclesData implements CirclesDataInterface {
         }
       ]
     }, [{
-      name: "circles",
-      generator: async (row: TransactionHistoryRow) => calculateBalances(row).circles
+      name: 'circles',
+      generator: async (row, context) => context.getOrCreateMemo('conversions', () => calculateBalances(row)).then(o => o.circles)
     }, {
-      name: "attoCircles",
-      generator: async (row: TransactionHistoryRow) => calculateBalances(row).attoCircles
+      name: 'attoCircles',
+      generator: async (row, context) => context.getOrCreateMemo('conversions', () => calculateBalances(row)).then(o => o.attoCircles)
     }, {
-      name: "staticCircles",
-      generator: async (row: TransactionHistoryRow) => calculateBalances(row).staticCircles
+      name: 'staticCircles',
+      generator: async (row, context) => context.getOrCreateMemo('conversions', () => calculateBalances(row)).then(o => o.staticCircles)
     }, {
-      name: "staticAttoCircles",
-      generator: async (row: TransactionHistoryRow) => calculateBalances(row).staticAttoCircles
+      name: 'staticAttoCircles',
+      generator: async (row, context) => context.getOrCreateMemo('conversions', () => calculateBalances(row)).then(o => o.staticAttoCircles)
     }, {
-      name: "crc",
-      generator: async (row: TransactionHistoryRow) => calculateBalances(row).crc
+      name: 'crc',
+      generator: async (row, context) => context.getOrCreateMemo('conversions', () => calculateBalances(row)).then(o => o.crc)
     }, {
-      name: "attoCrc",
-      generator: async (row: TransactionHistoryRow) => calculateBalances(row).attoCrc
+      name: 'attoCrc',
+      generator: async (row, context) => context.getOrCreateMemo('conversions', () => calculateBalances(row)).then(o => o.attoCrc)
     }]);
   }
 
@@ -283,14 +201,14 @@ export class CirclesData implements CirclesDataInterface {
       sortOrder: 'DESC',
       limit: pageSize,
       columns: [
-        "blockNumber",
-        "timestamp",
-        "transactionIndex",
-        "logIndex",
-        "transactionHash",
-        "trustee",
-        "truster",
-        "expiryTime"
+        'blockNumber',
+        'timestamp',
+        'transactionIndex',
+        'logIndex',
+        'transactionHash',
+        'trustee',
+        'truster',
+        'expiryTime'
       ],
       filter: [
         {
@@ -505,27 +423,27 @@ export class CirclesData implements CirclesDataInterface {
       sortOrder: 'ASC',
       limit: 1000
     }, [{
-        name: 'isHuman',
-        generator: async (row: AvatarRow) => {
-          return row.type === "CrcV2_RegisterHuman" || row.type === "CrcV1_Signup";
-        }
-      },
-      {
-      name: 'cidV0',
+      name: 'isHuman',
       generator: async (row: AvatarRow) => {
-        try {
-          if (!row.cidV0Digest) {
+        return row.type === 'CrcV2_RegisterHuman' || row.type === 'CrcV1_Signup';
+      }
+    },
+      {
+        name: 'cidV0',
+        generator: async (row: AvatarRow) => {
+          try {
+            if (!row.cidV0Digest) {
+              return undefined;
+            }
+
+            const dataFromHexString = hexStringToUint8Array(row.cidV0Digest.substring(2));
+            return uint8ArrayToCidV0(dataFromHexString);
+          } catch (error) {
+            console.error('Failed to convert cidV0Digest to CIDv0 string:', error);
             return undefined;
           }
-
-          const dataFromHexString = hexStringToUint8Array(row.cidV0Digest.substring(2));
-          return uint8ArrayToCidV0(dataFromHexString);
-        } catch (error) {
-          console.error('Failed to convert cidV0Digest to CIDv0 string:', error);
-          return undefined;
         }
-      }
-    }]);
+      }]);
 
     const results: AvatarRow[] = [];
 
@@ -568,15 +486,15 @@ export class CirclesData implements CirclesDataInterface {
       namespace: 'V_Crc',
       table: 'Tokens',
       columns: [
-        "blockNumber",
-        "timestamp",
-        "transactionIndex",
-        "logIndex",
-        "transactionHash",
-        "version",
-        "type",
-        "token",
-        "tokenOwner"
+        'blockNumber',
+        'timestamp',
+        'transactionIndex',
+        'logIndex',
+        'transactionHash',
+        'version',
+        'type',
+        'token',
+        'tokenOwner'
       ],
       filter: [
         {
@@ -639,7 +557,7 @@ export class CirclesData implements CirclesDataInterface {
     // (mutual trust cannot exist in invitation state - to trust back, the avatar must be on v2 already)
     const v2Relations = await this.getAggregatedTrustRelations(avatar, 2);
     const v2Trusters = v2Relations
-      .filter(o => o.relation == "trustedBy")
+      .filter(o => o.relation == 'trustedBy')
       .map(o => o.objectAvatar);
 
     const humanInviters: AvatarRow[] = [];
@@ -721,7 +639,7 @@ export class CirclesData implements CirclesDataInterface {
         'memberCount',
         'trustedCount'
       ],
-      sortOrder: "DESC",
+      sortOrder: 'DESC',
       limit: pageSize
     };
 

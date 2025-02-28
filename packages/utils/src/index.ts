@@ -1,5 +1,5 @@
 import { BigNumber } from 'bignumber.js';
-import { ethers, parseEther } from 'ethers';
+import { ethers } from 'ethers';
 import multihash from 'multihashes';
 
 const CirclesInceptionTimestamp = new Date('2020-10-15T00:00:00.000Z').getTime();
@@ -36,10 +36,9 @@ function getCrcPayoutAt(timestamp: number): number {
  * @return The TC value of the transaction (as float).
  */
 export function crcToTc(timestamp: Date, amount: bigint): number {
-  const amountFloat = parseFloat(ethers.formatEther(amount ?? '0'));
-  const ts = timestamp.getTime();
-  const payoutAtTimestamp = getCrcPayoutAt(ts);
-  return amountFloat / payoutAtTimestamp * 24;
+  const amountCrc = new BigNumber(amount.toString()).shiftedBy(-18);
+  const payoutAtTimestamp = new BigNumber(getCrcPayoutAt(timestamp.getTime()));
+  return amountCrc.div(payoutAtTimestamp).times(24).toNumber();
 }
 
 /**
@@ -48,24 +47,27 @@ export function crcToTc(timestamp: Date, amount: bigint): number {
  * @param amount The TC value of the transaction.
  */
 export function tcToCrc(timestamp: Date, amount: number): bigint {
-  const ts = timestamp.getTime();
-  const payoutAtTimestamp = getCrcPayoutAt(ts);
-  return parseEther((amount / 24 * payoutAtTimestamp).toString());
+  const bnTc = new BigNumber(amount);
+  const payoutAtTimestamp = new BigNumber(getCrcPayoutAt(timestamp.getTime()));
+  const crcFloat = bnTc.times(payoutAtTimestamp).div(24);
+  const attoCrc = crcFloat.shiftedBy(18).integerValue(BigNumber.ROUND_FLOOR);
+  return BigInt(attoCrc.toFixed(0));
 }
 
 export function staticCirclesToCircles(value: number): number {
-  const lastUpdate = new Date();
-  const lastUpdateDay = (lastUpdate.getTime() - CirclesInceptionTimestamp) / 86400000;
-  const f = Math.pow(Beta, lastUpdateDay);
+  const now = new Date().getTime();
+  const daysSinceInception = (now - CirclesInceptionTimestamp) / 86400000;
+  const f = Math.pow(Beta, daysSinceInception);
   return value / f;
 }
 
 export function attoCirclesToCircles(weiBalance: bigint): number {
-  return parseFloat(ethers.formatEther(weiBalance.toString()));
+  return new BigNumber(weiBalance.toString()).shiftedBy(-18).toNumber();
 }
 
 export function circlesToAttoCircles(circlesBalance: number): bigint {
-  return BigInt(ethers.parseEther(circlesBalance.toFixed(18)).toString());
+  const val = new BigNumber(circlesBalance).shiftedBy(18).integerValue(BigNumber.ROUND_FLOOR);
+  return BigInt(val.toFixed(0));
 }
 
 export function staticCirclesToAttoCircles(value: number): bigint {
@@ -74,21 +76,21 @@ export function staticCirclesToAttoCircles(value: number): bigint {
 }
 
 export function staticAttoCirclesToAttoCircles(value: bigint): bigint {
-  const staticCircles = attoCirclesToCircles(value);
+  const staticCircles = new BigNumber(value.toString()).shiftedBy(-18).toNumber();
   return staticCirclesToAttoCircles(staticCircles);
 }
 
 export function circlesToStaticCircles(value: number): number {
-  const lastUpdate = new Date();
-  const lastUpdateDay = (lastUpdate.getTime() - CirclesInceptionTimestamp) / 86400000;
-  const f = Math.pow(Beta, lastUpdateDay);
+  const now = new Date().getTime();
+  const daysSinceInception = (now - CirclesInceptionTimestamp) / 86400000;
+  const f = Math.pow(Beta, daysSinceInception);
   return value * f;
 }
 
 export function attoCirclesToStaticAttoCircles(value: bigint): bigint {
-  const circles = attoCirclesToCircles(value);
-  const staticCircles = circlesToStaticCircles(circles);
-  return circlesToAttoCircles(staticCircles);
+  const circles = new BigNumber(value.toString()).shiftedBy(-18).toNumber();
+  const sc = circlesToStaticCircles(circles);
+  return circlesToAttoCircles(sc);
 }
 
 /**
