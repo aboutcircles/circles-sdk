@@ -54,6 +54,7 @@ export class ComethSdkContractRunner implements SdkContractRunner {
       value: tx.value.toString(),
       data: tx.data
     });
+
     const txPending = await provider.getTransaction(sendTxResponse.safeTxHash);
     const txReceipt = await txPending.wait();
     return {
@@ -96,6 +97,7 @@ export class ComethBatchRun implements BatchRun {
       value: tx.value.toString(),
       data: tx.data
     }));
+
     const batchTxResponse = await this.comethWallet.sendBatchTransactions(metaTransactions);
     const txPending = await provider.getTransaction(batchTxResponse.safeTxHash);
     const txReceipt = await txPending.wait();

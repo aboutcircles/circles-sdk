@@ -225,7 +225,75 @@ export const errorAbis = [
   'error CirclesMigrationAmountMustBeGreaterThanZero()',
   'error InflationaryCirclesOperatorOnlyActOnBalancesOfSender(address sender, address from)',
   'error CirclesOperatorInvalidStreamSource(uint256 streamIndex, uint256 singleSourceCoordinate, uint256 streamSourceCoordinate)',
-  'error CirclesStandardTreasuryRedemptionCollateralMismatch(uint256 circlesId, uint256[] redemptionIds, uint256[] redemptionValues, uint256[] burnIds, uint256[] burnValues)'
+  'error CirclesStandardTreasuryRedemptionCollateralMismatch(uint256 circlesId, uint256[] redemptionIds, uint256[] redemptionValues, uint256[] burnIds, uint256[] burnValues)',
+  'error ERC2612ExpiredSignature(uint256 deadline)',
+  'error ERC2612InvalidSigner(address signer, address owner)',
+  // Circles Group operator contracts errors
+  'error SupergroupProxyAlreadyInitialised()',
+  'error SupergroupOnlyHub()',
+  'error SupergroupOnlyOwner()',
+  'error SupergroupOnlyOwnerOrService()',
+  'error SupergroupOnlyAuthorizedOperator()',
+  'error SupergroupMustBeRegistered()',
+  'error SupergroupMustUseStandardTreasury()',
+  'error SupergroupInvalidCallingParameters()',
+  'error SupergroupBlockNormalERC1155Transfers()',
+  'error SupergroupAlwaysBlockUntrustedIds()',
+  'error SupergroupInvalidOperator(address operator)',
+  'error SupergroupMustHaveOperatorsActivated()',
+  'error SupergroupLogicAssertion()',
+  'error SupergroupOperatorRequestInProgress()',
+  'error SupergroupFingerprintUnderflow()',
+  'error SupergroupOperatorUnservicedGroup(address group)',
+  'error SupergroupOperatorNotAuthorizedAndAuthorizationRequired(address group)',
+  'error SupergroupOperatorDoesNotImplement()',
+  'error ExpectationAlreadySet(bytes32 expectation)',
+  'error NoExpectationSet()',
+  'error ExpectationMismatch(bytes32 expected, bytes32 actual)',
+  'error ExpectationSingleReceiveOnlySupergroupId(uint256 id)',
+  'error CMGroupProxyAlreadyInitialised()',
+  'error CMGroupOnlyHub()',
+  'error CMGroupOnlyHubOrTreasury()',
+  'error CMGroupOnlyOwner()',
+  'error CMGroupMembershipCheckFailed(address avatar, address failedCondition)',
+  'error CMGroupMaxConditionsActive(uint256 conditionsActive)',
+  'error CMGroupOnlyOwnerOrService()',
+  'error CMGroupInteractionAmountIsBelowMinimum(uint256 id, uint256 receivedAmount, uint256 minimalAmount)',
+  'error CMGroupInvalidCallingParameters()',
+  'error CMGHandlerOnlyHub()',
+  'error CMGHandlerOnlyCMGroup()',
+  'error CMGHandlerOnlyOwner()',
+  'error CMGHandlerAcceptanceCallUnhandled()',
+  'error CGMHandlerOperatorUnservicedGroup(address group)',
+  'error CMGHandlerRefuseGroupCircles()',
+  'error CMGHandlerConversionOngoing(uint256 amount)',
+  'error CMGHandlerNoConversionExpected()',
+  'error CMGHandlerReceivedZeroAmount()',
+  'error CGMHandlerRedemptionExpectedFromVault(address from)',
+  'error CGMHandlerDataHashMismatchUponReceiving(bytes32 expectedDataHash, bytes receivedData)',
+  'error CMGHandlerVaultNotFound(address group)',
+  'error CMGHandlerCouldNotFillRedemptionRequest()',
+  'error CMGHandlerEarlyRevertCollateralNotPresent()',
+  'error CMGHandlerOnlyTransferOwnCircles()',
+  'error CMGHandlerInvalidCallingParameters()',
+  'error CMGHandlerLogicAssertion()',
+  'error CMGPrimaryGroupMustBeHumanAndGroupToRegisterPrimaryGroup(address human, address group)',
+  // Liquidity bootstrapping pool factory errors
+  'error OnlyFactory()',
+  'error OrderNotFilledYet()',
+  'error AlreadyCreated()',
+  'error InsufficientBackingAssetBalance()',
+  'error NotBacker()',
+  'error TokensLockedUntilTimestamp(uint256 timestamp)',
+  'error OnlyHub()',
+  'error NotExactlyRequiredCRCAmount(uint256 required, uint256 received)',
+  'error OnlyHumanAvatarsAreSupported()',
+  'error BackingInFavorDissalowed()',
+  'error UnsupportedBackingAsset(address requestedAsset)',
+  'error CirclesBackingDeploymentFailed(address backer)',
+  'error OnlyCirclesBacking()',
+  'error NotAdmin()',
+  'error OnlyTwoTokenLBPSupported()'
 ];
 
 const errorInterface = new ethers.Interface(errorAbis);
@@ -237,6 +305,47 @@ export function parseError(errorData: string): ethers.ErrorDescription | null {
   } catch (error) {
     throw new Error(`Error decoding the revert data: ${error}. Original error data: ${errorData}`);
   }
+}
+
+function getCustomErrorFragment(errorText: string) {
+  const abi = [
+      "error Error(string)"
+  ];
+  
+  const iface = new ethers.Interface(abi);
+  const errorFragment = iface.getError("Error");
+  const encodedError = iface.encodeErrorResult("Error", [errorText]);
+  const decodedError = iface.decodeErrorResult("Error", encodedError);
+  
+  return {
+      fragment: errorFragment,
+      name: errorFragment?.name,
+      args: decodedError,
+      signature: errorFragment?.format(),
+      selector: iface.getFunction("Error")?.selector
+  };
+}
+
+
+export function handleTransactionError(e: any): never {
+  console.log(e);
+  // handle when data is null
+  if (e.data) {
+    const parsedError = parseError(e.data);
+    if (parsedError) {
+      const bigIntReplacer = (key: string, value: any) => {
+        if (typeof value === 'bigint') {
+          return value.toString();
+        }
+        return value;
+      };
+      throw new Error(JSON.stringify(parsedError, bigIntReplacer, 2));
+    }
+  } else if (!e.data && e.info?.error?.message) {
+    throw new Error(JSON.stringify(getCustomErrorFragment(e.info.error.message), null, 2));
+  }
+
+  throw new Error(JSON.stringify(getCustomErrorFragment("Unknown"), null, 2));
 }
 
 export type { Address } from './type';

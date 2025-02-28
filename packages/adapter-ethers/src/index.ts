@@ -12,7 +12,7 @@ import {
   TransactionRequest as SdkTransactionRequest, TransactionResponse,
   TransactionResponse as SdkTransactionResponse
 } from '@circles-sdk/adapter';
-import { Address, parseError } from '@circles-sdk/utils';
+import { Address, handleTransactionError } from '@circles-sdk/utils';
 
 export abstract class EthersContractRunner implements SdkContractRunner {
   sendBatchTransaction?: (() => BatchRun) | undefined;
@@ -25,26 +25,6 @@ export abstract class EthersContractRunner implements SdkContractRunner {
 
   abstract init(): Promise<void>;
 }
-
-function handleTransactionError(e: any): never {
-  if (e.data) {
-    const parsedError = parseError(e.data);
-    if (parsedError) {
-      const bigIntReplacer = (key: string, value: any) => {
-        if (typeof value === 'bigint') {
-          return value.toString();
-        }
-        return value;
-      };
-      throw new Error(JSON.stringify(parsedError, bigIntReplacer, 2));
-    } else {
-      throw e;
-    }
-  } else {
-    throw e;
-  }
-}
-
 
 export class PrivateKeyContractRunner implements EthersContractRunner {
   constructor(public provider: Provider, private privateKey: string) {
@@ -126,11 +106,16 @@ export class BrowserProviderBatchRun implements BatchRun {
   }
 
   async run() {
-    const signer = await this.provider.getSigner();
+    const signer = await (<BrowserProvider>this.provider).getSigner();
+
     let lastReceipt: TransactionReceipt | null = null;
     for (const tx of this.transactions) {
-      const txResponse = await signer.sendTransaction(tx);
-      lastReceipt = await txResponse.wait();
+      try {
+        const txResponse = await signer.sendTransaction(tx);
+        lastReceipt = await txResponse.wait();
+      } catch (error) {
+        handleTransactionError(error);
+      }
     }
     return <TransactionResponse><unknown>lastReceipt;
   }

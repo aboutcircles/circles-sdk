@@ -6,7 +6,7 @@ import {
 import Safe, {SafeConfig} from "@safe-global/protocol-kit";
 import {BrowserProvider, Eip1193Provider, ethers, Provider} from "ethers";
 import {MetaTransaction, OperationType} from "ethers-multisend";
-import { Address } from '@circles-sdk/utils';
+import { Address, handleTransactionError } from '@circles-sdk/utils';
 
 export class SafeSdkPrivateKeyContractRunner implements SdkContractRunner {
   address?: Address;
@@ -44,7 +44,10 @@ export class SafeSdkPrivateKeyContractRunner implements SdkContractRunner {
         data: tx.data
       }]
     });
-    const txResponse = await this.safe.executeTransaction(txs);
+    const txResponse = await this.safe.executeTransaction(txs)
+      .catch(error => {
+        handleTransactionError(error)
+      });
     return <SdkTransactionResponse><unknown>txResponse.transactionResponse;
   };
   sendBatchTransaction?: () => BatchRun = () => {
@@ -97,7 +100,11 @@ export class SafeSdkBrowserContractRunner implements SdkContractRunner {
         data: tx.data
       }]
     });
-    const txResponse = await this.safe.executeTransaction(txs);
+
+    const txResponse = await this.safe.executeTransaction(txs)
+      .catch(error => {
+        handleTransactionError(error)
+      });
     return <SdkTransactionResponse><unknown>txResponse.transactionResponse;
   };
   sendBatchTransaction?: () => BatchRun = () => {
@@ -131,7 +138,11 @@ export class SafeBatchRun implements BatchRun {
     const tx = await this.safe.createTransaction({
       transactions: metaTransactions
     });
-    const txReceipt = await this.safe.executeTransaction(tx);
+    const txReceipt = await this.safe.executeTransaction(tx)
+      .catch(error => {
+        handleTransactionError(error);
+      });
+
     if (!txReceipt) {
       throw new Error("Transaction failed");
     }
