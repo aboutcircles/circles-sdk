@@ -151,7 +151,7 @@ export class Avatar implements AvatarInterfaceV2 {
   private async isCoreMembersGroup(avatar: Address): Promise<boolean> {
     const results = await this._sdk.data.getCreatedCMGroups(1, avatar);
 
-    return results.length > 0 ? true : false;
+    return results.length > 0;
   }
 
   /**
