@@ -10,4 +10,5 @@ export interface CirclesConfig {
   readonly migrationAddress?: Address;
   readonly baseGroupMintPolicy?: string;
   readonly standardTreasury?: string;
+  readonly coreMembersGroupDeployer?: string;
 }
