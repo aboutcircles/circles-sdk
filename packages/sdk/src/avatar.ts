@@ -203,22 +203,20 @@ export class Avatar implements AvatarInterfaceV2 {
 
   /**
    * Trusts another avatar. Trusting an avatar means you're willing to accept Circles that have been issued by this avatar.
-   * This method has two overloads:
-   * - If only `avatarAddress` is provided, it trusts the specified avatar(s).
-   * - (Only for core members group avatars) If `expiry` is provided, it sets an expiration time for the trust relationship.
    * 
+   * This method has two modes:
+   * - Basic trust: Pass only `avatarAddress` to trust the specified avatar(s)
+   * - Timed trust: (Only for core members group avatars) Include `expiry` to set a time limit on trust
+   *
    * @param avatarAddress The address of the avatar to trust. Can be a single address or an array of addresses.
    * @param expiry (Optional) The expiration time of the trust relationship in Unix timestamp format.
-   * @returns A `TransactionResponse`, or `ContractTransactionReceipt` if the avatar is a core members group.
+   * @returns TransactionResponse
    */
-  trust(avatarAddress: Address | Address[]): Promise<TransactionResponse>;
-  trust(avatarAddress: Address, expiry: bigint): Promise<TransactionResponse>;
   trust(avatarAddress: Address | Address[], expiry?: bigint): Promise<TransactionResponse> {
-    if(expiry !== undefined && !Array.isArray(avatarAddress)) {
+    if(this._isCoreMembersGroupAvatar) {
       return this.onlyIfCoreMembersGroup((avatar) => avatar!.trust(avatarAddress, expiry));
-    } else {
-      return this.onlyIfInitialized(() => this._avatar!.trust(avatarAddress));
     }
+    return this.onlyIfInitialized(() => this._avatar!.trust(avatarAddress));
   }
 
   /**

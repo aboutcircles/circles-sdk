@@ -44,9 +44,6 @@ export class CMGAvatar implements AvatarInterfaceV2 {
     }
   }
 
-  // @notice function overloading is used for compatibility with AvatarInterfaceV2
-  async trust(avatar: Address | Address[]): Promise<TransactionResponse>;
-  async trust(avatar: Address, expiry: bigint): Promise<TransactionResponse>;
   async trust(avatar: Address | Address[], expiry?: bigint): Promise<TransactionResponse> {
     expiry = BigInt(expiry || 0);
 
