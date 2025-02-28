@@ -4,6 +4,8 @@ import { Pathfinder } from './v1/pathfinder';
 import { AvatarInterface } from './AvatarInterface';
 import { Hub as HubV1, Hub__factory as HubV1Factory, Token__factory } from '@circles-sdk/abi-v1';
 import {
+  CMGroupDeployer,
+  CMGroupDeployer__factory,
   DemurrageCircles,
   DemurrageCircles__factory,
   Hub as HubV2,
@@ -56,6 +58,10 @@ interface SdkInterface {
    * An instance of the v2 Pathfinder client.
    */
   v2Pathfinder?: V2Pathfinder;
+  /**
+   * An instance of the v2 Core Members Group deployer.
+   */
+  coreMembersGroupDeployer?: CMGroupDeployer;
   /**
    * Stores and retrieves profiles from the Circles profile service.
    */
@@ -153,6 +159,10 @@ export class Sdk implements SdkInterface {
    */
   readonly v2Pathfinder: V2Pathfinder;
   /**
+   * The Core Members Group deployer (v2).
+   */
+  readonly coreMembersGroupDeployer?: CMGroupDeployer;
+  /**
    * The profiles service client.
    */
   readonly profiles?: Profiles;
@@ -193,6 +203,9 @@ export class Sdk implements SdkInterface {
     }
     if (this.circlesConfig.profileServiceUrl) {
       this.profiles = new Profiles(this.circlesConfig.profileServiceUrl);
+    }
+    if (this.circlesConfig.coreMembersGroupDeployer) {
+      this.coreMembersGroupDeployer = CMGroupDeployer__factory.connect(this.circlesConfig.coreMembersGroupDeployer, <ContractRunner>this.contractRunner);
     }
   }
 

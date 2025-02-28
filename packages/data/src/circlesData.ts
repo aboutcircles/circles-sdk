@@ -1,31 +1,45 @@
+// Core Utilities and SDK Imports
+import { CirclesRpc } from './circlesRpc';
+import { CirclesDataInterface, GroupQueryParams } from './circlesDataInterface';
+import { Observable } from './observable';
+
+// Paged Queries
 import { CirclesQuery } from './pagedQuery/circlesQuery';
+import { PagedQueryParams } from './pagedQuery/pagedQueryParams';
+
+// Event Handling
+import { CirclesEvent } from './events/events';
+import { parseRpcSubscriptionMessage, RcpSubscriptionEvent } from './events/parser';
+
+// Rows - Data Models
+import { AvatarRow } from './rows/avatarRow';
 import { TransactionHistoryRow } from './rows/transactionHistoryRow';
 import { TrustListRow } from './rows/trustListRow';
 import { TokenBalanceRow } from './rows/tokenBalanceRow';
-import { CirclesRpc } from './circlesRpc';
-import { AvatarRow } from './rows/avatarRow';
-import {
-  Address,
-  attoCirclesToCircles,
-  attoCirclesToStaticAttoCircles, circlesToAttoCircles,
-  crcToTc,
-  hexStringToUint8Array, staticAttoCirclesToAttoCircles,
-  tcToCrc,
-  uint8ArrayToCidV0
-} from '@circles-sdk/utils';
 import { TrustRelation, TrustRelationRow } from './rows/trustRelationRow';
-import { CirclesDataInterface, GroupQueryParams } from './circlesDataInterface';
-import { Observable } from './observable';
-import { CirclesEvent } from './events/events';
+import { CoreMembersGroupRow } from './rows/coreMembersGroupRow';
 import { InvitationRow } from './rows/invitationRow';
-import { PagedQueryParams } from './pagedQuery/pagedQueryParams';
-import { Filter } from './rpcSchema/filter';
 import { GroupMembershipRow } from './rows/groupMembershipRow';
 import { GroupRow } from './rows/groupRow';
 import { TokenInfoRow } from './rows/tokenInfoRow';
-import { parseRpcSubscriptionMessage, RcpSubscriptionEvent } from './events/parser';
-import { FilterPredicate } from "./rpcSchema/filterPredicate";
 import { EventRow } from "./pagedQuery/eventRow";
+
+// Filtering and Schema Definitions
+import { Filter } from './rpcSchema/filter';
+import { FilterPredicate } from "./rpcSchema/filterPredicate";
+
+// Utility Functions and Type Definitions
+import { 
+  Address,
+  attoCirclesToCircles,
+  attoCirclesToStaticAttoCircles,
+  circlesToAttoCircles,
+  crcToTc,
+  hexStringToUint8Array,
+  staticAttoCirclesToAttoCircles,
+  tcToCrc,
+  uint8ArrayToCidV0
+} from '@circles-sdk/utils';
 
 export type TrustEvent = {
   blockNumber: number;
@@ -592,6 +606,57 @@ export class CirclesData implements CirclesDataInterface {
 
     return await circlesQuery.getSingleRow();
   }
+
+  /**
+   * Gets data about created core members groups by a specific group proxy contract.
+   * @param pageSize The maximum number of groups per page.
+   * @param proxy Optional address of the group proxy to filter by.
+   * @returns A CirclesQuery object with the group creation data.
+   */
+  async getCreatedCMGroups(pageSize: number, proxy?: Address): Promise<CoreMembersGroupRow[]> {
+    const filter: Filter[] = [];
+    
+    if (proxy) {
+      proxy = proxy.toLowerCase() as Address;
+      filter.push({
+        Type: 'FilterPredicate',
+        FilterType: 'Equals',
+        Column: 'proxy',
+        Value: proxy
+      });
+    }
+  
+    const query = new CirclesQuery(this.rpc, {
+      namespace: 'CrcV2',
+      table: 'CMGroupCreated',
+      columns: [
+        'blockNumber',
+        'timestamp',
+        'transactionIndex',
+        'logIndex',
+        'transactionHash',
+        'proxy',
+        'owner',
+        'mintHandler',
+        'redemptionHandler'
+      ],
+      filter: filter,
+      sortOrder: 'DESC',
+      limit: pageSize
+    });
+  
+    const results: any[] = [];
+  
+    while (await query.queryNextPage()) {
+      const resultRows = query.currentPage?.results ?? [];
+      if (resultRows.length === 0) break;
+      results.push(...resultRows);
+      if (resultRows.length < pageSize) break;
+    }
+  
+    return results;
+  }
+  
 
   /**
    * Subscribes to Circles events.

@@ -3,3 +3,5 @@ src/migration/**
 src/nameRegistry/**
 src/demurrageCircles/**
 src/inflationaryCircles/**
+src/coreMembersGroup/**
+src/coreMembersGroupDeployer/**
