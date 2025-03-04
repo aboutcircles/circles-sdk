@@ -16,8 +16,6 @@ import { AvatarRow } from './rows/avatarRow';
 import { TransactionHistoryRow } from './rows/transactionHistoryRow';
 import { TrustListRow } from './rows/trustListRow';
 import { TokenBalanceRow } from './rows/tokenBalanceRow';
-import { CirclesRpc } from './circlesRpc';
-import { AvatarRow } from './rows/avatarRow';
 import {
   Address,
   attoCirclesToCircles,
@@ -30,26 +28,11 @@ import { InvitationRow } from './rows/invitationRow';
 import { GroupMembershipRow } from './rows/groupMembershipRow';
 import { GroupRow } from './rows/groupRow';
 import { TokenInfoRow } from './rows/tokenInfoRow';
-import { parseRpcSubscriptionMessage, RcpSubscriptionEvent } from './events/parser';
-import { FilterPredicate } from './rpcSchema/filterPredicate';
 import { EventRow } from './pagedQuery/eventRow';
 
 // Filtering and Schema Definitions
 import { Filter } from './rpcSchema/filter';
 import { FilterPredicate } from "./rpcSchema/filterPredicate";
-
-// Utility Functions and Type Definitions
-import { 
-  Address,
-  attoCirclesToCircles,
-  attoCirclesToStaticAttoCircles,
-  circlesToAttoCircles,
-  crcToTc,
-  hexStringToUint8Array,
-  staticAttoCirclesToAttoCircles,
-  tcToCrc,
-  uint8ArrayToCidV0
-} from '@circles-sdk/utils';
 
 export type TrustEvent = {
   blockNumber: number;
