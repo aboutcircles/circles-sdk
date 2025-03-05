@@ -384,4 +384,25 @@ export class Avatar implements AvatarInterfaceV2 {
    * @returns Set of addresses representing membership conditions.
    */
   getMembershipConditions = (): Promise<Address[]> => this.onlyIfCoreMembersGroup((avatar) => avatar.getMembershipConditions());
+
+  /**
+   * Sets the service address for the group contract.
+   * @param service The new service address to be set.
+   * @returns A promise resolving to the transaction receipt.
+   */
+  setService = (service: Address): Promise<ContractTransactionReceipt> => this.onlyIfCoreMembersGroup((avatar) => avatar.setService(service));
+
+  /**
+   * Assigns a new mint handler responsible for mint operations.
+   * @param mintHandler The address of the new mint handler.
+   * @returns A promise resolving to the transaction receipt.
+   */
+  setMintHandler = (mintHandler: Address): Promise<ContractTransactionReceipt> => this.onlyIfCoreMembersGroup((avatar) => avatar.setMintHandler(mintHandler));
+
+  /**
+   * Assigns a new redemption handler responsible for handling redemptions.
+   * @param redemptionHandler The address of the new redemption handler.
+   * @returns A promise resolving to the transaction receipt.
+   */
+  setRedemptionHandler = (redemptionHandler: Address): Promise<ContractTransactionReceipt> => this.onlyIfCoreMembersGroup((avatar) => avatar.setRedemptionHandler(redemptionHandler));
 }

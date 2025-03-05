@@ -174,6 +174,36 @@ export class CMGAvatar implements AvatarInterfaceV2 {
     return 0n;
   }
 
+  async setService(service: Address): Promise<ContractTransactionReceipt> {
+    const tx = await this.coreMemberGroup.setService(service);
+    const receipt = await tx.wait();
+    if (!receipt) {
+      throw new Error('Updating service failed');
+    }
+
+    return receipt;
+  }
+
+  async setMintHandler(mintHandler: Address): Promise<ContractTransactionReceipt> {
+    const tx = await this.coreMemberGroup.setMintHandler(mintHandler);
+    const receipt = await tx.wait();
+    if (!receipt) {
+      throw new Error('Updating group mint handler failed');
+    }
+
+    return receipt;
+  }
+
+  async setRedemptionHandler(service: Address): Promise<ContractTransactionReceipt> {
+    const tx = await this.coreMemberGroup.setRedemptionHandler(service);
+    const receipt = await tx.wait();
+    if (!receipt) {
+      throw new Error('Updating group redemption handler failed');
+    }
+
+    return receipt;
+  }
+
   async getTransactionHistory(pageSize: number): Promise<CirclesQuery<TransactionHistoryRow>> {
     const query = this.sdk.data.getTransactionHistory(this.address, pageSize);
     await query.queryNextPage();
