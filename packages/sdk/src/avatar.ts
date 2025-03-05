@@ -391,4 +391,18 @@ export class Avatar implements AvatarInterfaceV2 {
    * @returns A promise resolving to the transaction receipt.
    */
   setRedemptionHandler = (redemptionHandler: Address): Promise<ContractTransactionReceipt> => this.onlyIfCoreMembersGroup((avatar) => avatar.setRedemptionHandler(redemptionHandler));
+
+  /**
+   * Sets the minimal deposit required for the group mint.
+   * @param minimalDeposit The amount representing the minimal deposit requirement.
+   * @returns A promise resolving to the transaction receipt.
+   */
+  setMinimalDeposit = (minimalDeposit: bigint): Promise<ContractTransactionReceipt> => this.onlyIfCoreMembersGroup((avatar) => avatar.setMinimalDeposit(minimalDeposit));
+
+  /**
+   * Assigns a new address for fee collection.
+   * @param feeCollection The address of the new fee collection entity.
+   * @returns A promise resolving to the transaction receipt.
+   */
+  setFeeCollection = (feeCollection: Address): Promise<ContractTransactionReceipt> => this.onlyIfCoreMembersGroup((avatar) => avatar.setFeeCollection(feeCollection));
 }

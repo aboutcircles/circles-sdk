@@ -189,6 +189,26 @@ export class CMGAvatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
+  async setMinimalDeposit(minimalDeposit: bigint): Promise<ContractTransactionReceipt> {
+    const tx = await this.coreMemberGroup.setMinimalDeposit(minimalDeposit);
+    const receipt = await tx.wait();
+    if (!receipt) {
+      throw new Error('Updating minimal deposit failed');
+    }
+
+    return receipt;
+  }
+
+  async setFeeCollection(feeCollection: Address): Promise<ContractTransactionReceipt> {
+    const tx = await this.coreMemberGroup.setFeeCollection(feeCollection);
+    const receipt = await tx.wait();
+    if (!receipt) {
+      throw new Error('Updating fee collection failed');
+    }
+
+    return receipt;
+  }
+
   async getTransactionHistory(pageSize: number): Promise<CirclesQuery<TransactionHistoryRow>> {
     const query = this.sdk.data.getTransactionHistory(this.address, pageSize);
     await query.queryNextPage();
