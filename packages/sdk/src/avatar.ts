@@ -319,6 +319,7 @@ export class Avatar implements AvatarInterfaceV2 {
   /**
    * Updates the avatar's metadata (profile).
    * @param cid The IPFS content identifier of the metadata (Qm....).
+   * @returns The transaction receipt confirming the update.
    */
   updateMetadata = (cid: string): Promise<ContractTransactionReceipt> => this.onlyIfV2((_avatar) => _avatar.updateMetadata(cid));
 
@@ -341,13 +342,6 @@ export class Avatar implements AvatarInterfaceV2 {
   getTotalSupply = (): Promise<bigint> => this.onlyIfInitialized(() => this._avatar!.getTotalSupply());
 
   /// Methods for CMGAvatar
-
-  /**
-   * Updates the group avatar's metadata digest.
-   * @param metadataDigest The new metadata digest (CID) to update.
-   * @returns The transaction receipt confirming the update.
-   */
-  updateMetadataDigest = (metadataDigest: string): Promise<ContractTransactionReceipt> => this.onlyIfCoreMembersGroup((avatar) => avatar.updateMetadataDigest(metadataDigest));
 
   /**
    * Retrieves the owner of the group.

@@ -96,19 +96,6 @@ export class CMGAvatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  async updateMetadataDigest(metadataDigest: string): Promise<ContractTransactionReceipt> {
-    const digest = cidV0ToUint8Array(metadataDigest);
-    const tx = await this.coreMemberGroup.updateMetadataDigest(digest);
-    const receipt = await tx.wait();
-    if (!receipt) {
-      throw new Error('Updating Metadata Digest failed');
-    }
-
-    this.avatarInfo.cidV0 = metadataDigest;
-
-    return receipt;
-  }
-
   owner(): Promise<Address> {
     return this.coreMemberGroup.owner() as Promise<Address>;
   }
@@ -142,13 +129,11 @@ export class CMGAvatar implements AvatarInterfaceV2 {
   }
 
   async updateMetadata(cid: string): Promise<ContractTransactionReceipt> {
-    this.throwIfNameRegistryIsNotAvailable();
-
     const digest = cidV0ToUint8Array(cid);
-    const tx = await this.sdk.nameRegistry?.updateMetadataDigest(digest);
+    const tx = await this.coreMemberGroup.updateMetadataDigest(digest);
     const receipt = await tx?.wait();
     if (!receipt) {
-      throw new Error('Transfer failed');
+      throw new Error('Updating Metadata Digest failed');
     }
 
     this.avatarInfo.cidV0 = cid;
@@ -306,12 +291,6 @@ export class CMGAvatar implements AvatarInterfaceV2 {
   private throwIfV2IsNotAvailable() {
     if (!this.sdk.circlesConfig.v2HubAddress) {
       throw new Error('V2 is not available');
-    }
-  }
-
-  private throwIfNameRegistryIsNotAvailable() {
-    if (!this.sdk.nameRegistry) {
-      throw new Error('Name registry is not available');
     }
   }
 
