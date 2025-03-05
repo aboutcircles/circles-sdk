@@ -1,6 +1,10 @@
 // Core Utilities and SDK Imports
 import { CirclesRpc } from './circlesRpc';
-import { CirclesDataInterface, GroupQueryParams } from './circlesDataInterface';
+import {
+  CirclesDataInterface,
+  CMGroupQueryParams,
+  GroupQueryParams
+} from './circlesDataInterface';
 import { Observable } from './observable';
 
 // Paged Queries
@@ -524,23 +528,13 @@ export class CirclesData implements CirclesDataInterface {
   /**
    * Gets data about created core members groups by a specific group proxy contract.
    * @param pageSize The maximum number of groups per page.
-   * @param proxy Optional address of the group proxy to filter by.
+   * @param params Optional query parameters to filter the core members groups.
    * @returns A CirclesQuery object with the group creation data.
    */
-  async getCreatedCMGroups(pageSize: number, proxy?: Address): Promise<CoreMembersGroupRow[]> {
-    const filter: Filter[] = [];
-    
-    if (proxy) {
-      proxy = proxy.toLowerCase() as Address;
-      filter.push({
-        Type: 'FilterPredicate',
-        FilterType: 'Equals',
-        Column: 'proxy',
-        Value: proxy
-      });
-    }
-  
-    const query = new CirclesQuery(this.rpc, {
+  async getCreatedCMGroups(pageSize: number, params?: CMGroupQueryParams): Promise<CoreMembersGroupRow[]> {
+    let filter: Filter[] = [];
+
+    const queryDefintion: PagedQueryParams = {
       namespace: 'CrcV2',
       table: 'CMGroupCreated',
       columns: [
@@ -557,7 +551,39 @@ export class CirclesData implements CirclesDataInterface {
       filter: filter,
       sortOrder: 'DESC',
       limit: pageSize
-    });
+    };
+
+    if (params?.ownerEquals) {
+      filter.push({
+        Type: 'FilterPredicate',
+        FilterType: 'Equals',
+        Column: 'owner',
+        Value: params.ownerEquals
+      });
+    }
+
+    if (params?.groupProxyAddressIn) {
+      filter.push({
+        Type: 'FilterPredicate',
+        FilterType: 'In',
+        Column: 'proxy',
+        Value: params.groupProxyAddressIn
+      });
+    }
+
+    if (filter.length > 1) {
+      filter = [{
+        Type: 'Conjunction',
+        Predicates: filter,
+        ConjunctionType: 'And'
+      }];
+    }
+
+    if(filter.length) {
+      queryDefintion.filter = filter;
+    }
+
+    const query = new CirclesQuery(this.rpc, queryDefintion);
   
     const results: any[] = [];
   
@@ -571,7 +597,6 @@ export class CirclesData implements CirclesDataInterface {
     return results;
   }
   
-
   /**
    * Subscribes to Circles events.
    * @param avatar The avatar to subscribe to. If not provided, all events are subscribed to.
