@@ -94,7 +94,7 @@ export class Avatar implements AvatarInterfaceV2 {
     const v2Person = () => new V2Avatar(this._sdk, this._avatarInfo!);
     const CMGroup = () => new CMGAvatar(this._sdk, this._avatarInfo!)
 
-    this._isCoreMembersGroupAvatar = await this.isCoreMembersGroup(this.address);
+    this._isCoreMembersGroupAvatar = await this._sdk.isCoreMembersGroup(this.address);
 
     switch (version) {
       case 1:
@@ -146,14 +146,6 @@ export class Avatar implements AvatarInterfaceV2 {
       throw new Error('CoreMembersGroup avatar is not initialized or is not a v2 avatar');
     }
     return func(<CMGAvatar>this._avatar);
-  }
-
-  private async isCoreMembersGroup(avatar: Address): Promise<boolean> {
-    const results = await this._sdk.data.getCreatedCMGroups(1, {
-      ownerEquals: avatar
-    });
-
-    return results.length > 0;
   }
 
   /**
