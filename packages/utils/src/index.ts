@@ -150,6 +150,16 @@ export function hexStringToUint8Array(hexString: string) {
   return new Uint8Array(bytes);
 }
 
+/**
+ * Converts a string to a Uint8Array.
+ * @param {string} str - The string to convert.
+ * @returns {Uint8Array} - The resulting Uint8Array.
+ */
+export function stringToUint8Array(str: string): Uint8Array {
+  const encoder = new TextEncoder();
+  return encoder.encode(str);
+}
+
 export function addressToUInt256(address: string): bigint {
   // Remove the '0x' prefix if it exists
   if (address.startsWith('0x')) {

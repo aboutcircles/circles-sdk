@@ -41,9 +41,10 @@ export interface AvatarInterface {
    *
    * @param to The address of the avatar to transfer to.
    * @param amount The amount to transfer.
+   * @param txData The data to send with the transaction.
    * @param token The token to transfer (address). Leave empty to allow transitive transfers.
    */
-  transfer(to: Address, amount: bigint, token?: Address): Promise<TransactionReceipt>;
+  transfer(to: Address, amount: bigint, token?: Address, txData?: Uint8Array): Promise<TransactionReceipt>;
 
   /**
    * Trusts another avatar. Trusting an avatar means you're willing to accept Circles that have been issued by this avatar.

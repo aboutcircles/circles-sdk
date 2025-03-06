@@ -14,7 +14,12 @@ import {
   TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
-import {Address, addressToUInt256, attoCirclesToCircles, cidV0ToUint8Array} from '@circles-sdk/utils';
+import {
+  Address,
+  addressToUInt256,
+  attoCirclesToCircles,
+  cidV0ToUint8Array
+} from '@circles-sdk/utils';
 import {Profile} from "@circles-sdk/profiles";
 import {TokenType} from "@circles-sdk/data/dist/rows/tokenInfoRow";
 import {BatchRun, TransactionRequest, TransactionResponse} from "@circles-sdk/adapter";
@@ -166,7 +171,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
     batch.addTransaction(personalMintTx);
   }
 
-  private async directTransfer(to: Address, amount: bigint, tokenAddress: Address): Promise<TransactionReceipt> {
+  private async directTransfer(to: Address, amount: bigint, tokenAddress: Address, txData?: Uint8Array): Promise<TransactionReceipt> {
     const tokenInf = await this.sdk.data.getTokenInfo(tokenAddress);
     console.log(`Direct transfer - of: ${amount} - tokenId: ${tokenInf?.token} - to: ${to}`);
     if (!tokenInf) {
@@ -177,7 +182,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
     const erc20Types = new Set<TokenType>(['CrcV2_ERC20WrapperDeployed_Demurraged', 'CrcV2_ERC20WrapperDeployed_Inflationary', 'CrcV1_Signup']);
 
     if (erc1155Types.has(tokenInf.type)) {
-      return await this.transferErc1155(tokenAddress, to, amount);
+      return await this.transferErc1155(tokenAddress, to, amount, txData);
     } else if (erc20Types.has(tokenInf.type)) {
       return <TransactionReceipt><unknown>await this.transferErc20(to, amount, tokenAddress);
     }
@@ -199,15 +204,16 @@ export class V2Avatar implements AvatarInterfaceV2 {
     });
   }
 
-  private async transferErc1155(tokenAddress: Address, to: Address, amount: bigint) {
+  private async transferErc1155(tokenAddress: Address, to: Address, amount: bigint, txData?: Uint8Array) {
     const numericTokenId = addressToUInt256(tokenAddress);
+    txData = txData || new Uint8Array(0);
     console.log(`numericTokenId: ${numericTokenId}`);
     const tx = await this.sdk.v2Hub?.safeTransferFrom(
       this.address,
       to,
       numericTokenId,
       amount,
-      new Uint8Array(0));
+      txData);
 
     const receipt = await tx?.wait();
     if (!receipt) {
@@ -217,7 +223,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  async transfer(to: Address, amount: bigint, tokenAddress?: Address): Promise<TransactionReceipt> {
+  async transfer(to: Address, amount: bigint, tokenAddress?: Address, txData?: Uint8Array): Promise<TransactionReceipt> {
     if (!this.sdk?.contractRunner?.sendBatchTransaction) {
       throw new Error('ContractRunner (or sendBatchTransaction capability) not available');
     }
@@ -239,7 +245,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
 
       return <TransactionReceipt><unknown>(await batch.run());
     } else {
-      return this.directTransfer(to, amount, tokenAddress);
+      return this.directTransfer(to, amount, tokenAddress, txData);
     }
   }
 
