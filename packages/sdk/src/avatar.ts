@@ -182,17 +182,17 @@ export class Avatar implements AvatarInterfaceV2 {
    * @param amount The amount to transfer.
    * @param token The token to transfer. Leave empty to allow transitive transfers.
    */
-  transfer(to: Address, amount: number, token?: Address): Promise<TransactionReceipt>;
-  transfer(to: Address, amount: bigint, token?: Address): Promise<TransactionReceipt>;
-  transfer(to: Address, amount: number | bigint, token?: Address): Promise<TransactionReceipt> {
+  transfer(to: Address, amount: number, token?: Address, txData?: Uint8Array): Promise<TransactionReceipt>;
+  transfer(to: Address, amount: bigint, token?: Address, txData?: Uint8Array): Promise<TransactionReceipt>;
+  transfer(to: Address, amount: number | bigint, token?: Address, txData?: Uint8Array): Promise<TransactionReceipt> {
     if (typeof amount === 'number') {
       const sendValue = this?.avatarInfo?.version === 1
         ? tcToCrc(new Date(), amount)
         : parseEther(amount.toString());
 
-      return this.onlyIfInitialized(() => this._avatar!.transfer(to, sendValue, token))
+      return this.onlyIfInitialized(() => this._avatar!.transfer(to, sendValue, token, txData))
     }
-    return this.onlyIfInitialized(() => this._avatar!.transfer(to, amount, token))
+    return this.onlyIfInitialized(() => this._avatar!.transfer(to, amount, token, txData))
   }
 
   /**
