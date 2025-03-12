@@ -12,6 +12,11 @@ import { GroupMembershipRow } from './rows/groupMembershipRow';
 import { TokenInfoRow } from './rows/tokenInfoRow';
 import { Address } from '@circles-sdk/utils';
 
+export interface CMGroupQueryParams {
+  ownerEquals?: string;
+  groupProxyAddressIn?: string[];
+}
+
 export interface GroupQueryParams {
   nameStartsWith?: string;
   symbolStartsWith?: string;

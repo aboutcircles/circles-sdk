@@ -686,4 +686,12 @@ export class Sdk implements SdkInterface {
   getDemurragedWrapper = async (wrapperAddress: Address): Promise<DemurrageCircles> => {
     return DemurrageCircles__factory.connect(wrapperAddress, <ContractRunner>this.contractRunner);
   }
+
+  isCoreMembersGroup = async (avatar: Address): Promise<boolean> => {
+    const results = await this.data.getCreatedCMGroups(1, {
+      groupProxyAddressIn: [avatar]
+    });
+
+    return results.length > 0;
+  }
 }

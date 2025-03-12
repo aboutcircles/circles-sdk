@@ -96,19 +96,6 @@ export class CMGAvatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  async updateMetadataDigest(metadataDigest: string): Promise<ContractTransactionReceipt> {
-    const digest = cidV0ToUint8Array(metadataDigest);
-    const tx = await this.coreMemberGroup.updateMetadataDigest(digest);
-    const receipt = await tx.wait();
-    if (!receipt) {
-      throw new Error('Updating Metadata Digest failed');
-    }
-
-    this.avatarInfo.cidV0 = metadataDigest;
-
-    return receipt;
-  }
-
   owner(): Promise<Address> {
     return this.coreMemberGroup.owner() as Promise<Address>;
   }
@@ -142,13 +129,11 @@ export class CMGAvatar implements AvatarInterfaceV2 {
   }
 
   async updateMetadata(cid: string): Promise<ContractTransactionReceipt> {
-    this.throwIfNameRegistryIsNotAvailable();
-
     const digest = cidV0ToUint8Array(cid);
-    const tx = await this.sdk.nameRegistry?.updateMetadataDigest(digest);
+    const tx = await this.coreMemberGroup.updateMetadataDigest(digest);
     const receipt = await tx?.wait();
     if (!receipt) {
-      throw new Error('Transfer failed');
+      throw new Error('Updating Metadata Digest failed');
     }
 
     this.avatarInfo.cidV0 = cid;
@@ -172,6 +157,56 @@ export class CMGAvatar implements AvatarInterfaceV2 {
     // TODO: re-implement
     // return await this.sdk.contractRunner.provider?.getBalance(this.address) ?? 0n;
     return 0n;
+  }
+
+  async setService(service: Address): Promise<ContractTransactionReceipt> {
+    const tx = await this.coreMemberGroup.setService(service);
+    const receipt = await tx.wait();
+    if (!receipt) {
+      throw new Error('Updating service failed');
+    }
+
+    return receipt;
+  }
+
+  async setMintHandler(mintHandler: Address): Promise<ContractTransactionReceipt> {
+    const tx = await this.coreMemberGroup.setMintHandler(mintHandler);
+    const receipt = await tx.wait();
+    if (!receipt) {
+      throw new Error('Updating group mint handler failed');
+    }
+
+    return receipt;
+  }
+
+  async setRedemptionHandler(service: Address): Promise<ContractTransactionReceipt> {
+    const tx = await this.coreMemberGroup.setRedemptionHandler(service);
+    const receipt = await tx.wait();
+    if (!receipt) {
+      throw new Error('Updating group redemption handler failed');
+    }
+
+    return receipt;
+  }
+
+  async setMinimalDeposit(minimalDeposit: bigint): Promise<ContractTransactionReceipt> {
+    const tx = await this.coreMemberGroup.setMinimalDeposit(minimalDeposit);
+    const receipt = await tx.wait();
+    if (!receipt) {
+      throw new Error('Updating minimal deposit failed');
+    }
+
+    return receipt;
+  }
+
+  async setFeeCollection(feeCollection: Address): Promise<ContractTransactionReceipt> {
+    const tx = await this.coreMemberGroup.setFeeCollection(feeCollection);
+    const receipt = await tx.wait();
+    if (!receipt) {
+      throw new Error('Updating fee collection failed');
+    }
+
+    return receipt;
   }
 
   async getTransactionHistory(pageSize: number): Promise<CirclesQuery<TransactionHistoryRow>> {
@@ -276,12 +311,6 @@ export class CMGAvatar implements AvatarInterfaceV2 {
   private throwIfV2IsNotAvailable() {
     if (!this.sdk.circlesConfig.v2HubAddress) {
       throw new Error('V2 is not available');
-    }
-  }
-
-  private throwIfNameRegistryIsNotAvailable() {
-    if (!this.sdk.nameRegistry) {
-      throw new Error('Name registry is not available');
     }
   }
 
