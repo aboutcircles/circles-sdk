@@ -1,6 +1,7 @@
 import { BigNumber } from 'bignumber.js';
 import { ethers } from 'ethers';
 import multihash from 'multihashes';
+import { Address } from './type';
 
 const CirclesInceptionTimestamp = new Date('2020-10-15T00:00:00.000Z').getTime();
 const OneDayInMilliseconds = new BigNumber(86400).multipliedBy(1000);
@@ -160,17 +161,18 @@ export function stringToUint8Array(str: string): Uint8Array {
   return encoder.encode(str);
 }
 
-export function addressToUInt256(address: string): bigint {
+export function addressToUInt256(address: Address): bigint {
   // Remove the '0x' prefix if it exists
-  if (address.startsWith('0x')) {
-    address = address.slice(2);
+  let addr: string = address;
+  if (addr.startsWith('0x')) {
+    addr = addr.slice(2);
   }
 
   // Convert the address to a BigInt
-  return BigInt('0x' + address);
+  return BigInt('0x' + addr);
 }
 
-export function uint256ToAddress(uint256: bigint): string {
+export function uint256ToAddress(uint256: bigint): Address {
   // Convert the BigInt to a hex string
   let hexString = uint256.toString(16);
 
@@ -178,7 +180,7 @@ export function uint256ToAddress(uint256: bigint): string {
   hexString = hexString.padStart(40, '0');
 
   // Add the '0x' prefix
-  return '0x' + hexString;
+  return `0x${hexString}`;
 }
 
 export const errorAbis = [

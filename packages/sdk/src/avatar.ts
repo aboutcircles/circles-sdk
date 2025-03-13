@@ -10,12 +10,12 @@ import {
 } from '@circles-sdk/data';
 import {V2Avatar} from './v2/v2Avatar';
 import {CirclesEvent} from '@circles-sdk/data';
-import {tcToCrc} from '@circles-sdk/utils';
+import { Address, tcToCrc } from '@circles-sdk/utils';
 import {Profile} from "@circles-sdk/profiles";
-import {TokenBalanceRow} from "../../data";
+import {TokenBalanceRow} from '@circles-sdk/data';
 import {TransactionResponse} from "@circles-sdk/adapter";
-import {Address} from '@circles-sdk/utils';
 import {CMGAvatar} from './v2/cmgAvatar';
+
 /**
  * An Avatar represents a user registered at Circles.
  * It provides methods to interact with the Circles protocol, such as minting, transferring and trusting other avatars.
@@ -277,6 +277,17 @@ export class Avatar implements AvatarInterfaceV2 {
    * @returns The transaction receipt.
    */
   groupMint = (group: Address, collateral: Address[], amounts: bigint[], data: Uint8Array): Promise<ContractTransactionReceipt> => this.onlyIfV2((avatar) => avatar.groupMint(group, collateral, amounts, data));
+
+  /**
+   * Facilitates the redemption process for a specified group using the provided collateral and amounts.
+   *
+   * @param group - The address of the group for which the operation is being performed.
+   * @param collateral - An array of collateral addresses to redeem.
+   * @param amounts - An array of amounts corresponding to each collateral.
+   * @returns A promise that resolves to the transaction receipt of the redemption process.
+   */
+  groupRedeem = (group: Address, collateral: Address[], amounts: bigint[]): Promise<ContractTransactionReceipt> => this.onlyIfV2((avatar) => avatar.groupRedeem(group, collateral, amounts));
+
   /**
    * Wraps the specified amount of personal Circles into demurraged ERC20 tokens for use outside the Circles protocol.
    * Note: This kind of token can be incompatible with services since it's demurraged and thus the balance changes over time.

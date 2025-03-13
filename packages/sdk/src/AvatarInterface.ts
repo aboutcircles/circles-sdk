@@ -135,6 +135,16 @@ export interface AvatarInterfaceV2 extends AvatarInterface {
   groupMint(group: Address, collateral: Address[], amounts: bigint[], data: Uint8Array): Promise<ContractTransactionReceipt>;
 
   /**
+   * Redeems collateral from a group in exchange for the group tokens.
+   *
+   * @param group - The address of the group to redeem from.
+   * @param collateral - An array of collateral addresses involved in the redemption.
+   * @param amounts - An array of amounts corresponding to the collateral to redeem.
+   * @return A promise that resolves to the transaction receipt of the redemption.
+   */
+  groupRedeem(group: Address, collateral: Address[], amounts: bigint[]): Promise<ContractTransactionReceipt>;
+
+  /**
    * Wraps ERC115 Circles into demurraged ERC20 Circles.
    * @param avatarAddress The address of the avatar whose Circles should be wrapped.
    * @param amount The amount of ERC115 Circles to wrap.
