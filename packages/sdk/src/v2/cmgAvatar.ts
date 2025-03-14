@@ -44,6 +44,10 @@ export class CMGAvatar implements AvatarInterfaceV2 {
     }
   }
 
+  groupRedeem(group: Address, collateral: Address[], amounts: bigint[]): Promise<ContractTransactionReceipt> {
+    throw this.NotSupportedError();
+  }
+
   async trust(avatar: Address | Address[], expiry?: bigint): Promise<TransactionResponse> {
     expiry = BigInt(expiry || 0);
 

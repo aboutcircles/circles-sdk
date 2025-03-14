@@ -1,12 +1,13 @@
-import {AvatarInterfaceV2} from '../AvatarInterface';
+import { AvatarInterfaceV2 } from '../AvatarInterface';
 import {
+  AbiCoder,
   ContractTransactionReceipt,
   ethers,
-  formatEther,
+  formatEther, keccak256, toUtf8Bytes,
   TransactionReceipt,
   ZeroAddress
 } from 'ethers';
-import {Sdk} from '../sdk';
+import { Sdk } from '../sdk';
 import {
   AvatarRow,
   CirclesQuery,
@@ -20,20 +21,9 @@ import {
   attoCirclesToCircles,
   cidV0ToUint8Array
 } from '@circles-sdk/utils';
-import {Profile} from "@circles-sdk/profiles";
-import {TokenType} from "@circles-sdk/data/dist/rows/tokenInfoRow";
-import {BatchRun, TransactionRequest, TransactionResponse} from "@circles-sdk/adapter";
-
-export type FlowEdge = {
-  streamSinkId: bigint;
-  amount: bigint;
-};
-
-export type Stream = {
-  sourceCoordinate: bigint,
-  flowEdgeIds: bigint[],
-  data: Uint8Array
-}
+import { Profile } from '@circles-sdk/profiles';
+import { TokenType } from '@circles-sdk/data/dist/rows/tokenInfoRow';
+import { BatchRun, TransactionRequest, TransactionResponse } from '@circles-sdk/adapter';
 
 export class V2Avatar implements AvatarInterfaceV2 {
   public readonly sdk: Sdk;
@@ -46,6 +36,8 @@ export class V2Avatar implements AvatarInterfaceV2 {
 
   private _cachedProfile: Profile | undefined;
   private _cachedProfileCid: string | undefined;
+
+  public readonly METADATATYPE_GROUPREDEEM = keccak256(toUtf8Bytes('CIRCLESv2:RESERVED_DATA:CirclesGroupRedeem'));
 
   constructor(sdk: Sdk, avatarInfo: AvatarRow) {
     this.sdk = sdk;
@@ -161,11 +153,11 @@ export class V2Avatar implements AvatarInterfaceV2 {
       throw new Error('V2Hub not available');
     }
 
-    const operateFlowMatrixCallData = this.sdk.v2Hub.interface.encodeFunctionData("operateFlowMatrix", [flowMatrix.flowVertices, flowMatrix.flowEdges, flowMatrix.streams, flowMatrix.packedCoordinates]);
+    const operateFlowMatrixCallData = this.sdk.v2Hub.interface.encodeFunctionData('operateFlowMatrix', [flowMatrix.flowVertices, flowMatrix.flowEdges, flowMatrix.streams, flowMatrix.packedCoordinates]);
     const personalMintTx: TransactionRequest = {
       to: this.sdk.circlesConfig.v2HubAddress!,
       data: operateFlowMatrixCallData,
-      value: 0n,
+      value: 0n
     };
 
     batch.addTransaction(personalMintTx);
@@ -232,7 +224,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
 
       const approvalStatus = await this.sdk.v2Hub!.isApprovedForAll(this.address, this.address);
       if (!approvalStatus) {
-        const tx = this.sdk.v2Hub!.interface.encodeFunctionData("setApprovalForAll", [this.address, true]);
+        const tx = this.sdk.v2Hub!.interface.encodeFunctionData('setApprovalForAll', [this.address, true]);
         batch.addTransaction({
           to: this.sdk.circlesConfig.v2HubAddress!,
           data: tx,
@@ -260,7 +252,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
     const batch = this.sdk.contractRunner.sendBatchTransaction();
 
     for (const av of avatars) {
-      const txData = this.sdk.v2Hub!.interface.encodeFunctionData("trust", [av, BigInt('79228162514264337593543950335')]);
+      const txData = this.sdk.v2Hub!.interface.encodeFunctionData('trust', [av, BigInt('79228162514264337593543950335')]);
       batch.addTransaction({
         to: this.sdk.circlesConfig.v2HubAddress!,
         data: txData,
@@ -287,7 +279,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
     const batch = this.sdk.contractRunner.sendBatchTransaction();
 
     for (const av of avatars) {
-      const txData = this.sdk.v2Hub!.interface.encodeFunctionData("trust", [av, BigInt('0')]);
+      const txData = this.sdk.v2Hub!.interface.encodeFunctionData('trust', [av, BigInt('0')]);
       batch.addTransaction({
         to: this.sdk.circlesConfig.v2HubAddress!,
         data: txData,
@@ -309,6 +301,77 @@ export class V2Avatar implements AvatarInterfaceV2 {
     const receipt = await tx.wait();
     if (!receipt) {
       throw new Error('Group mint failed');
+    }
+
+    return receipt;
+  }
+
+  async groupRedeem(
+    group: Address,
+    collateral: Address[],
+    amounts: bigint[]
+  ): Promise<ContractTransactionReceipt> {
+    this.throwIfV2IsNotAvailable();
+
+    const standardTreasury = this.sdk.circlesConfig.standardTreasury;
+    if (!standardTreasury) {
+      throw new Error('No standard treasury address in config.');
+    }
+
+    // 1) Sum up requested redemption amounts
+    let totalValue = 0n;
+    for (const val of amounts) {
+      totalValue += val;
+    }
+    if (totalValue === 0n) {
+      throw new Error('Cannot redeem zero amount.');
+    }
+
+    // 2) Encode the "BaseRedemptionPolicy" data:
+    //    struct BaseRedemptionPolicy {
+    //       uint256[] redemptionIds;
+    //       uint256[] redemptionValues;
+    //    }
+    // Convert each collateral address to its numeric ID:
+    const redemptionIds = collateral.map(addr => addressToUInt256(addr));
+    const baseRedemptionPolicyEncoded = AbiCoder.defaultAbiCoder().encode(
+      ['tuple(uint256[] redemptionIds, uint256[] redemptionValues)'],
+      [[redemptionIds, amounts]]
+    );
+
+    // 3) Encode the Metadata struct:
+    //    struct Metadata {
+    //       bytes32 metadataType;
+    //       bytes   metadata;         // must be empty for groupRedeem
+    //       bytes   erc1155UserData;  // your redemption policy
+    //    }
+    const metadataTuple = [
+      this.METADATATYPE_GROUPREDEEM,
+      '0x',                       // empty 'metadata' for groupRedeem
+      baseRedemptionPolicyEncoded
+    ];
+
+    // Encode as a single tuple
+    const metadataEncoded = AbiCoder.defaultAbiCoder().encode(
+      ['tuple(bytes32, bytes, bytes)'],
+      [metadataTuple]
+    );
+
+    // 4) safeTransferFrom(...) to StandardTreasury
+    const groupId = addressToUInt256(group);
+
+    const tx = await this.sdk.v2Hub!.safeTransferFrom(
+      this.address,
+      standardTreasury,
+      groupId,
+      totalValue,
+      metadataEncoded
+    );
+
+    // 5) Wait on the receipt
+    const receipt = await tx.wait();
+    if (!receipt) {
+      throw new Error('Group redeem failed');
     }
 
     return receipt;

@@ -4,8 +4,10 @@ export interface JsonRpcResponse<TResult> {
   result: TResult;
 }
 
-export interface CirclesQueryJsonRpcResponse extends JsonRpcResponse<{
+export interface CirclesQueryJsonRpcResponse extends JsonRpcResponse<CirclesQueryResult> {
+}
+
+export interface CirclesQueryResult {
   columns: string[];
   rows: unknown[][];
-}> {
 }
