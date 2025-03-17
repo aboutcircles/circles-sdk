@@ -61,7 +61,6 @@ export class PrivateKeyContractRunner implements EthersContractRunner {
       handleTransactionError(e);
     }
   };
-
 }
 
 export class BrowserProviderContractRunner implements EthersContractRunner {

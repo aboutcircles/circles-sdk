@@ -143,11 +143,17 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  private async transitiveTransfer(to: Address, amount: bigint, batch: BatchRun) {
+  private async transitiveTransfer(to: Address, amount: bigint, batch: BatchRun, txData?: Uint8Array) {
     this.throwIfV2IsNotAvailable();
     to = to.toLowerCase() as Address;
 
     const flowMatrix = await this.sdk.v2Pathfinder.getArgsForPath(this.address, to, amount.toString());
+
+    if(txData) {
+      for (let i = 0; i < flowMatrix.streams.length; i++) {
+        flowMatrix.streams[i].data = txData || new Uint8Array(0);
+      }
+    }
 
     if (!this.sdk.v2Hub) {
       throw new Error('V2Hub not available');
@@ -233,7 +239,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
       }
       console.log(`Approval by ${this.address} for ${this.address} successful`);
 
-      await this.transitiveTransfer(to, amount, batch);
+      await this.transitiveTransfer(to, amount, batch, txData);
 
       return <TransactionReceipt><unknown>(await batch.run());
     } else {
