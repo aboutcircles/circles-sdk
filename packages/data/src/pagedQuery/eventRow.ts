@@ -7,4 +7,5 @@ export interface EventRow {
   transactionIndex: number;
   logIndex: number;
   batchIndex?: number;
+  timestamp?: number;
 }
