@@ -11,13 +11,13 @@ import {
   TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
-import {Address, cidV0ToUint8Array} from '@circles-sdk/utils';
-import {Profile} from "@circles-sdk/profiles";
-import {TransactionResponse} from "@circles-sdk/adapter";
-import {CoreMembersGroup, CoreMembersGroup__factory } from '@circles-sdk/abi-v2';
+import { Address, cidV0ToUint8Array } from '@circles-sdk/utils';
+import { Profile } from '@circles-sdk/profiles';
+import { TransactionResponse } from '@circles-sdk/adapter';
+import { CoreMembersGroup, CoreMembersGroup__factory } from '@circles-sdk/abi-v2';
 
-import {Sdk} from '../sdk';
-import {AvatarInterfaceV2} from '../AvatarInterface';
+import { Sdk } from '../sdk';
+import { AvatarInterfaceV2 } from '../AvatarInterface';
 
 export class CMGAvatar implements AvatarInterfaceV2 {
   public readonly sdk: Sdk;
@@ -49,7 +49,7 @@ export class CMGAvatar implements AvatarInterfaceV2 {
   }
 
   async trust(avatar: Address | Address[], expiry?: bigint): Promise<TransactionResponse> {
-    expiry = BigInt(expiry || 0);
+    expiry = BigInt(expiry || Number.MAX_SAFE_INTEGER);
 
     if (!this.sdk?.contractRunner?.sendBatchTransaction) {
       throw new Error('ContractRunner (or sendBatchTransaction capability) not available');
@@ -59,7 +59,7 @@ export class CMGAvatar implements AvatarInterfaceV2 {
     const batch = this.sdk.contractRunner.sendBatchTransaction();
 
     for (const av of avatars) {
-      const txData = this.coreMemberGroup!.interface.encodeFunctionData("trust", [av, expiry]);
+      const txData = this.coreMemberGroup!.interface.encodeFunctionData('trust', [av, expiry]);
       batch.addTransaction({
         to: this.address!,
         data: txData,
@@ -84,7 +84,7 @@ export class CMGAvatar implements AvatarInterfaceV2 {
     const batch = this.sdk.contractRunner.sendBatchTransaction();
 
     for (const av of avatars) {
-      const txData = this.coreMemberGroup!.interface.encodeFunctionData("trust", [av, BigInt('0')]);
+      const txData = this.coreMemberGroup!.interface.encodeFunctionData('trust', [av, BigInt('0')]);
       batch.addTransaction({
         to: this.address!,
         data: txData,
