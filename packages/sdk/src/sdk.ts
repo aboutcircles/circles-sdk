@@ -2,7 +2,13 @@ import { Avatar } from './avatar';
 import { CirclesConfig } from './circlesConfig';
 import { Pathfinder } from './v1/pathfinder';
 import { AvatarInterface } from './AvatarInterface';
-import { Hub as HubV1, Hub__factory as HubV1Factory, Token__factory } from '@circles-sdk/abi-v1';
+import {
+  Hub as HubV1,
+  Hub__factory as HubV1Factory,
+  Token__factory,
+  NameRegistryV1,
+  NameRegistryV1__factory
+} from '@circles-sdk/abi-v1';
 import {
   CMGroupDeployer,
   CMGroupDeployer__factory,
@@ -151,6 +157,10 @@ export class Sdk implements SdkInterface {
    */
   readonly nameRegistry?: NameRegistry;
   /**
+   * The typechain generated V1NameRegistry contract wrapper.
+   */
+  readonly v1NameRegistry?: NameRegistryV1;
+  /**
    * The pathfinder client (v1).
    */
   readonly v1Pathfinder?: Pathfinder;
@@ -200,6 +210,9 @@ export class Sdk implements SdkInterface {
     }
     if (this.circlesConfig.nameRegistryAddress) {
       this.nameRegistry = NameRegistry__factory.connect(this.circlesConfig.nameRegistryAddress, <ContractRunner>this.contractRunner);
+    }
+    if (this.circlesConfig.v1NameRegistryAddress) {
+      this.v1NameRegistry = NameRegistryV1__factory.connect(this.circlesConfig.v1NameRegistryAddress, <ContractRunner>this.contractRunner);
     }
     if (this.circlesConfig.profileServiceUrl) {
       this.profiles = new Profiles(this.circlesConfig.profileServiceUrl);
