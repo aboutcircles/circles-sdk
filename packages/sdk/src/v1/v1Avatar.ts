@@ -12,7 +12,7 @@ import {
   TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
-import { Address, crcToTc } from '@circles-sdk/utils';
+import { Address, crcToTc, cidV0ToUint8Array } from '@circles-sdk/utils';
 import { TransactionResponse } from "@circles-sdk/adapter";
 
 export class V1Avatar implements AvatarInterface {
@@ -48,6 +48,21 @@ export class V1Avatar implements AvatarInterface {
 
   async getBalances(): Promise<TokenBalanceRow[]> {
     return await this.sdk.data.getTokenBalances(this.address);
+  }
+
+  async updateMetadata(cid: string): Promise<ContractTransactionReceipt> {
+    this.throwIfNotInitialized();
+
+    const digest = cidV0ToUint8Array(cid);
+    const tx = await this.sdk.v1NameRegistry?.updateMetadataDigest(digest);
+    const receipt = await tx?.wait();
+    if (!receipt) {
+      throw new Error('Metadata update failed');
+    }
+
+    this.avatarInfo.cidV0 = cid;
+
+    return receipt;
   }
 
   /**
