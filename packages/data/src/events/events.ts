@@ -44,6 +44,14 @@ export type CrcV1_Transfer = CirclesBaseEvent & {
   amount?: bigint;
 };
 
+export type CrcV1_TransferSummary = CirclesBaseEvent & {
+  $event: 'CrcV1_TransferSummary',
+  from?: string;
+  to?: string;
+  amount?: bigint;
+  events?: string;
+};
+
 export type CrcV2_InviteHuman = CirclesBaseEvent & {
   $event: 'CrcV2_InviteHuman',
   inviter?: Address;
@@ -248,9 +256,51 @@ export type CrcV2_DiscountCost = CirclesBaseEvent & {
   cost?: bigint;
 };
 
+export type CrcV2_TransferSummary = Omit<CrcV1_TransferSummary, '$event'> & {
+  $event: 'CrcV2_TransferSummary'
+};
+
+export type CrcV2_FlowEdgesScopeLastEnded = CirclesBaseEvent & {
+  $event: 'CrcV2_FlowEdgesScopeLastEnded'
+};
+
+export type CrcV2_FlowEdgesScopeSingleStarted = CirclesBaseEvent & {
+  $event: 'CrcV2_FlowEdgesScopeSingleStarted',
+  flowEdgeId?: bigint;
+  streamId?: bigint;
+};
+
 export type Crc_UnknownEvent = CirclesBaseEvent & {
-  $event: 'Crc_UnknownEvent';
+  $event: 'Crc_UnknownEvent',
   originalEventType: string;
+};
+
+export type Safe_AddedOwner = CirclesBaseEvent & {
+  $event: 'Safe_AddedOwner',
+  safeAddress?: string;
+  owner?: string;
+};
+
+export type Safe_ProxyCreation = CirclesBaseEvent & {
+  $event: 'Safe_ProxyCreation',
+  proxy?: string;
+  singleton?: string;
+};
+
+export type Safe_RemovedOwner = CirclesBaseEvent & {
+  $event: 'Safe_RemovedOwner',
+  safeAddress?: string;
+  owner?: string;
+};
+
+export type Safe_SafeSetup = CirclesBaseEvent & {
+  $event: 'Safe_SafeSetup',
+  safeAddress?: string;
+  initiator?: string;
+  owner?: string;
+  threshold?: bigint;
+  initializer?: string;
+  fallbackHandler?: string;
 };
 
 export type CirclesEvent =
@@ -259,6 +309,7 @@ export type CirclesEvent =
   | CrcV1_OrganizationSignup
   | CrcV1_Trust
   | CrcV1_Transfer
+  | CrcV1_TransferSummary
   | CrcV2_InviteHuman
   | CrcV2_PersonalMint
   | CrcV2_RegisterGroup
@@ -287,7 +338,14 @@ export type CirclesEvent =
   | CrcV2_WithdrawDemurraged
   | CrcV2_WithdrawInflationary
   | CrcV2_DiscountCost
-  | Crc_UnknownEvent;
+  | CrcV2_TransferSummary
+  | CrcV2_FlowEdgesScopeLastEnded
+  | CrcV2_FlowEdgesScopeSingleStarted
+  | Crc_UnknownEvent
+  | Safe_AddedOwner
+  | Safe_ProxyCreation
+  | Safe_RemovedOwner
+  | Safe_SafeSetup;
 
 export type CirclesEventType =
   | 'CrcV1_HubTransfer'
@@ -295,6 +353,7 @@ export type CirclesEventType =
   | 'CrcV1_OrganizationSignup'
   | 'CrcV1_Trust'
   | 'CrcV1_Transfer'
+  | 'CrcV1_TransferSummary'
   | 'CrcV2_InviteHuman'
   | 'CrcV2_PersonalMint'
   | 'CrcV2_RegisterGroup'
@@ -323,4 +382,11 @@ export type CirclesEventType =
   | 'CrcV2_WithdrawInflationary'
   | 'CrcV2_ERC20WrapperDeployed'
   | 'CrcV2_DiscountCost'
-  | 'Crc_UnknownEvent';
+  | 'CrcV2_TransferSummary'
+  | 'CrcV2_FlowEdgesScopeLastEnded'
+  | 'CrcV2_FlowEdgesScopeSingleStarted'
+  | 'Crc_UnknownEvent'
+  | 'Safe_AddedOwner'
+  | 'Safe_ProxyCreation'
+  | 'Safe_RemovedOwner'
+  | 'Safe_SafeSetup';
