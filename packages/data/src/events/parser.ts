@@ -72,6 +72,15 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
         to: values.to as Address,
         amount: values.amount ? hexToBigInt(values.amount) : undefined
       };
+    case 'CrcV1_TransferSummary':
+      return {
+        ...baseEvent,
+        $event: 'CrcV1_TransferSummary',
+        from: values.from as Address,
+        to: values.to as Address,
+        amount: values.amount ? hexToBigInt(values.amount) : undefined,
+        events: values.events,
+      };
     case 'CrcV2_InviteHuman':
       return {
         ...baseEvent,
@@ -303,6 +312,59 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
         account: values.account,
         id: values.id ? hexToBigInt(values.id) : undefined,
         cost: values.cost ? hexToBigInt(values.cost) : undefined
+      };
+    case 'CrcV2_TransferSummary':
+      return {
+        ...baseEvent,
+        $event: 'CrcV2_TransferSummary',
+        from: values.from as Address,
+        to: values.to as Address,
+        amount: values.amount ? hexToBigInt(values.amount) : undefined,
+        events: values.events
+      };
+    case 'CrcV2_FlowEdgesScopeLastEnded':
+      return {
+        ...baseEvent,
+        $event: 'CrcV2_FlowEdgesScopeLastEnded'
+      };
+    case 'CrcV2_FlowEdgesScopeSingleStarted':
+      return {
+        ...baseEvent,
+        $event: 'CrcV2_FlowEdgesScopeSingleStarted',
+        flowEdgeId: values.flowEdgeId ? hexToBigInt(values.flowEdgeId) : undefined,
+        streamId: values.streamId ? hexToBigInt(values.streamId) : undefined
+      };
+    case 'Safe_AddedOwner':
+      return {
+        ...baseEvent,
+        $event: 'Safe_AddedOwner',
+        safeAddress: values.safeAddress as Address,
+        owner: values.owner as Address
+      };
+    case 'Safe_ProxyCreation':
+      return {
+        ...baseEvent,
+        $event: 'Safe_ProxyCreation',
+        proxy: values.proxy as Address,
+        singleton: values.singleton as Address
+    };
+    case 'Safe_RemovedOwner':
+      return {
+        ...baseEvent,
+        $event: 'Safe_RemovedOwner',
+        safeAddress: values.safeAddress as Address,
+        owner: values.owner as Address
+    };
+    case 'Safe_SafeSetup':
+      return {
+        ...baseEvent,
+        $event: 'Safe_SafeSetup',
+        safeAddress: values.safeAddress as Address,
+        initiator: values.initiator as Address,
+        owner: values.owner as Address,
+        threshold: values.threshold ? hexToBigInt(values.threshold) : undefined,
+        initializer: values.initializer as Address,
+        fallbackHandler: values.fallbackHandler as Address
       };
     default:
       return {
