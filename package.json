@@ -8,7 +8,6 @@
     "packages/utils",
     "packages/profiles",
     "packages/adapter",
-    "packages/adapter-cometh",
     "packages/adapter-ethers",
     "packages/adapter-safe",
     "packages/adapter-safe-app"
@@ -36,5 +35,5 @@
   },
   "name": "@cirlces-sdk/root",
   "license": "MIT",
-  "version": "0.20.1"
+  "version": "0.21.0"
 }
