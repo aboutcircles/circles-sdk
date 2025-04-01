@@ -121,8 +121,6 @@ export class V1Avatar implements AvatarInterface {
         throw new Error(`Couldn't find a valid path from ${this.address} to ${to} for ${amount}.`);
       }
 
-      console.log('transferPath', transferPath);
-
       const tokenOwners = transferPath.transfers.map(o => o.tokenOwner);
       const srcs = transferPath.transfers.map(o => o.from);
       const dests = transferPath.transfers.map(o => o.to);
