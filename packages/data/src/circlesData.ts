@@ -36,7 +36,7 @@ import { EventRow } from './pagedQuery/eventRow';
 
 // Filtering and Schema Definitions
 import { Filter } from './rpcSchema/filter';
-import { FilterPredicate } from "./rpcSchema/filterPredicate";
+import { FilterPredicate } from './rpcSchema/filterPredicate';
 
 export type TrustEvent = {
   blockNumber: number;
@@ -525,6 +525,8 @@ export class CirclesData implements CirclesDataInterface {
     return await circlesQuery.getSingleRow();
   }
 
+
+
   /**
    * Gets data about created core members groups by a specific group proxy contract.
    * @param pageSize The maximum number of groups per page.
@@ -579,24 +581,24 @@ export class CirclesData implements CirclesDataInterface {
       }];
     }
 
-    if(filter.length) {
+    if (filter.length) {
       queryDefintion.filter = filter;
     }
 
     const query = new CirclesQuery(this.rpc, queryDefintion);
-  
+
     const results: any[] = [];
-  
+
     while (await query.queryNextPage()) {
       const resultRows = query.currentPage?.results ?? [];
       if (resultRows.length === 0) break;
       results.push(...resultRows);
       if (resultRows.length < pageSize) break;
     }
-  
+
     return results;
   }
-  
+
   /**
    * Subscribes to Circles events.
    * @param avatar The avatar to subscribe to. If not provided, all events are subscribed to.
