@@ -1,6 +1,6 @@
 {
   "name": "@circles-sdk/abi-v2",
-  "version": "0.21.1",
+  "version": "0.22.0",
   "description": "",
   "type": "module",
   "main": "./dist/cjs/index.js",
