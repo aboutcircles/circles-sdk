@@ -1,20 +1,34 @@
 import typescript from '@rollup/plugin-typescript';
-import json from '@rollup/plugin-json';
 
 export default {
   input: './src/index.ts',
   output: [
     {
-      dir: 'dist',
-      format: 'es',
-      sourcemap: true
+      // ESM build
+      format: 'esm',
+      sourcemap: true,
+      entryFileNames: 'esm/[name].js',
+      chunkFileNames: 'esm/[name].js',
+      dir: 'dist'
+    },
+    {
+      // CommonJS build
+      format: 'cjs',
+      sourcemap: true,
+      entryFileNames: 'cjs/[name].js',
+      chunkFileNames: 'cjs/[name].js',
+      dir: 'dist'
     }
   ],
   plugins: [
-    json(),
     typescript({
-      tsconfig: './tsconfig.json'
-    })
+      tsconfig: './tsconfig.json',
+      compilerOptions: {
+        outDir: undefined,
+        declaration: true,
+        declarationDir: 'dist/types'
+      }
+    }),
   ],
   external: ['ethers', 'multihashes', '@circles-sdk/abi-v1', '@circles-sdk/abi-v2', '@circles-sdk/data', '@circles-sdk/utils', '@circles-sdk/profiles']
 };
