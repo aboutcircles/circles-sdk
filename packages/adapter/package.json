@@ -1,6 +1,6 @@
 {
   "name": "@circles-sdk/adapter",
-  "version": "0.22.0",
+  "version": "0.22.0-preview",
   "description": "",
   "type": "module",
   "main": "./dist/cjs/index.js",
