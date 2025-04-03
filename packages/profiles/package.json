@@ -1,11 +1,17 @@
 {
   "name": "@circles-sdk/profiles",
-  "version": "0.21.1",
+  "version": "0.22.0-preview",
   "description": "",
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js"
+    }
+  },
   "files": [
     "dist",
     "package.json"
@@ -17,7 +23,7 @@
     "build": "rollup -c"
   },
   "dependencies": {
-    "@circles-sdk/utils": "0.21.1"
+    "@circles-sdk/utils": "0.22.0-preview"
   },
   "keywords": [],
   "author": "",

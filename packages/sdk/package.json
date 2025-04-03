@@ -1,11 +1,17 @@
 {
   "name": "@circles-sdk/sdk",
-  "version": "0.21.1",
+  "version": "0.22.0-preview",
   "description": "",
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js"
+    }
+  },
   "files": [
     "dist",
     "package.json"
@@ -17,11 +23,11 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@circles-sdk/abi-v1": "0.21.1",
-    "@circles-sdk/abi-v2": "0.21.1",
-    "@circles-sdk/data": "0.21.1",
-    "@circles-sdk/profiles": "0.21.1",
-    "@circles-sdk/adapter-ethers": "0.21.1",
+    "@circles-sdk/abi-v1": "0.22.0-preview",
+    "@circles-sdk/abi-v2": "0.22.0-preview",
+    "@circles-sdk/data": "0.22.0-preview",
+    "@circles-sdk/profiles": "0.22.0-preview",
+    "@circles-sdk/adapter-ethers": "0.22.0-preview",
     "ethers": "^6.13.2",
     "multihashes": "^4.0.3"
   },
