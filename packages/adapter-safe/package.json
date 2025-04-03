@@ -1,17 +1,11 @@
 {
   "name": "@circles-sdk/adapter-safe",
-  "version": "0.21.2",
+  "version": "0.21.1",
   "description": "",
   "type": "module",
-  "main": "./dist/cjs/index.js",
-  "module": "./dist/esm/index.js",
-  "types": "./dist/types/index.d.ts",
-  "exports": {
-    ".": {
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.js"
-    }
-  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "files": [
     "dist",
     "package.json"
@@ -24,7 +18,7 @@
     "build": "rollup -c"
   },
   "dependencies": {
-    "@circles-sdk/adapter": "0.21.2",
+    "@circles-sdk/adapter": "^0.10.0",
     "@safe-global/protocol-kit": "^4.1.0",
     "ethers-multisend": "^3.1.0"
   },

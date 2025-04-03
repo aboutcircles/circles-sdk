@@ -9,6 +9,7 @@
     "module": "ESNext",
     "moduleResolution": "node",
     "declaration": true,
+    "outDir": "./dist",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
