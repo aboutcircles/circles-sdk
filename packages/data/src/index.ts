@@ -24,6 +24,7 @@ export {TrustRelationRow} from './rows/trustRelationRow';
 export {InvitationRow} from './rows/invitationRow';
 export {GroupRow} from './rows/groupRow';
 export {GroupQueryParams} from './circlesDataInterface';
+export {CalculatedColumn} from './pagedQuery/circlesQuery'
 export {
   CirclesEvent,
   CirclesEventType,
