@@ -3,6 +3,8 @@ export interface Profile {
   description?: string;
   previewImageUrl?: string;
   imageUrl?: string;
+  location?: string;
+  geoLocation?: [number, number];
   extensions?: Record<string, any>;
 }
 
@@ -18,6 +20,8 @@ export interface SearchResultProfile extends Pick<Profile, 'name' | 'description
   // Optional fields for complete profiles
   imageUrl?: string;
   previewImageUrl?: string;
+  location?: string;
+  geoLocation?: [number, number];
 }
 
 /**
@@ -134,6 +138,24 @@ export class Profiles {
   }
 
   /**
+   * Search for profiles by location.
+   * @param location The location to search for (partial match).
+   * @param options Optional search options, including fetchComplete to retrieve full profile data including images.
+   * @returns Array of profiles matching the search criteria.
+   */
+  async searchByLocation(location: string, options?: SearchOptions): Promise<SearchResultProfile[]> {
+    const params = new URLSearchParams();
+    params.append('location', location);
+    if (options?.fetchComplete) params.append('fetchComplete', 'true');
+    
+    const response = await fetch(`${this.getProfileServiceUrl()}search?${params.toString()}`);
+    if (!response.ok) {
+      throw new Error(`Failed to search profiles by location. Status: ${response.status} ${response.statusText}. Body: ${await response.text()}`);
+    }
+    return await response.json();
+  }
+
+  /**
    * Search for a profile by address.
    * @param address The exact address to search for.
    * @param options Optional search options, including fetchComplete to retrieve full profile data including images.
@@ -223,6 +245,7 @@ export class Profiles {
     address?: string;
     CID?: string;
     registeredName?: string;
+    location?: string;
   }, options?: SearchOptions): Promise<SearchResultProfile[]> {
     const params = new URLSearchParams();
     if (criteria.name) params.append('name', criteria.name);
@@ -230,6 +253,7 @@ export class Profiles {
     if (criteria.address) params.append('address', criteria.address);
     if (criteria.CID) params.append('CID', criteria.CID);
     if (criteria.registeredName) params.append('registeredName', criteria.registeredName);
+    if (criteria.location) params.append('location', criteria.location);
     if (options?.fetchComplete) params.append('fetchComplete', 'true');
 
     const response = await fetch(`${this.getProfileServiceUrl()}search?${params.toString()}`);

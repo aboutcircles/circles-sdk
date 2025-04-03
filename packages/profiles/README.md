@@ -26,6 +26,8 @@ const profile = {
   description: 'Web3 Developer',
   imageUrl: 'https://example.com/image.jpg',
   previewImageUrl: 'https://example.com/preview.jpg',
+  location: 'Berlin, Germany',
+  geoLocation: [52.5200, 13.4050]
 };
 
 const cid = await profiles.create(profile);
@@ -83,6 +85,12 @@ const nameResults = await profiles.searchByRegisteredName('Jo');
 console.log('Profile for registeredName:', nameResults);
 ```
 
+Search by location (partial match):
+```typescript
+const locationResults = await profiles.searchByLocation('Berlin');
+console.log('Profiles matching location:', locationResults);
+```
+
 Search with multiple criteria:
 ```typescript
 const results = await profiles.search({
@@ -126,6 +134,8 @@ interface Profile {
   description?: string;
   previewImageUrl?: string;
   imageUrl?: string;
+  location?: string;
+  geoLocation?: [number, number];
   extensions?: Record<string, any>;
 }
 ```
@@ -147,6 +157,8 @@ export interface SearchResultProfile extends Pick<Profile, 'name' | 'description
   // Optional fields for complete profiles
   imageUrl?: string;
   previewImageUrl?: string;
+  location?: string;
+  geoLocation?: [number, number];
 }
 ```
 
@@ -168,5 +180,6 @@ interface SearchCriteria {
   address?: string;
   CID?: string;
   registeredName?: string;
+  location?: string;
 }
 ```
