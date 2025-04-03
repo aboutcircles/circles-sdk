@@ -1,43 +1,12 @@
 import { CirclesRpc } from "@circles-sdk/data";
 import { Address } from "@circles-sdk/utils";
-
-export interface TransferPathStep {
-  readonly from: Address;
-  readonly to: Address;
-  readonly tokenOwner: Address;
-  readonly value: string;
-}
-
-type FlowEdge = {
-  streamSinkId: number;
-  amount: bigint;
-};
-
-type Stream = {
-  sourceCoordinate: number;
-  flowEdgeIds: number[];
-  data: Uint8Array;
-};
-
-type FlowMatrix = {
-  flowVertices: string[];
-  flowEdges: FlowEdge[];
-  streams: Stream[];
-  packedCoordinates: Uint8Array;
-  sourceCoordinate: number;
-};
-
-export type MaxFlowResponse = {
-  maxFlow: string;
-  transfers: TransferPathStep[];
-};
-
-export interface TransferPathStep {
-  readonly from: Address;
-  readonly to: Address;
-  readonly tokenOwner: Address;
-  readonly value: string;
-}
+import {
+  FlowEdge,
+  FlowMatrix,
+  MaxFlowResponse,
+  Stream,
+  TransferPathStep
+} from '../pathfinderTypes';
 
 export class V2Pathfinder {
   private rpc: CirclesRpc;

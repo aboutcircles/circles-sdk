@@ -1,6 +1,6 @@
 {
   "name": "@circles-sdk/utils",
-  "version": "0.21.1",
+  "version": "0.21.3",
   "description": "",
   "type": "module",
   "main": "./dist/index.js",

@@ -23,7 +23,7 @@ import { TokenBalanceRow } from './rows/tokenBalanceRow';
 import {
   Address,
   attoCirclesToCircles,
-  attoCirclesToStaticAttoCircles, hexStringToUint8Array, tcToCrc,
+  attoCirclesToStaticAttoCircles, circlesToAttoCircles, crcToTc, hexStringToUint8Array, tcToCrc,
   uint8ArrayToCidV0
 } from '@circles-sdk/utils';
 import { TrustRelation, TrustRelationRow } from './rows/trustRelationRow';
@@ -36,7 +36,7 @@ import { EventRow } from './pagedQuery/eventRow';
 
 // Filtering and Schema Definitions
 import { Filter } from './rpcSchema/filter';
-import { FilterPredicate } from "./rpcSchema/filterPredicate";
+import { FilterPredicate } from './rpcSchema/filterPredicate';
 
 export type TrustEvent = {
   blockNumber: number;
@@ -96,21 +96,42 @@ export const TokenTypes: Record<string, TokenInfo> = {
 };
 
 function calculateBalances(row: TransactionHistoryRow) {
-  const attoCircles: bigint = BigInt((<any>row).value);
-  const circles: number = attoCirclesToCircles(attoCircles);
-  const attoCrc: bigint = tcToCrc(new Date(), circles);
-  const crc: number = attoCirclesToCircles(attoCrc);
-  const staticAttoCircles: bigint = attoCirclesToStaticAttoCircles(attoCircles);
-  const staticCircles: number = attoCirclesToCircles(staticAttoCircles);
 
-  return Promise.resolve({
-    attoCircles,
-    circles,
-    staticAttoCircles,
-    staticCircles,
-    attoCrc,
-    crc
-  });
+  if (row.version === 1) {
+    // The .circles property actually contains `crc` values here
+    const attoCrc: bigint = BigInt((<any>row).value);
+    const crc: number = attoCirclesToCircles(attoCrc);
+    const circles: number = crcToTc(new Date(row.timestamp * 1000), attoCrc);
+    const attoCircles: bigint = circlesToAttoCircles(circles);
+    const staticAttoCircles: bigint = attoCirclesToStaticAttoCircles(attoCircles);
+    const staticCircles: number = attoCirclesToCircles(staticAttoCircles);
+
+    return Promise.resolve({
+      attoCircles,
+      circles,
+      staticAttoCircles,
+      staticCircles,
+      attoCrc,
+      crc
+    });
+  } else {
+    // The .circles property contains the `circles` value
+    const attoCircles: bigint = BigInt((<any>row).value);
+    const circles: number = attoCirclesToCircles(attoCircles);
+    const attoCrc: bigint = tcToCrc(new Date(row.timestamp * 1000), circles);
+    const crc: number = attoCirclesToCircles(attoCrc);
+    const staticAttoCircles: bigint = attoCirclesToStaticAttoCircles(attoCircles);
+    const staticCircles: number = attoCirclesToCircles(staticAttoCircles);
+
+    return Promise.resolve({
+      attoCircles,
+      circles,
+      staticAttoCircles,
+      staticCircles,
+      attoCrc,
+      crc
+    });
+  }
 }
 
 export class CirclesData implements CirclesDataInterface {
@@ -525,6 +546,7 @@ export class CirclesData implements CirclesDataInterface {
     return await circlesQuery.getSingleRow();
   }
 
+
   /**
    * Gets data about created core members groups by a specific group proxy contract.
    * @param pageSize The maximum number of groups per page.
@@ -579,24 +601,24 @@ export class CirclesData implements CirclesDataInterface {
       }];
     }
 
-    if(filter.length) {
+    if (filter.length) {
       queryDefintion.filter = filter;
     }
 
     const query = new CirclesQuery(this.rpc, queryDefintion);
-  
+
     const results: any[] = [];
-  
+
     while (await query.queryNextPage()) {
       const resultRows = query.currentPage?.results ?? [];
       if (resultRows.length === 0) break;
       results.push(...resultRows);
       if (resultRows.length < pageSize) break;
     }
-  
+
     return results;
   }
-  
+
   /**
    * Subscribes to Circles events.
    * @param avatar The avatar to subscribe to. If not provided, all events are subscribed to.
