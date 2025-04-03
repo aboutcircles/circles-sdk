@@ -1,8 +1,14 @@
 import { Avatar } from './avatar';
 import { CirclesConfig } from './circlesConfig';
-import { Pathfinder } from './v1/pathfinder';
+import { V1Pathfinder } from './v1/pathfinderV1';
 import { AvatarInterface } from './AvatarInterface';
-import { Hub as HubV1, Hub__factory as HubV1Factory, Token__factory } from '@circles-sdk/abi-v1';
+import {
+  Hub as HubV1,
+  Hub__factory as HubV1Factory,
+  Token__factory,
+  NameRegistryV1,
+  NameRegistryV1__factory
+} from '@circles-sdk/abi-v1';
 import {
   CMGroupDeployer,
   CMGroupDeployer__factory,
@@ -20,10 +26,10 @@ import { AvatarRow, CirclesData, CirclesRpc } from '@circles-sdk/data';
 import { V1Avatar } from './v1/v1Avatar';
 import { Address, cidV0ToUint8Array } from '@circles-sdk/utils';
 import { GroupProfile, Profile, Profiles } from '@circles-sdk/profiles';
-import { ContractRunner, ContractTransactionReceipt, ZeroAddress } from "ethers";
-import { SdkContractRunner, TransactionRequest } from "@circles-sdk/adapter";
-import { circlesConfig } from "./config";
-import { V2Pathfinder } from "./v2/pathfinderV2";
+import { ContractRunner, ContractTransactionReceipt, ZeroAddress } from 'ethers';
+import { SdkContractRunner, TransactionRequest } from '@circles-sdk/adapter';
+import { circlesConfig } from './config';
+import { V2Pathfinder } from './v2/pathfinderV2';
 
 /**
  * The SDK interface.
@@ -53,7 +59,7 @@ interface SdkInterface {
   /**
    * An instance of the v1 Pathfinder client (necessary for transfers; only available on gnosis chain with v1 Circles at the moment).
    */
-  v1Pathfinder?: Pathfinder;
+  v1Pathfinder?: V1Pathfinder;
   /**
    * An instance of the v2 Pathfinder client.
    */
@@ -151,9 +157,13 @@ export class Sdk implements SdkInterface {
    */
   readonly nameRegistry?: NameRegistry;
   /**
+   * The typechain generated V1NameRegistry contract wrapper.
+   */
+  readonly v1NameRegistry?: NameRegistryV1;
+  /**
    * The pathfinder client (v1).
    */
-  readonly v1Pathfinder?: Pathfinder;
+  readonly v1Pathfinder?: V1Pathfinder;
   /**
    * The pathfinder client (v2).
    */
@@ -171,9 +181,9 @@ export class Sdk implements SdkInterface {
    * Contains the bootstrap periods for each known hub contract.
    */
   readonly bootstrapPeriods: { [contract: string]: number } = {
-    "0xc12c1e50abb450d6205ea2c3fa861b3b834d13e8": /*deployedAt:*/ 1728824950 + /*bootsrapTime:*/ 2883058,
-    "0x3d61f0a272ec69d65f5cff097212079aafde8267": /*deployedAt:*/ 1730401610 + /*bootsrapTime:*/ 1313598,
-  }
+    '0xc12c1e50abb450d6205ea2c3fa861b3b834d13e8': /*deployedAt:*/ 1728824950 + /*bootsrapTime:*/ 2883058,
+    '0x3d61f0a272ec69d65f5cff097212079aafde8267': /*deployedAt:*/ 1730401610 + /*bootsrapTime:*/ 1313598
+  };
 
   /**
    * Creates a new SDK instance.
@@ -196,10 +206,13 @@ export class Sdk implements SdkInterface {
       this.v2Hub = HubV2Factory.connect(this.circlesConfig.v2HubAddress, <ContractRunner>this.contractRunner);
     }
     if (this.circlesConfig.pathfinderUrl) {
-      this.v1Pathfinder = new Pathfinder(this.circlesConfig.pathfinderUrl);
+      this.v1Pathfinder = new V1Pathfinder(this.circlesConfig.circlesRpcUrl);
     }
     if (this.circlesConfig.nameRegistryAddress) {
       this.nameRegistry = NameRegistry__factory.connect(this.circlesConfig.nameRegistryAddress, <ContractRunner>this.contractRunner);
+    }
+    if (this.circlesConfig.v1NameRegistryAddress) {
+      this.v1NameRegistry = NameRegistryV1__factory.connect(this.circlesConfig.v1NameRegistryAddress, <ContractRunner>this.contractRunner);
     }
     if (this.circlesConfig.profileServiceUrl) {
       this.profiles = new Profiles(this.circlesConfig.profileServiceUrl);
@@ -249,7 +262,7 @@ export class Sdk implements SdkInterface {
     }
 
     return receipt;
-  }
+  };
 
   /**
    * Registers the connected wallet as a human avatar.
@@ -429,7 +442,7 @@ export class Sdk implements SdkInterface {
           const personalMintTx: TransactionRequest = {
             to: avatarInfo.v1Token!,
             data: personalMintData,
-            value: 0n,
+            value: 0n
           };
           batch.addTransaction(personalMintTx);
 
@@ -438,7 +451,7 @@ export class Sdk implements SdkInterface {
           const stopTx: TransactionRequest = {
             to: avatarInfo.v1Token,
             data: stopData,
-            value: 0n,
+            value: 0n
           };
           batch.addTransaction(stopTx);
         }
@@ -449,7 +462,7 @@ export class Sdk implements SdkInterface {
         // Add 'registerHumanV2' to the batch
         const metadataDigest = await this.createProfileIfNecessary(profile);
 
-        if (avatarInfo.type === "CrcV1_Signup") {
+        if (avatarInfo.type === 'CrcV1_Signup') {
 
           // Check if the account that's migrating stopped minting in v1 during the migration period.
           // Throw an error otherwise.
@@ -462,16 +475,16 @@ export class Sdk implements SdkInterface {
           const registerHumanTx: TransactionRequest = {
             to: this.circlesConfig.v2HubAddress!,
             data: registerHumanData,
-            value: 0n,
+            value: 0n
           };
           batch.addTransaction(registerHumanTx);
-        } else if (avatarInfo.type === "CrcV1_OrganizationSignup") {
+        } else if (avatarInfo.type === 'CrcV1_OrganizationSignup') {
           // Add 'registerOrganization' to the batch
           const registerOrganizationData = this.v2Hub.interface.encodeFunctionData('registerOrganization', [profile.name, metadataDigest]);
           const registerOrganizationTx: TransactionRequest = {
             to: this.circlesConfig.v2HubAddress!,
             data: registerOrganizationData,
-            value: 0n,
+            value: 0n
           };
           batch.addTransaction(registerOrganizationTx);
         } else {
@@ -486,7 +499,7 @@ export class Sdk implements SdkInterface {
         const calculateIssuanceTx: TransactionRequest = {
           to: this.circlesConfig.v2HubAddress!,
           data: calculateIssuanceData,
-          value: 0n,
+          value: 0n
         };
         batch.addTransaction(calculateIssuanceTx);
       }
@@ -515,7 +528,7 @@ export class Sdk implements SdkInterface {
           const trustTx: TransactionRequest = {
             to: this.circlesConfig.v2HubAddress!,
             data: trustData,
-            value: 0n,
+            value: 0n
           };
           batch.addTransaction(trustTx);
         }
@@ -556,7 +569,7 @@ export class Sdk implements SdkInterface {
     // Once the migration period is over, verify that minting stopped before or during the migration period
     const [isStopped, lastMint] = await Promise.all([
       v1Token.stopped(),
-      v1Token.lastTouched(),
+      v1Token.lastTouched()
     ]);
 
     return isStopped && lastMint <= migrationPeriodEnd;
@@ -615,7 +628,7 @@ export class Sdk implements SdkInterface {
         const tx: TransactionRequest = {
           to: tokenToMigrate.tokenAddress,
           data: increaseAllowanceData,
-          value: 0n,
+          value: 0n
         };
         batch.addTransaction(tx);
       }
@@ -630,7 +643,7 @@ export class Sdk implements SdkInterface {
     const migrateTx: TransactionRequest = {
       to: this.circlesConfig.migrationAddress,
       data: migrateData,
-      value: 0n,
+      value: 0n
     };
     batch.addTransaction(migrateTx);
 
@@ -681,11 +694,11 @@ export class Sdk implements SdkInterface {
 
   getInflationaryWrapper = async (wrapperAddress: Address): Promise<InflationaryCircles> => {
     return InflationaryCircles__factory.connect(wrapperAddress, <ContractRunner>this.contractRunner);
-  }
+  };
 
   getDemurragedWrapper = async (wrapperAddress: Address): Promise<DemurrageCircles> => {
     return DemurrageCircles__factory.connect(wrapperAddress, <ContractRunner>this.contractRunner);
-  }
+  };
 
   isCoreMembersGroup = async (avatar: Address): Promise<boolean> => {
     const results = await this.data.getCreatedCMGroups(1, {
@@ -693,5 +706,5 @@ export class Sdk implements SdkInterface {
     });
 
     return results.length > 0;
-  }
+  };
 }

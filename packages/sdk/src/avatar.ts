@@ -324,7 +324,7 @@ export class Avatar implements AvatarInterfaceV2 {
    * @param cid The IPFS content identifier of the metadata (Qm....).
    * @returns The transaction receipt confirming the update.
    */
-  updateMetadata = (cid: string): Promise<ContractTransactionReceipt> => this.onlyIfV2((_avatar) => _avatar.updateMetadata(cid));
+  updateMetadata = (cid: string): Promise<ContractTransactionReceipt> => this.onlyIfInitialized(() => this._avatar!.updateMetadata(cid));
 
   /**
    * Gets the profile that's associated with the avatar or returns `undefined` if no profile is associated.

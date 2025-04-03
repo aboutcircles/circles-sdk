@@ -12,8 +12,8 @@ import {
   TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
-import { Address, crcToTc } from '@circles-sdk/utils';
-import { TransactionResponse } from "@circles-sdk/adapter";
+import { Address, crcToTc, cidV0ToUint8Array } from '@circles-sdk/utils';
+import { TransactionResponse } from '@circles-sdk/adapter';
 
 export class V1Avatar implements AvatarInterface {
   public readonly sdk: Sdk;
@@ -50,6 +50,21 @@ export class V1Avatar implements AvatarInterface {
     return await this.sdk.data.getTokenBalances(this.address);
   }
 
+  async updateMetadata(cid: string): Promise<ContractTransactionReceipt> {
+    this.throwIfNotInitialized();
+
+    const digest = cidV0ToUint8Array(cid);
+    const tx = await this.sdk.v1NameRegistry?.updateMetadataDigest(digest);
+    const receipt = await tx?.wait();
+    if (!receipt) {
+      throw new Error('Metadata update failed');
+    }
+
+    this.avatarInfo.cidV0 = cid;
+
+    return receipt;
+  }
+
   /**
    * Utilizes the pathfinder to find the max. transferable amount from the avatar to `to`.
    * @param to The recipient
@@ -67,22 +82,22 @@ export class V1Avatar implements AvatarInterface {
 
       const tokenBalances = await this.sdk.data.getTokenBalances(this.address);
       const tokenBalance = tokenBalances.filter(b => b.version === 1 && b.tokenAddress === tokenId)[0]?.circles;
-      return tokenBalance ?? "0";
+      return tokenBalance ?? '0';
     }
 
     this.throwIfPathfinderIsNotAvailable();
 
     const largeAmount = BigInt('999999999999999999999999999999');
-    const transferPath = await this.sdk.v1Pathfinder!.getTransferPath(
+    const transferPath = await this.sdk.v1Pathfinder!.getPath(
       this.address,
       to,
-      largeAmount);
+      largeAmount.toString());
 
-    if (!transferPath.isValid) {
+    if (!transferPath.transfers.length) {
       return 0;
     }
 
-    return crcToTc(new Date(), transferPath.maxFlow);
+    return crcToTc(new Date(), BigInt(transferPath.maxFlow));
   }
 
   /**
@@ -97,21 +112,19 @@ export class V1Avatar implements AvatarInterface {
     if (!token) {
       this.throwIfPathfinderIsNotAvailable();
       // transitive transfer
-      const transferPath = await this.sdk.v1Pathfinder!.getTransferPath(
+      const transferPath = await this.sdk.v1Pathfinder!.getPath(
         this.address,
         to,
-        amount);
+        amount.toString());
 
-      if (!transferPath.isValid || transferPath.transferSteps.length === 0) {
+      if (transferPath.transfers.length === 0) {
         throw new Error(`Couldn't find a valid path from ${this.address} to ${to} for ${amount}.`);
       }
 
-      console.log('transferPath', transferPath);
-
-      const tokenOwners = transferPath.transferSteps.map(o => o.token_owner);
-      const srcs = transferPath.transferSteps.map(o => o.from);
-      const dests = transferPath.transferSteps.map(o => o.to);
-      const wads = transferPath.transferSteps.map(o => BigInt(o.value));
+      const tokenOwners = transferPath.transfers.map(o => o.tokenOwner);
+      const srcs = transferPath.transfers.map(o => o.from);
+      const dests = transferPath.transfers.map(o => o.to);
+      const wads = transferPath.transfers.map(o => BigInt(o.value));
       const tx = await this.sdk.v1Hub.transferThrough(tokenOwners, srcs, dests, wads);
 
       receipt = await tx.wait();
@@ -127,7 +140,7 @@ export class V1Avatar implements AvatarInterface {
       const tx = await this.sdk.contractRunner.sendTransaction({
         to: token,
         data: data,
-        value: 0n,
+        value: 0n
       });
 
       receipt = <TransactionReceipt><unknown>tx;
@@ -155,7 +168,7 @@ export class V1Avatar implements AvatarInterface {
       batch.addTransaction({
         to: this.sdk.circlesConfig.v1HubAddress,
         data: txData,
-        value: 0n,
+        value: 0n
       });
     }
 
@@ -182,7 +195,7 @@ export class V1Avatar implements AvatarInterface {
       batch.addTransaction({
         to: this.sdk.circlesConfig.v1HubAddress,
         data: txData,
-        value: 0n,
+        value: 0n
       });
     }
 

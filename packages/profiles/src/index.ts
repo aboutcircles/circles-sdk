@@ -63,12 +63,19 @@ export class Profiles {
    */
   async get(cid: string): Promise<Profile | undefined> {
     const response = await fetch(`${this.getProfileServiceUrl()}get?cid=${cid}`);
+    const body = await response.text();
+
     if (!response.ok) {
-      console.warn(`Failed to retrieve profile ${cid}. Status: ${response.status} ${response.statusText}. Body: ${await response.text()}`);
+      console.warn(`Failed to retrieve profile ${cid}. Status: ${response.status} ${response.statusText}. Body: ${body}`);
       return undefined;
     }
 
-    return await response.json();
+    try {
+      return JSON.parse(body);
+    } catch (e) {
+      console.warn(`Failed to parse profile ${cid}. Status: ${response.status} ${response.statusText}. Body: ${body}`);
+      return undefined;
+    }
   }
 
   /**

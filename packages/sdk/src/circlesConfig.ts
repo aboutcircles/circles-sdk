@@ -7,6 +7,7 @@ export interface CirclesConfig {
   readonly v1HubAddress: Address;
   readonly v2HubAddress?: Address;
   readonly nameRegistryAddress?: Address;
+  readonly v1NameRegistryAddress?: Address;
   readonly migrationAddress?: Address;
   readonly baseGroupMintPolicy?: string;
   readonly standardTreasury?: string;

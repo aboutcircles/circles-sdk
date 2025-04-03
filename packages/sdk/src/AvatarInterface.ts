@@ -119,6 +119,12 @@ export interface AvatarInterface {
    * Gets the total supply of either this avatar's Personal or Group Circles.
    */
   getTotalSupply(): Promise<bigint>;
+
+  /**
+   * Updates the avatar's metadata (profile).
+   * @param cid The IPFS CID of the metadata.
+   */
+  updateMetadata(cid: string): Promise<ContractTransactionReceipt>;
 }
 
 /**
@@ -179,12 +185,6 @@ export interface AvatarInterfaceV2 extends AvatarInterface {
    * @param avatar The avatar's avatar.
    */
   inviteHuman(avatar: Address): Promise<TransactionResponse>;
-
-  /**
-   * Updates the avatar's metadata (profile).
-   * @param cid The IPFS CID of the metadata.
-   */
-  updateMetadata(cid: string): Promise<ContractTransactionReceipt>;
 
   /**
    * Gets the profile that's associated with the avatar or returns `undefined` if no profile is associated.
