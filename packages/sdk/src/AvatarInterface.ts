@@ -2,9 +2,9 @@ import {
   AvatarRow, CirclesQuery, TokenBalanceRow, TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
-import {ContractTransactionReceipt, TransactionReceipt} from 'ethers';
-import {Profile} from "@circles-sdk/profiles";
-import {TransactionResponse} from "@circles-sdk/adapter";
+import { ContractTransactionReceipt, TransactionReceipt } from 'ethers';
+import { Profile } from '@circles-sdk/profiles';
+import { TransactionResponse } from '@circles-sdk/adapter';
 import { Address } from '@circles-sdk/utils';
 
 /**
@@ -27,12 +27,18 @@ export interface AvatarInterface {
    * Calculates the maximum Circles amount that can be transferred to another avatar.
    *
    * NOTE: This operation can be long-running.
+   * NOTE: The max. transferable amount can be lower than the avatar's balance depending on its trust relations and token holdings.
+   *       Use the `getMaxTransferableAmount()` method to calculate the max. transferable amount if you need to know it beforehand.
+   *
    *
    * @param to The address of the avatar to transfer to.
    * @param tokenId The token to transfer (address). Leave empty to allow transitive transfers.
+   * @param useWrappedBalances If wrapped Circles should be considered in the transfers.
+   * @param fromTokens If specified, makes sure that only the given tokens are used at the source.
+   * @param toTokens If specified, makes sure that only the given tokens arrive at the sink.
    * @returns The maximum amount that can be transferred.
    */
-  getMaxTransferableAmount(to: Address, tokenId?: Address): Promise<number>;
+  getMaxTransferableAmount(to: Address, tokenId?: Address, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[]): Promise<number>;
 
   /**
    * Transfers Circles to another avatar.
@@ -43,8 +49,11 @@ export interface AvatarInterface {
    * @param amount The amount to transfer.
    * @param txData The data to send with the transaction.
    * @param token The token to transfer (address). Leave empty to allow transitive transfers.
+   * @param useWrappedBalances If wrapped Circles should be considered in the transfers.
+   * @param fromTokens If specified, makes sure that only the given tokens are used at the source.
+   * @param toTokens If specified, makes sure that only the given tokens arrive at the sink.
    */
-  transfer(to: Address, amount: bigint, token?: Address, txData?: Uint8Array, useWrappedBalances?: boolean): Promise<TransactionReceipt>;
+  transfer(to: Address, amount: bigint, token?: Address, txData?: Uint8Array, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[]): Promise<TransactionReceipt>;
 
   /**
    * Trusts another avatar. Trusting an avatar means you're willing to accept Circles that have been issued by this avatar.
@@ -100,7 +109,7 @@ export interface AvatarInterface {
    * @param otherAvatar The address of the other avatar.
    * @return `true` if this avatar trusts the other avatar.
    */
-  trusts(otherAvatar: Address) : Promise<boolean>;
+  trusts(otherAvatar: Address): Promise<boolean>;
 
   /**
    * Can be used to check if this avatar is trusted by the other avatar.

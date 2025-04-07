@@ -1,20 +1,20 @@
-import {V1Avatar} from './v1/v1Avatar';
-import {ContractTransactionReceipt, parseEther, TransactionReceipt} from 'ethers';
-import {Sdk} from './sdk';
-import {AvatarInterface, AvatarInterfaceV2} from './AvatarInterface';
+import { V1Avatar } from './v1/v1Avatar';
+import { ContractTransactionReceipt, parseEther, TransactionReceipt } from 'ethers';
+import { Sdk } from './sdk';
+import { AvatarInterface, AvatarInterfaceV2 } from './AvatarInterface';
 import {
   AvatarRow,
   CirclesQuery, Observable,
   TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
-import {V2Avatar} from './v2/v2Avatar';
-import {CirclesEvent} from '@circles-sdk/data';
+import { V2Avatar } from './v2/v2Avatar';
+import { CirclesEvent } from '@circles-sdk/data';
 import { Address, tcToCrc } from '@circles-sdk/utils';
-import {Profile} from "@circles-sdk/profiles";
-import {TokenBalanceRow} from '@circles-sdk/data';
-import {TransactionResponse} from "@circles-sdk/adapter";
-import {CMGAvatar} from './v2/cmgAvatar';
+import { Profile } from '@circles-sdk/profiles';
+import { TokenBalanceRow } from '@circles-sdk/data';
+import { TransactionResponse } from '@circles-sdk/adapter';
+import { CMGAvatar } from './v2/cmgAvatar';
 
 /**
  * An Avatar represents a user registered at Circles.
@@ -69,14 +69,14 @@ export class Avatar implements AvatarInterfaceV2 {
     if (this._tokenEventSubscription) {
       this._tokenEventSubscription();
     }
-  }
+  };
 
   subscribeToEvents = async () => {
     if (!this._avatarInfo) {
       throw new Error('Avatar is not initialized');
     }
     this._events = await this._sdk.data.subscribeToEvents(this._avatarInfo.avatar);
-  }
+  };
 
   /**
    * Initializes the avatar.
@@ -89,10 +89,10 @@ export class Avatar implements AvatarInterfaceV2 {
       throw new Error('Avatar is not signed up at Circles');
     }
 
-    const {version, hasV1} = this._avatarInfo;
+    const { version, hasV1 } = this._avatarInfo;
     const v1Person = () => new V1Avatar(this._sdk, this._avatarInfo!);
     const v2Person = () => new V2Avatar(this._sdk, this._avatarInfo!);
-    const CMGroup = () => new CMGAvatar(this._sdk, this._avatarInfo!)
+    const CMGroup = () => new CMGAvatar(this._sdk, this._avatarInfo!);
 
     this._isCoreMembersGroupAvatar = await this._sdk.isCoreMembersGroup(this.address);
 
@@ -102,7 +102,7 @@ export class Avatar implements AvatarInterfaceV2 {
         break;
 
       case 2:
-        if(this._isCoreMembersGroupAvatar) {
+        if (this._isCoreMembersGroupAvatar) {
           this._avatar = CMGroup();
         } else if (!hasV1) {
           this._avatar = v2Person();
@@ -142,7 +142,7 @@ export class Avatar implements AvatarInterfaceV2 {
 
   private onlyIfCoreMembersGroup<T>(func: (avatar: CMGAvatar) => T) {
     if (!this._avatar || this._avatarInfo?.version !== 2 || !this._isCoreMembersGroupAvatar) {
-      
+
       throw new Error('CoreMembersGroup avatar is not initialized or is not a v2 avatar');
     }
     return func(<CMGAvatar>this._avatar);
@@ -165,39 +165,54 @@ export class Avatar implements AvatarInterfaceV2 {
    * Stops the avatar's token. This will prevent any future `personalMint()` calls and is not reversible.
    */
   stop = (): Promise<ContractTransactionReceipt> => this.onlyIfInitialized(() => this._avatar!.stop());
+
   /**
-   * Utilizes the pathfinder to find the maximum Circles amount that can be transferred from this Avatar to the other avatar.
-   * @param to The address to transfer the Circles to.
-   * @param tokenId The token ID to transfer. If not specified, a transitve transfer is calculated.
-   * @returns The maximum Circles amount that can be transferred.
+   * Calculates the maximum Circles amount that can be transferred to another avatar.
+   *
+   * NOTE: This operation can be long-running.
+   * NOTE: The max. transferable amount can be lower than the avatar's balance depending on its trust relations and token holdings.
+   *       Use the `getMaxTransferableAmount()` method to calculate the max. transferable amount if you need to know it beforehand.
+   *
+   *
+   * @param to The address of the avatar to transfer to.
+   * @param tokenId The token to transfer (address). Leave empty to allow transitive transfers.
+   * @param useWrappedBalances If wrapped Circles should be considered in the transfers.
+   * @param fromTokens If specified, makes sure that only the given tokens are used at the source.
+   * @param toTokens If specified, makes sure that only the given tokens arrive at the sink.
+   * @returns The maximum amount that can be transferred.
    */
-  getMaxTransferableAmount = (to: Address, tokenId?: Address): Promise<number> => this.onlyIfInitialized(() => this._avatar!.getMaxTransferableAmount(to, tokenId));
+  getMaxTransferableAmount = (to: Address, tokenId?: Address, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[]): Promise<number> =>
+    this.onlyIfInitialized(() => this._avatar!.getMaxTransferableAmount(to, tokenId, useWrappedBalances, fromTokens, toTokens));
 
   /**
    * Transfers Circles to another avatar.
    *
-   * Note: The max. transferable amount can be lower than the avatar's balance depending on its trust relations and token holdings.
-   *       Use the `getMaxTransferableAmount()` method to calculate the max. transferable amount if you need to know it beforehand.
+   * NOTE: This operation can be long-running.
+   *
    * @param to The address of the avatar to transfer to.
    * @param amount The amount to transfer.
-   * @param token The token to transfer. Leave empty to allow transitive transfers.
+   * @param txData The data to send with the transaction.
+   * @param token The token to transfer (address). Leave empty to allow transitive transfers.
+   * @param useWrappedBalances If wrapped Circles should be considered in the transfers.
+   * @param fromTokens If specified, makes sure that only the given tokens are used at the source.
+   * @param toTokens If specified, makes sure that only the given tokens arrive at the sink.
    */
-  transfer(to: Address, amount: number, token?: Address, txData?: Uint8Array, useWrappedBalances?: boolean): Promise<TransactionReceipt>;
-  transfer(to: Address, amount: bigint, token?: Address, txData?: Uint8Array, useWrappedBalances?: boolean): Promise<TransactionReceipt>;
-  transfer(to: Address, amount: number | bigint, token?: Address, txData?: Uint8Array, useWrappedBalances?: boolean): Promise<TransactionReceipt> {
+  transfer(to: Address, amount: number, token?: Address, txData?: Uint8Array, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[]): Promise<TransactionReceipt>;
+  transfer(to: Address, amount: bigint, token?: Address, txData?: Uint8Array, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[]): Promise<TransactionReceipt>;
+  transfer(to: Address, amount: number | bigint, token?: Address, txData?: Uint8Array, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[]): Promise<TransactionReceipt> {
     if (typeof amount === 'number') {
       const sendValue = this?.avatarInfo?.version === 1
         ? tcToCrc(new Date(), amount)
         : parseEther(amount.toString());
 
-      return this.onlyIfInitialized(() => this._avatar!.transfer(to, sendValue, token, txData, useWrappedBalances))
+      return this.onlyIfInitialized(() => this._avatar!.transfer(to, sendValue, token, txData, useWrappedBalances, fromTokens, toTokens));
     }
-    return this.onlyIfInitialized(() => this._avatar!.transfer(to, amount, token, txData, useWrappedBalances))
+    return this.onlyIfInitialized(() => this._avatar!.transfer(to, amount, token, txData, useWrappedBalances, fromTokens, toTokens));
   }
 
   /**
    * Trusts another avatar. Trusting an avatar means you're willing to accept Circles that have been issued by this avatar.
-   * 
+   *
    * This method has two modes:
    * - Basic trust: Pass only `avatarAddress` to trust the specified avatar(s)
    * - Timed trust: (Only for core members group avatars) Include `expiry` to set a time limit on trust
@@ -207,7 +222,7 @@ export class Avatar implements AvatarInterfaceV2 {
    * @returns TransactionResponse
    */
   trust(avatarAddress: Address | Address[], expiry?: bigint): Promise<TransactionResponse> {
-    if(this._isCoreMembersGroupAvatar) {
+    if (this._isCoreMembersGroupAvatar) {
       return this.onlyIfCoreMembersGroup((avatar) => avatar!.trust(avatarAddress, expiry));
     }
     return this.onlyIfInitialized(() => this._avatar!.trust(avatarAddress));
