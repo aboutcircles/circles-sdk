@@ -1,4 +1,4 @@
-import { Address } from "@circles-sdk/utils";
+import { Address } from '@circles-sdk/utils';
 
 // Base event type
 export type CirclesBaseEvent = {
@@ -50,6 +50,12 @@ export type CrcV1_TransferSummary = CirclesBaseEvent & {
   to?: string;
   amount?: bigint;
   events?: string;
+};
+
+export type CrcV1_UpdateMetadataDigest = CirclesBaseEvent & {
+  $event: 'CrcV1_UpdateMetadataDigest',
+  avatar?: Address;
+  metadataDigest?: Uint8Array;
 };
 
 export type CrcV2_InviteHuman = CirclesBaseEvent & {
@@ -310,6 +316,7 @@ export type CirclesEvent =
   | CrcV1_Trust
   | CrcV1_Transfer
   | CrcV1_TransferSummary
+  | CrcV1_UpdateMetadataDigest
   | CrcV2_InviteHuman
   | CrcV2_PersonalMint
   | CrcV2_RegisterGroup
@@ -354,6 +361,7 @@ export type CirclesEventType =
   | 'CrcV1_Trust'
   | 'CrcV1_Transfer'
   | 'CrcV1_TransferSummary'
+  | 'CrcV1_UpdateMetadataDigest'
   | 'CrcV2_InviteHuman'
   | 'CrcV2_PersonalMint'
   | 'CrcV2_RegisterGroup'
