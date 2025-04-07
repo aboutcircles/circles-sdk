@@ -1,5 +1,5 @@
-import { CirclesRpc } from "@circles-sdk/data";
-import { Address } from "@circles-sdk/utils";
+import { CirclesRpc } from '@circles-sdk/data';
+import { Address } from '@circles-sdk/utils';
 import {
   FlowEdge,
   FlowMatrix,
@@ -15,33 +15,36 @@ export class V2Pathfinder {
     this.rpc = new CirclesRpc(circlesRpcUrl); // Using CirclesRpc class
   }
 
-  async getMaxFlow(from: Address, to: Address): Promise<bigint> {
+  async getMaxFlow(from: Address, to: Address, includeWrapped: boolean = true): Promise<bigint> {
     const requestBody = {
       Source: from,
       Sink: to,
-      TargetFlow: "99999999999999999999999999999999999999", // A large target flow
+      TargetFlow: '99999999999999999999999999999999999999', // A large target flow
+      WithWrap: includeWrapped
     };
 
     const response = await this.rpc.call<MaxFlowResponse>('circlesV2_findPath', [requestBody]);
     return BigInt(response.result.maxFlow);
   }
 
-  async getPath(from: Address, to: Address, value: string): Promise<MaxFlowResponse> {
+  async getPath(from: Address, to: Address, value: string, includeWrapped: boolean = true): Promise<MaxFlowResponse> {
     const requestBody = {
       Source: from,
       Sink: to,
       TargetFlow: value.toString(),
+      WithWrap: includeWrapped
     };
 
     const response = await this.rpc.call<MaxFlowResponse>('circlesV2_findPath', [requestBody]);
     return response.result;
   }
 
-  async getArgsForPath(from: Address, to: Address, value: string): Promise<FlowMatrix> {
+  async getArgsForPath(from: Address, to: Address, value: string, includeWrapped: boolean = true): Promise<FlowMatrix> {
     const requestBody = {
       Source: from,
       Sink: to,
       TargetFlow: value.toString(),
+      WithWrap: includeWrapped
     };
 
     const response = await this.rpc.call<MaxFlowResponse>('circlesV2_findPath', [requestBody]);
@@ -89,7 +92,7 @@ function transformToFlowVertices(transfers: TransferPathStep[], from: Address, t
 
   return {
     sortedAddresses: sortedAddresses,
-    lookUpMap: lookUpMap,
+    lookUpMap: lookUpMap
   };
 }
 
@@ -122,8 +125,8 @@ function createFlowMatrix(from: Address, to: Address, value: string, transfers: 
 
   // Initialize flow edges
   const flowEdges: FlowEdge[] = transfers.map((transfer) => ({
-    streamSinkId: transfer.to === to? 1 : 0, // Set streamSinkId to 1 if transfer.to matches the given 'to' address
-    amount: BigInt(transfer.value), // Convert string value to bigint
+    streamSinkId: transfer.to === to ? 1 : 0, // Set streamSinkId to 1 if transfer.to matches the given 'to' address
+    amount: BigInt(transfer.value) // Convert string value to bigint
   }));
 
   // Ensure at least one terminal edge is marked
@@ -155,7 +158,7 @@ function createFlowMatrix(from: Address, to: Address, value: string, transfers: 
   const stream: Stream = {
     sourceCoordinate: lookUpMap[from],
     flowEdgeIds: flowEdgeIds,
-    data: new Uint8Array(), // Empty bytes for now
+    data: new Uint8Array() // Empty bytes for now
   };
 
   // Get coordinates for each triple (tokenOwner, sender, receiver) and pack them
@@ -172,6 +175,6 @@ function createFlowMatrix(from: Address, to: Address, value: string, transfers: 
     flowEdges: flowEdges,
     streams: [stream],
     packedCoordinates: packedCoordinates,
-    sourceCoordinate: lookUpMap[from], // Add sourceCoordinate using the lookup map
+    sourceCoordinate: lookUpMap[from] // Add sourceCoordinate using the lookup map
   };
 }

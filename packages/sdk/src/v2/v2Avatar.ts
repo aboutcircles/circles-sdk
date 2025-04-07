@@ -71,7 +71,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  async getMaxTransferableAmount(to: Address, tokenId?: Address): Promise<number> {
+  async getMaxTransferableAmount(to: Address, tokenId?: Address, includeWrapped: boolean = true): Promise<number> {
     this.throwIfV2IsNotAvailable();
     to = to.toLowerCase() as Address;
 
@@ -86,7 +86,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
       return tokenBalance?.circles ?? 0;
     }
 
-    const result = await this.sdk.v2Pathfinder.getMaxFlow(this.address, to);
+    const result = await this.sdk.v2Pathfinder.getMaxFlow(this.address, to, includeWrapped);
     return attoCirclesToCircles(result);
   }
 
@@ -143,13 +143,13 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  private async transitiveTransfer(to: Address, amount: bigint, batch: BatchRun, txData?: Uint8Array) {
+  private async transitiveTransfer(to: Address, amount: bigint, batch: BatchRun, txData: Uint8Array | undefined = undefined, useWrappedBalances: boolean = true) {
     this.throwIfV2IsNotAvailable();
     to = to.toLowerCase() as Address;
 
-    const flowMatrix = await this.sdk.v2Pathfinder.getArgsForPath(this.address, to, amount.toString());
+    const flowMatrix = await this.sdk.v2Pathfinder.getArgsForPath(this.address, to, amount.toString(), useWrappedBalances);
 
-    if(txData) {
+    if (txData) {
       for (let i = 0; i < flowMatrix.streams.length; i++) {
         flowMatrix.streams[i].data = txData || new Uint8Array(0);
       }
@@ -221,7 +221,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  async transfer(to: Address, amount: bigint, tokenAddress?: Address, txData?: Uint8Array): Promise<TransactionReceipt> {
+  async transfer(to: Address, amount: bigint, tokenAddress?: Address, txData: Uint8Array | undefined = undefined, useWrappedBalances: boolean = true): Promise<TransactionReceipt> {
     if (!this.sdk?.contractRunner?.sendBatchTransaction) {
       throw new Error('ContractRunner (or sendBatchTransaction capability) not available');
     }
@@ -239,7 +239,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
       }
       console.log(`Approval by ${this.address} for ${this.address} successful`);
 
-      await this.transitiveTransfer(to, amount, batch, txData);
+      await this.transitiveTransfer(to, amount, batch, txData, useWrappedBalances);
 
       return <TransactionReceipt><unknown>(await batch.run());
     } else {
