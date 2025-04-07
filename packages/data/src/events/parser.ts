@@ -79,7 +79,7 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
         from: values.from as Address,
         to: values.to as Address,
         amount: values.amount ? hexToBigInt(values.amount) : undefined,
-        events: values.events,
+        events: values.events
       };
     case 'CrcV2_InviteHuman':
       return {
@@ -183,6 +183,13 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
       return {
         ...baseEvent,
         $event: 'CrcV2_UpdateMetadataDigest',
+        avatar: values.avatar as Address,
+        metadataDigest: values.metadataDigest ? hexToUint8Array(values.metadataDigest) : undefined
+      };
+    case 'CrcV1_UpdateMetadataDigest':
+      return {
+        ...baseEvent,
+        $event: 'CrcV1_UpdateMetadataDigest',
         avatar: values.avatar as Address,
         metadataDigest: values.metadataDigest ? hexToUint8Array(values.metadataDigest) : undefined
       };
@@ -347,14 +354,14 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
         $event: 'Safe_ProxyCreation',
         proxy: values.proxy as Address,
         singleton: values.singleton as Address
-    };
+      };
     case 'Safe_RemovedOwner':
       return {
         ...baseEvent,
         $event: 'Safe_RemovedOwner',
         safeAddress: values.safeAddress as Address,
         owner: values.owner as Address
-    };
+      };
     case 'Safe_SafeSetup':
       return {
         ...baseEvent,
