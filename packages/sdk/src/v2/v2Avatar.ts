@@ -18,7 +18,7 @@ import {
 import {
   Address,
   addressToUInt256,
-  attoCirclesToCircles,
+  attoCirclesToCircles, attoCirclesToStaticAttoCircles,
   cidV0ToUint8Array
 } from '@circles-sdk/utils';
 import { Profile } from '@circles-sdk/profiles';
@@ -194,7 +194,11 @@ export class V2Avatar implements AvatarInterfaceV2 {
       for (const wrappedToken of wrappedInflationTokens) {
         const inflationaryWrapper = await this.sdk.getInflationaryWrapper(wrappedToken.token);
         const amountToUnwrap = allOutgoingTokens[wrappedToken.token].value;
-        const tx = await inflationaryWrapper.unwrap.populateTransaction(amountToUnwrap);
+        const convertedAmount = attoCirclesToStaticAttoCircles(amountToUnwrap);
+
+        console.log(`Unwrapping ${convertedAmount} (demurraged: ${amountToUnwrap}) from ${wrappedToken.token}`);
+
+        const tx = await inflationaryWrapper.unwrap.populateTransaction(convertedAmount);
         const unwrapTransaction: TransactionRequest = {
           to: tx.to as Address,
           data: tx.data,
