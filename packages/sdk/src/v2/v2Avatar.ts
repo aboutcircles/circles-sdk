@@ -18,12 +18,13 @@ import {
 import {
   Address,
   addressToUInt256,
-  attoCirclesToCircles,
+  attoCirclesToCircles, attoCirclesToStaticAttoCircles,
   cidV0ToUint8Array
 } from '@circles-sdk/utils';
 import { Profile } from '@circles-sdk/profiles';
 import { TokenType } from '@circles-sdk/data/dist/rows/tokenInfoRow';
 import { BatchRun, TransactionRequest, TransactionResponse } from '@circles-sdk/adapter';
+import { TransferPathStep } from '../pathfinderTypes';
 
 export class V2Avatar implements AvatarInterfaceV2 {
   public readonly sdk: Sdk;
@@ -71,7 +72,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  async getMaxTransferableAmount(to: Address, tokenId?: Address): Promise<number> {
+  async getMaxTransferableAmount(to: Address, tokenId?: Address, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[]): Promise<number> {
     this.throwIfV2IsNotAvailable();
     to = to.toLowerCase() as Address;
 
@@ -86,7 +87,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
       return tokenBalance?.circles ?? 0;
     }
 
-    const result = await this.sdk.v2Pathfinder.getMaxFlow(this.address, to);
+    const result = await this.sdk.v2Pathfinder.getMaxFlow(this.address, to, useWrappedBalances, fromTokens, toTokens);
     return attoCirclesToCircles(result);
   }
 
@@ -143,13 +144,89 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  private async transitiveTransfer(to: Address, amount: bigint, batch: BatchRun, txData?: Uint8Array) {
+  private async transitiveTransfer(to: Address, amount: bigint, batch: BatchRun, txData?: Uint8Array, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[]) {
     this.throwIfV2IsNotAvailable();
     to = to.toLowerCase() as Address;
 
-    const flowMatrix = await this.sdk.v2Pathfinder.getArgsForPath(this.address, to, amount.toString());
+    const path = await this.sdk.v2Pathfinder.getPath(this.address, to, amount.toString(), useWrappedBalances, fromTokens, toTokens);
 
-    if(txData) {
+    let transfers: TransferPathStep[] = path.transfers;
+
+    if (useWrappedBalances) {
+      // If wrapped balances are used, query the token info of each token to determine which are the wrapped tokens
+      const allOutgoingTokens: Record<Address, {
+        tokenOwner?: Address,
+        value: bigint
+      }> = path.transfers
+        .filter(o => o.from == this.address)
+        .reduce((p, c) => {
+          p[c.tokenOwner] = {
+            tokenOwner: undefined,
+            value: BigInt(c.value)
+          };
+          return p;
+        }, <Record<Address, { tokenOwner?: Address, value: bigint }>>{});
+
+      const allOutgoingTokenInfo = await this.sdk.data.getTokenInfoBatch(Object.keys(allOutgoingTokens) as Address[]);
+      allOutgoingTokenInfo.forEach(t => {
+        allOutgoingTokens[t.token].tokenOwner = t.tokenOwner;
+      });
+
+      // Find all wrapped tokens
+      const wrappedDemurrageTokens = allOutgoingTokenInfo.filter(o => o.type == 'CrcV2_ERC20WrapperDeployed_Demurraged');
+
+      // Add a unwrap of the required amount to the batch (demurrage)
+      for (const wrappedToken of wrappedDemurrageTokens) {
+        const demurragedWrapper = await this.sdk.getDemurragedWrapper(wrappedToken.token);
+        const amountToUnwrap = allOutgoingTokens[wrappedToken.token].value;
+        const tx = await demurragedWrapper.unwrap.populateTransaction(amountToUnwrap);
+        const unwrapTransaction: TransactionRequest = {
+          to: tx.to as Address,
+          data: tx.data,
+          value: tx.value ?? 0n
+        };
+        batch.addTransaction(unwrapTransaction);
+      }
+
+      const wrappedInflationTokens = allOutgoingTokenInfo.filter(o => o.type == 'CrcV2_ERC20WrapperDeployed_Inflationary');
+
+      // Add a unwrap of the required amount to the batch (inflationary)
+      for (const wrappedToken of wrappedInflationTokens) {
+        const inflationaryWrapper = await this.sdk.getInflationaryWrapper(wrappedToken.token);
+        const amountToUnwrap = allOutgoingTokens[wrappedToken.token].value;
+        const convertedAmount = attoCirclesToStaticAttoCircles(amountToUnwrap);
+
+        console.log(`Unwrapping ${convertedAmount} (demurraged: ${amountToUnwrap}) from ${wrappedToken.token}`);
+
+        const tx = await inflationaryWrapper.unwrap.populateTransaction(convertedAmount);
+        const unwrapTransaction: TransactionRequest = {
+          to: tx.to as Address,
+          data: tx.data,
+          value: tx.value ?? 0n
+        };
+        batch.addTransaction(unwrapTransaction);
+      }
+
+      // Replace the addresses of the wrapper tokens with the 'tokenOwner' of the unwrapped ones
+      transfers = path.transfers.map(t => {
+        if (allOutgoingTokens[t.tokenOwner]) {
+          return <TransferPathStep>{
+            ...t,
+            tokenOwner: allOutgoingTokens[t.tokenOwner].tokenOwner
+          };
+        }
+
+        return t;
+      });
+    }
+
+    const flowMatrix = this.sdk.v2Pathfinder.createFlowMatrix(
+      this.address
+      , to
+      , amount.toString()
+      , transfers);
+
+    if (txData) {
       for (let i = 0; i < flowMatrix.streams.length; i++) {
         flowMatrix.streams[i].data = txData || new Uint8Array(0);
       }
@@ -159,14 +236,22 @@ export class V2Avatar implements AvatarInterfaceV2 {
       throw new Error('V2Hub not available');
     }
 
-    const operateFlowMatrixCallData = this.sdk.v2Hub.interface.encodeFunctionData('operateFlowMatrix', [flowMatrix.flowVertices, flowMatrix.flowEdges, flowMatrix.streams, flowMatrix.packedCoordinates]);
-    const personalMintTx: TransactionRequest = {
+    const operateFlowMatrixCallData = this.sdk.v2Hub.interface.encodeFunctionData(
+      'operateFlowMatrix'
+      , [
+        flowMatrix.flowVertices,
+        flowMatrix.flowEdges,
+        flowMatrix.streams,
+        flowMatrix.packedCoordinates
+      ]);
+
+    const operateFlowMatrixTx: TransactionRequest = {
       to: this.sdk.circlesConfig.v2HubAddress!,
       data: operateFlowMatrixCallData,
       value: 0n
     };
 
-    batch.addTransaction(personalMintTx);
+    batch.addTransaction(operateFlowMatrixTx);
   }
 
   private async directTransfer(to: Address, amount: bigint, tokenAddress: Address, txData?: Uint8Array): Promise<TransactionReceipt> {
@@ -221,7 +306,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  async transfer(to: Address, amount: bigint, tokenAddress?: Address, txData?: Uint8Array): Promise<TransactionReceipt> {
+  async transfer(to: Address, amount: bigint, tokenAddress?: Address, txData?: Uint8Array, useWrappedBalances?: boolean): Promise<TransactionReceipt> {
     if (!this.sdk?.contractRunner?.sendBatchTransaction) {
       throw new Error('ContractRunner (or sendBatchTransaction capability) not available');
     }
@@ -239,7 +324,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
       }
       console.log(`Approval by ${this.address} for ${this.address} successful`);
 
-      await this.transitiveTransfer(to, amount, batch, txData);
+      await this.transitiveTransfer(to, amount, batch, txData, useWrappedBalances);
 
       return <TransactionReceipt><unknown>(await batch.run());
     } else {

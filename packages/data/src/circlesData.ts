@@ -546,6 +546,50 @@ export class CirclesData implements CirclesDataInterface {
     return await circlesQuery.getSingleRow();
   }
 
+  /**
+   * Gets the token info for a given token address.
+   * @param addresses The address of the token.
+   * @returns The token info or undefined if the token is not found.
+   */
+  async getTokenInfoBatch(addresses: Address[]): Promise<TokenInfoRow[]> {
+    addresses = addresses.map(o => o.toLowerCase()) as Address[];
+    const circlesQuery = new CirclesQuery<TokenInfoRow>(this.rpc, {
+      namespace: 'V_Crc',
+      table: 'Tokens',
+      columns: [
+        'blockNumber',
+        'timestamp',
+        'transactionIndex',
+        'logIndex',
+        'transactionHash',
+        'version',
+        'type',
+        'token',
+        'tokenOwner'
+      ],
+      filter: [
+        {
+          Type: 'FilterPredicate',
+          FilterType: 'In',
+          Column: 'token',
+          Value: addresses
+        }
+      ],
+      sortOrder: 'ASC',
+      limit: 1000
+    });
+
+    const results: TokenInfoRow[] = [];
+    while (await circlesQuery.queryNextPage()) {
+      const resultRows = circlesQuery.currentPage?.results ?? [];
+      if (resultRows.length === 0) break;
+      results.push(...resultRows);
+      if (resultRows.length < 1000) break;
+    }
+    
+    return results;
+  }
+
 
   /**
    * Gets data about created core members groups by a specific group proxy contract.
