@@ -61,6 +61,37 @@ export class PrivateKeyContractRunner implements EthersContractRunner {
       handleTransactionError(e);
     }
   };
+  sendBatchTransaction?: (() => BatchRun) | undefined = () => {
+    if (!this._wallet) {
+      throw new Error('Not initialized');
+    }
+    return new PrivateKeyBatchRun(this._wallet);
+  };
+}
+
+export class PrivateKeyBatchRun implements BatchRun {
+  private readonly transactions: ethers.TransactionRequest[] = [];
+
+  constructor(private readonly provider: Wallet) {
+    // No asynchronous operations in the constructor
+  }
+
+  addTransaction(tx: ethers.TransactionRequest) {
+    this.transactions.push(tx);
+  }
+
+  async run() {
+    let lastReceipt: TransactionReceipt | null = null;
+    for (const tx of this.transactions) {
+      try {
+        const txResponse = await this.provider.sendTransaction(tx);
+        lastReceipt = await txResponse.wait();
+      } catch (error) {
+        handleTransactionError(error);
+      }
+    }
+    return <TransactionResponse><unknown>lastReceipt;
+  }
 }
 
 export class BrowserProviderContractRunner implements EthersContractRunner {
