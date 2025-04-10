@@ -500,10 +500,20 @@ export class CirclesData implements CirclesDataInterface {
         avatarMap[avatarRow.avatar].hasV1 = true;
         avatarMap[avatarRow.avatar].v1Token = avatarRow.tokenId as Address;
       } else {
+        let v0Cid: string | undefined;
+        let v0CidDigest: string | undefined;
+        if (avatarMap[avatarRow.avatar] && !avatarRow.cidV0) {
+          v0Cid = avatarMap[avatarRow.avatar].cidV0;
+          v0CidDigest = avatarMap[avatarRow.avatar].cidV0Digest;
+        }
         avatarMap[avatarRow.avatar] = {
           ...avatarMap[avatarRow.avatar],
           ...avatarRow
         };
+        if (v0Cid) {
+          avatarMap[avatarRow.avatar].cidV0 = v0Cid;
+          avatarMap[avatarRow.avatar].cidV0Digest = v0CidDigest;
+        }
       }
     });
 
