@@ -560,6 +560,11 @@ export class Sdk implements SdkInterface {
       return false;
     }
 
+    const ringsDeployment = "0x3d61f0a272ec69d65f5cff097212079aafde8267";
+    if (this.circlesConfig.v2HubAddress.toLowerCase() === ringsDeployment) {
+      return true;
+    }
+
     const migrationPeriodEnd = this.bootstrapPeriods[this.circlesConfig.v2HubAddress.toLowerCase()];
     if (Date.now() / 1000 < migrationPeriodEnd) {
       // Allow to self migrate anyone with a v1 token during the migration period
