@@ -81,16 +81,16 @@ export function staticAttoCirclesToAttoCircles(value: bigint): bigint {
   return staticCirclesToAttoCircles(staticCircles);
 }
 
-export function circlesToStaticCircles(value: number): number {
-  const now = new Date().getTime();
-  const daysSinceInception = (now - CirclesInceptionTimestamp) / 86400000;
+export function circlesToStaticCircles(value: number, timestamp?: number): number {
+  timestamp = timestamp ?? new Date().getTime();
+  const daysSinceInception = Math.floor((timestamp - CirclesInceptionTimestamp) / 86400000);
   const f = Math.pow(Beta, daysSinceInception);
   return value * f;
 }
 
-export function attoCirclesToStaticAttoCircles(value: bigint): bigint {
+export function attoCirclesToStaticAttoCircles(value: bigint, timestamp?: number): bigint {
   const circles = new BigNumber(value.toString()).shiftedBy(-18).toNumber();
-  const sc = circlesToStaticCircles(circles);
+  const sc = circlesToStaticCircles(circles, timestamp);
   return circlesToAttoCircles(sc);
 }
 
@@ -334,20 +334,20 @@ export function parseError(errorData: string): ethers.ErrorDescription | null {
 
 function getCustomErrorFragment(errorText: string) {
   const abi = [
-      "error Error(string)"
+    'error Error(string)'
   ];
-  
+
   const iface = new ethers.Interface(abi);
-  const errorFragment = iface.getError("Error");
-  const encodedError = iface.encodeErrorResult("Error", [errorText]);
-  const decodedError = iface.decodeErrorResult("Error", encodedError);
-  
+  const errorFragment = iface.getError('Error');
+  const encodedError = iface.encodeErrorResult('Error', [errorText]);
+  const decodedError = iface.decodeErrorResult('Error', encodedError);
+
   return {
-      fragment: errorFragment,
-      name: errorFragment?.name,
-      args: decodedError,
-      signature: errorFragment?.format(),
-      selector: iface.getFunction("Error")?.selector
+    fragment: errorFragment,
+    name: errorFragment?.name,
+    args: decodedError,
+    signature: errorFragment?.format(),
+    selector: iface.getFunction('Error')?.selector
   };
 }
 
@@ -370,7 +370,7 @@ export function handleTransactionError(e: any): never {
     throw new Error(JSON.stringify(getCustomErrorFragment(e.info.error.message), null, 2));
   }
 
-  throw new Error(JSON.stringify(getCustomErrorFragment("Unknown"), null, 2));
+  throw new Error(JSON.stringify(getCustomErrorFragment('Unknown'), null, 2));
 }
 
 export type { Address } from './type';
