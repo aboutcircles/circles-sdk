@@ -306,10 +306,11 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  async transfer(to: Address, amount: bigint, tokenAddress?: Address, txData?: Uint8Array, useWrappedBalances?: boolean): Promise<TransactionReceipt> {
+  async transfer(to: Address, amount: bigint, tokenAddress?: Address, txData?: Uint8Array, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[]): Promise<TransactionReceipt> {
     if (!this.sdk?.contractRunner?.sendBatchTransaction) {
       throw new Error('ContractRunner (or sendBatchTransaction capability) not available');
     }
+
     if (!tokenAddress) {
       const batch = this.sdk.contractRunner.sendBatchTransaction();
 
@@ -324,7 +325,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
       }
       console.log(`Approval by ${this.address} for ${this.address} successful`);
 
-      await this.transitiveTransfer(to, amount, batch, txData, useWrappedBalances);
+      await this.transitiveTransfer(to, amount, batch, txData, useWrappedBalances, fromTokens, toTokens);
 
       return <TransactionReceipt><unknown>(await batch.run());
     } else {
