@@ -310,7 +310,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
     if (!this.sdk?.contractRunner?.sendBatchTransaction) {
       throw new Error('ContractRunner (or sendBatchTransaction capability) not available');
     }
-    if (
+
     if (!tokenAddress) {
       const batch = this.sdk.contractRunner.sendBatchTransaction();
 
