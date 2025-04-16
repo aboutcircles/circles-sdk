@@ -108,8 +108,18 @@ export class Avatar implements AvatarInterfaceV2 {
           this._avatar = v2Person();
         } else {
           const v1Avatar = v1Person();
-          const isStopped = await v1Avatar.v1Token?.stopped();
-          this._avatar = isStopped ? v2Person() : v1Person();
+          const isHuman = await v1Avatar.avatarInfo.isHuman;
+
+          // Handle edge case: organization migrated to v2 but still have v1 account
+          // without token which is recognized as `isStopped == false`
+          let isStopped = false;
+          if(isHuman) {
+            isStopped = await v1Avatar.v1Token?.stopped() || false;
+            this._avatar = isStopped ? v2Person() : v1Person();
+          } else {
+            this._avatar = v2Person();
+          }
+
           const avatarInfo = this._avatar.avatarInfo;
           if (avatarInfo) {
             avatarInfo.v1Stopped = isStopped;
