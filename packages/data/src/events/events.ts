@@ -276,6 +276,32 @@ export type CrcV2_FlowEdgesScopeSingleStarted = CirclesBaseEvent & {
   streamId?: bigint;
 };
 
+export type CrcV2_BaseGroupCreated = CirclesBaseEvent & {
+  $event: 'CrcV2_BaseGroupCreated';
+  group: Address;
+  owner: Address;
+  mintHandler: Address;
+  treasury: Address;
+};
+
+export type CrcV2_BaseGroupOwnerUpdated = CirclesBaseEvent & {
+  $event: 'CrcV2_BaseGroupOwnerUpdated';
+  emitter: Address;
+  owner: Address;
+};
+
+export type CrcV2_BaseGroupServiceUpdated = CirclesBaseEvent & {
+  $event: 'CrcV2_BaseGroupServiceUpdated';
+  emitter: Address;
+  newService: Address;
+};
+
+export type CrcV2_BaseGroupFeeCollectionUpdated = CirclesBaseEvent & {
+  $event: 'CrcV2_BaseGroupFeeCollectionUpdated';
+  emitter: Address;
+  feeCollection: Address;
+};
+
 export type Crc_UnknownEvent = CirclesBaseEvent & {
   $event: 'Crc_UnknownEvent',
   originalEventType: string;
@@ -348,6 +374,10 @@ export type CirclesEvent =
   | CrcV2_TransferSummary
   | CrcV2_FlowEdgesScopeLastEnded
   | CrcV2_FlowEdgesScopeSingleStarted
+  | CrcV2_BaseGroupCreated
+  | CrcV2_BaseGroupOwnerUpdated
+  | CrcV2_BaseGroupServiceUpdated
+  | CrcV2_BaseGroupFeeCollectionUpdated
   | Crc_UnknownEvent
   | Safe_AddedOwner
   | Safe_ProxyCreation
@@ -393,6 +423,10 @@ export type CirclesEventType =
   | 'CrcV2_TransferSummary'
   | 'CrcV2_FlowEdgesScopeLastEnded'
   | 'CrcV2_FlowEdgesScopeSingleStarted'
+  | 'CrcV2_BaseGroupCreated'
+  | 'CrcV2_BaseGroupOwnerUpdated'
+  | 'CrcV2_BaseGroupServiceUpdated'
+  | 'CrcV2_BaseGroupFeeCollectionUpdated'
   | 'Crc_UnknownEvent'
   | 'Safe_AddedOwner'
   | 'Safe_ProxyCreation'

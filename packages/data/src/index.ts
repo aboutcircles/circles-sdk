@@ -1,30 +1,30 @@
-export {PagedQueryResult} from './pagedQuery/pagedQueryResult';
-export {Cursor} from './pagedQuery/cursor';
-export {CirclesQuery} from './pagedQuery/circlesQuery';
-export {PagedQueryParams} from './pagedQuery/pagedQueryParams';
-export {EventRow} from './pagedQuery/eventRow';
-export {Observable} from './observable';
-export {CirclesQueryParams} from './rpcSchema/circlesQueryParams';
-export {Conjunction} from './rpcSchema/conjunction';
-export {Filter} from './rpcSchema/filter';
-export {FilterPredicate} from './rpcSchema/filterPredicate';
-export {JsonRpcRequest} from './rpcSchema/jsonRpcRequest';
-export {JsonRpcResponse} from './rpcSchema/jsonRpcResponse';
-export {Order} from './rpcSchema/order';
-export {SortOrder} from './rpcSchema/sortOrder';
-export {Namespace, Table} from './rpcSchema/namespaces';
-export {CirclesData} from './circlesData';
-export {CirclesDataInterface} from './circlesDataInterface';
-export {TransactionHistoryRow} from './rows/transactionHistoryRow';
-export {TrustListRow} from './rows/trustListRow';
-export {TokenBalanceRow} from './rows/tokenBalanceRow';
-export {AvatarRow} from './rows/avatarRow';
-export {CirclesRpc} from './circlesRpc';
-export {TrustRelationRow} from './rows/trustRelationRow';
-export {InvitationRow} from './rows/invitationRow';
-export {GroupRow} from './rows/groupRow';
-export {GroupQueryParams} from './circlesDataInterface';
-export {CalculatedColumn} from './pagedQuery/circlesQuery'
+export { PagedQueryResult } from './pagedQuery/pagedQueryResult';
+export { Cursor } from './pagedQuery/cursor';
+export { CirclesQuery } from './pagedQuery/circlesQuery';
+export { PagedQueryParams } from './pagedQuery/pagedQueryParams';
+export { EventRow } from './pagedQuery/eventRow';
+export { Observable } from './observable';
+export { CirclesQueryParams } from './rpcSchema/circlesQueryParams';
+export { Conjunction } from './rpcSchema/conjunction';
+export { Filter } from './rpcSchema/filter';
+export { FilterPredicate } from './rpcSchema/filterPredicate';
+export { JsonRpcRequest } from './rpcSchema/jsonRpcRequest';
+export { JsonRpcResponse } from './rpcSchema/jsonRpcResponse';
+export { Order } from './rpcSchema/order';
+export { SortOrder } from './rpcSchema/sortOrder';
+export { Namespace, Table } from './rpcSchema/namespaces';
+export { CirclesData } from './circlesData';
+export { CirclesDataInterface } from './circlesDataInterface';
+export { TransactionHistoryRow } from './rows/transactionHistoryRow';
+export { TrustListRow } from './rows/trustListRow';
+export { TokenBalanceRow } from './rows/tokenBalanceRow';
+export { AvatarRow } from './rows/avatarRow';
+export { CirclesRpc } from './circlesRpc';
+export { TrustRelationRow } from './rows/trustRelationRow';
+export { InvitationRow } from './rows/invitationRow';
+export { GroupRow } from './rows/groupRow';
+export { GroupQueryParams } from './circlesDataInterface';
+export { CalculatedColumn } from './pagedQuery/circlesQuery';
 export {
   CirclesEvent,
   CirclesEventType,
@@ -49,6 +49,7 @@ export {
   CrcV2_PersonalMint,
   CrcV2_UpdateMetadataDigest
 } from './events/events';
-export {TrustEvent} from "./circlesData";
-export {TokenType} from './rows/tokenInfoRow';
-export {TrustRelation} from './rows/trustRelationRow';
+export { TrustEvent } from './circlesData';
+export { TokenType } from './rows/tokenInfoRow';
+export { TrustRelation } from './rows/trustRelationRow';
+export { GroupType } from './circlesDataInterface';

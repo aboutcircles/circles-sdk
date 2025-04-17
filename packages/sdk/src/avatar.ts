@@ -4,7 +4,7 @@ import { Sdk } from './sdk';
 import { AvatarInterface, AvatarInterfaceV2 } from './AvatarInterface';
 import {
   AvatarRow,
-  CirclesQuery, Observable,
+  CirclesQuery, GroupType, Observable,
   TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
@@ -41,7 +41,7 @@ export class Avatar implements AvatarInterfaceV2 {
 
   private _tokenEventSubscription?: () => void = undefined;
 
-  private _isCoreMembersGroupAvatar: boolean = false;
+  private _groupType: GroupType | undefined;
 
   /**
    * Creates a new Avatar instance that controls a Circles avatar at the given address.
@@ -94,7 +94,7 @@ export class Avatar implements AvatarInterfaceV2 {
     const v2Person = () => new V2Avatar(this._sdk, this._avatarInfo!);
     const CMGroup = () => new CMGAvatar(this._sdk, this._avatarInfo!);
 
-    this._isCoreMembersGroupAvatar = await this._sdk.isCoreMembersGroup(this.address);
+    this._groupType = await this._sdk.getGroupType(this.address);
 
     switch (version) {
       case 1:
@@ -102,7 +102,7 @@ export class Avatar implements AvatarInterfaceV2 {
         break;
 
       case 2:
-        if (this._isCoreMembersGroupAvatar) {
+        if (this._groupType === 'CrcV2_CMGroupCreated') {
           this._avatar = CMGroup();
         } else if (!hasV1) {
           this._avatar = v2Person();
@@ -151,7 +151,7 @@ export class Avatar implements AvatarInterfaceV2 {
   }
 
   private onlyIfCoreMembersGroup<T>(func: (avatar: CMGAvatar) => T) {
-    if (!this._avatar || this._avatarInfo?.version !== 2 || !this._isCoreMembersGroupAvatar) {
+    if (!this._avatar || this._avatarInfo?.version !== 2 || this._groupType !== 'CrcV2_CMGroupCreated') {
 
       throw new Error('CoreMembersGroup avatar is not initialized or is not a v2 avatar');
     }
@@ -232,7 +232,7 @@ export class Avatar implements AvatarInterfaceV2 {
    * @returns TransactionResponse
    */
   trust(avatarAddress: Address | Address[], expiry?: bigint): Promise<TransactionResponse> {
-    if (this._isCoreMembersGroupAvatar) {
+    if (this._groupType === 'CrcV2_CMGroupCreated') {
       return this.onlyIfCoreMembersGroup((avatar) => avatar!.trust(avatarAddress, expiry));
     }
     return this.onlyIfInitialized(() => this._avatar!.trust(avatarAddress));
