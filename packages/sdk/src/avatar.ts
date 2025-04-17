@@ -15,6 +15,7 @@ import { Profile } from '@circles-sdk/profiles';
 import { TokenBalanceRow } from '@circles-sdk/data';
 import { TransactionResponse } from '@circles-sdk/adapter';
 import { CMGAvatar } from './v2/cmgAvatar';
+import { BaseGroupAvatar } from './v2/baseGroupAvatar';
 
 /**
  * An Avatar represents a user registered at Circles.
@@ -93,6 +94,7 @@ export class Avatar implements AvatarInterfaceV2 {
     const v1Person = () => new V1Avatar(this._sdk, this._avatarInfo!);
     const v2Person = () => new V2Avatar(this._sdk, this._avatarInfo!);
     const CMGroup = () => new CMGAvatar(this._sdk, this._avatarInfo!);
+    const BaseGroup = () => new BaseGroupAvatar(this._sdk, this._avatarInfo!);
 
     this._groupType = await this._sdk.getGroupType(this.address);
 
@@ -104,6 +106,8 @@ export class Avatar implements AvatarInterfaceV2 {
       case 2:
         if (this._groupType === 'CrcV2_CMGroupCreated') {
           this._avatar = CMGroup();
+        } else if(this._groupType === 'CrcV2_BaseGroupCreated') {
+          this._avatar = BaseGroup();
         } else if (!hasV1) {
           this._avatar = v2Person();
         } else {
@@ -158,6 +162,22 @@ export class Avatar implements AvatarInterfaceV2 {
     return func(<CMGAvatar>this._avatar);
   }
 
+  private onlyIfBaseGroup<T>(func: (avatar: BaseGroupAvatar) => T) {
+    if (!this._avatar || this._avatarInfo?.version !== 2 || this._groupType !== 'CrcV2_BaseGroupCreated') {
+
+      throw new Error('BaseGroup avatar is not initialized or is not a v2 avatar');
+    }
+    return func(<BaseGroupAvatar>this._avatar);
+  }
+
+  private onlyIfGroup<T>(func: (avatar: CMGAvatar | BaseGroupAvatar) => T) {
+    if (!this._avatar || this._avatarInfo?.version !== 2 || (this._groupType !== 'CrcV2_CMGroupCreated' && this._groupType !== 'CrcV2_BaseGroupCreated')) {
+
+      throw new Error('Group avatar is not initialized or is not a v2 avatar');
+    }
+    return func(<BaseGroupAvatar>this._avatar);
+  }
+
   /**
    * `human` avatars can mint 24 personal Circles per day. This method returns the amount of Circles that can be minted.
    *
@@ -166,11 +186,13 @@ export class Avatar implements AvatarInterfaceV2 {
    * @returns The amount of Circles that can be minted.
    */
   getMintableAmount = (): Promise<number> => this.onlyIfInitialized(() => this._avatar!.getMintableAmount());
+
   /**
    * Mints the available personal Circles for the avatar. Check `getMintableAmount()` to see how many Circles can be minted.
    * @returns The transaction receipt.
    */
   personalMint = (): Promise<ContractTransactionReceipt> => this.onlyIfInitialized(() => this._avatar!.personalMint());
+
   /**
    * Stops the avatar's token. This will prevent any future `personalMint()` calls and is not reversible.
    */
@@ -225,15 +247,15 @@ export class Avatar implements AvatarInterfaceV2 {
    *
    * This method has two modes:
    * - Basic trust: Pass only `avatarAddress` to trust the specified avatar(s)
-   * - Timed trust: (Only for core members group avatars) Include `expiry` to set a time limit on trust
+   * - Timed trust: (Only for base group or core members group avatars) Include `expiry` to set a time limit on trust
    *
    * @param avatarAddress The address of the avatar to trust. Can be a single address or an array of addresses.
    * @param expiry (Optional) The expiration time of the trust relationship in Unix timestamp format.
    * @returns TransactionResponse
    */
   trust(avatarAddress: Address | Address[], expiry?: bigint): Promise<TransactionResponse> {
-    if (this._groupType === 'CrcV2_CMGroupCreated') {
-      return this.onlyIfCoreMembersGroup((avatar) => avatar!.trust(avatarAddress, expiry));
+    if (this._groupType === 'CrcV2_BaseGroupCreated' || this._groupType === 'CrcV2_CMGroupCreated') {
+      return this.onlyIfGroup((avatar) => avatar!.trust(avatarAddress, expiry));
     }
     return this.onlyIfInitialized(() => this._avatar!.trust(avatarAddress));
   }
@@ -264,12 +286,14 @@ export class Avatar implements AvatarInterfaceV2 {
    * @returns An array of trust relations in this form: avatar1 - [trusts|trustedBy|mutuallyTrusts] -> avatar2.
    */
   getTrustRelations = (): Promise<TrustRelationRow[]> => this.onlyIfInitialized(() => this._avatar!.getTrustRelations());
+
   /**
    * Gets the Circles transaction history of the avatar. The history contains incoming/outgoing transactions and minting of personal Circles and Group Circles.
    * @param pageSize The maximum number of transactions per page.
    * @returns A query object that can be used to iterate over the transaction history.
    */
   getTransactionHistory = (pageSize: number): Promise<CirclesQuery<TransactionHistoryRow>> => this.onlyIfInitialized(() => this._avatar!.getTransactionHistory(pageSize));
+
   /**
    * Gets the avatar's total Circles balance.
    *
@@ -375,13 +399,13 @@ export class Avatar implements AvatarInterfaceV2 {
    * Retrieves the owner of the group.
    * @returns The address of the owner.
    */
-  owner = (): Promise<Address> => this.onlyIfCoreMembersGroup((avatar) => avatar.owner());
+  owner = (): Promise<Address> => this.onlyIfGroup((avatar) => avatar.owner());
 
   /**
    * Retrieves the mint handler address, responsible for minting new group tokens.
    * @returns The address of the mint handler.
    */
-  mintHandler = (): Promise<Address> => this.onlyIfCoreMembersGroup((avatar) => avatar.mintHandler());
+  mintHandler = (): Promise<Address> => this.onlyIfGroup((avatar) => avatar.mintHandler());
 
   /**
    * Retrieves the redemption handler address, responsible for handling group token redemptions.
@@ -393,7 +417,7 @@ export class Avatar implements AvatarInterfaceV2 {
    * Retrieves the service address associated with the group contract.
    * @returns The address of the service.
    */
-  service = (): Promise<Address> => this.onlyIfCoreMembersGroup((avatar) => avatar.service());
+  service = (): Promise<Address> => this.onlyIfGroup((avatar) => avatar.service());
 
   /**
    * Gets the minimum deposit required for group mint operation.
@@ -405,14 +429,24 @@ export class Avatar implements AvatarInterfaceV2 {
    * Gets the membership conditions required to enter the group.
    * @returns Set of addresses representing membership conditions.
    */
-  getMembershipConditions = (): Promise<Address[]> => this.onlyIfCoreMembersGroup((avatar) => avatar.getMembershipConditions());
+  getMembershipConditions = (): Promise<Address[]> => this.onlyIfGroup((avatar) => avatar.getMembershipConditions());
+
+  /**
+   * Updates the owner of the group to a new address.
+   * This functionality is only available for Base Group avatars.
+   * 
+   * @param owner The address of the new owner
+   * @returns A promise resolving to the transaction receipt
+   * @throws Error if the avatar is not initialized or is not a Base Group avatar
+   */
+  setOwner = (owner: Address): Promise<ContractTransactionReceipt> => this.onlyIfBaseGroup((avatar) => avatar.setOwner(owner));
 
   /**
    * Sets the service address for the group contract.
    * @param service The new service address to be set.
    * @returns A promise resolving to the transaction receipt.
    */
-  setService = (service: Address): Promise<ContractTransactionReceipt> => this.onlyIfCoreMembersGroup((avatar) => avatar.setService(service));
+  setService = (service: Address): Promise<ContractTransactionReceipt> => this.onlyIfGroup((avatar) => avatar.setService(service));
 
   /**
    * Assigns a new mint handler responsible for mint operations.
@@ -440,5 +474,37 @@ export class Avatar implements AvatarInterfaceV2 {
    * @param feeCollection The address of the new fee collection entity.
    * @returns A promise resolving to the transaction receipt.
    */
-  setFeeCollection = (feeCollection: Address): Promise<ContractTransactionReceipt> => this.onlyIfCoreMembersGroup((avatar) => avatar.setFeeCollection(feeCollection));
+  setFeeCollection = (feeCollection: Address): Promise<ContractTransactionReceipt> => this.onlyIfGroup((avatar) => avatar.setFeeCollection(feeCollection));
+
+  /**
+   * Sets or updates a membership condition for the group.
+   * This functionality is only available for Base Group avatars.
+   * 
+   * @param condition The address representing a membership condition
+   * @param enabled Boolean flag indicating whether the condition should be enabled or disabled
+   * @returns A promise resolving to the transaction receipt
+   * @throws Error if the avatar is not initialized or is not a Base Group avatar
+   */
+  setMembershipCondition = (condition: Address, enabled: boolean): Promise<ContractTransactionReceipt> => this.onlyIfBaseGroup((avatar) => avatar.setMembershipCondition(condition, enabled));
+
+  /**
+   * Registers a short name for the group using a nonce value.
+   * This functionality is only available for Base Group avatars.
+   * 
+   * @param nonce A user-provided nonce to handle name collisions or concurrency issues
+   * @returns A promise resolving to the transaction receipt
+   * @throws Error if the avatar is not initialized or is not a Base Group avatar or if registration fails
+   */
+  registerShortNameWithNonce = (nonce: number): Promise<ContractTransactionReceipt> => this.onlyIfBaseGroup((avatar) => avatar.registerShortNameWithNonce(nonce));
+
+  /**
+   * Establishes trust relationships with multiple addresses in a single transaction with expiry conditions.
+   * This functionality is only available for Base Group avatars.
+   * 
+   * @param members An array of addresses to trust
+   * @param expiry Optional timestamp when the trust relationships will expire (defaults to 0)
+   * @returns A promise resolving to the transaction receipt
+   * @throws Error if the avatar is not initialized or is not a Base Group avatar
+   */
+  trustBatchWithConditions = (members: Address[], expiry?: bigint): Promise<ContractTransactionReceipt> => this.onlyIfBaseGroup((avatar) => avatar.trustBatchWithConditions(members, expiry));
 }
