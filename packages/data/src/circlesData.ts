@@ -2,7 +2,6 @@
 import { CirclesRpc } from './circlesRpc';
 import {
   CirclesDataInterface,
-  CMGroupQueryParams,
   GroupQueryParams
 } from './circlesDataInterface';
 import { Observable } from './observable';
@@ -27,7 +26,7 @@ import {
   uint8ArrayToCidV0
 } from '@circles-sdk/utils';
 import { TrustRelation, TrustRelationRow } from './rows/trustRelationRow';
-import { CoreMembersGroupRow } from './rows/coreMembersGroupRow';
+// import { CoreMembersGroupRow } from './rows/coreMembersGroupRow';
 import { InvitationRow } from './rows/invitationRow';
 import { GroupMembershipRow } from './rows/groupMembershipRow';
 import { GroupRow } from './rows/groupRow';
@@ -600,79 +599,6 @@ export class CirclesData implements CirclesDataInterface {
     return results;
   }
 
-
-  /**
-   * Gets data about created core members groups by a specific group proxy contract.
-   * @param pageSize The maximum number of groups per page.
-   * @param params Optional query parameters to filter the core members groups.
-   * @returns A CirclesQuery object with the group creation data.
-   */
-  async getCreatedCMGroups(pageSize: number, params?: CMGroupQueryParams): Promise<CoreMembersGroupRow[]> {
-    let filter: Filter[] = [];
-
-    const queryDefintion: PagedQueryParams = {
-      namespace: 'CrcV2',
-      table: 'CMGroupCreated',
-      columns: [
-        'blockNumber',
-        'timestamp',
-        'transactionIndex',
-        'logIndex',
-        'transactionHash',
-        'proxy',
-        'owner',
-        'mintHandler',
-        'redemptionHandler'
-      ],
-      filter: filter,
-      sortOrder: 'DESC',
-      limit: pageSize
-    };
-
-    if (params?.ownerEquals) {
-      filter.push({
-        Type: 'FilterPredicate',
-        FilterType: 'Equals',
-        Column: 'owner',
-        Value: params.ownerEquals
-      });
-    }
-
-    if (params?.groupProxyAddressIn) {
-      filter.push({
-        Type: 'FilterPredicate',
-        FilterType: 'In',
-        Column: 'proxy',
-        Value: params.groupProxyAddressIn
-      });
-    }
-
-    if (filter.length > 1) {
-      filter = [{
-        Type: 'Conjunction',
-        Predicates: filter,
-        ConjunctionType: 'And'
-      }];
-    }
-
-    if (filter.length) {
-      queryDefintion.filter = filter;
-    }
-
-    const query = new CirclesQuery(this.rpc, queryDefintion);
-
-    const results: any[] = [];
-
-    while (await query.queryNextPage()) {
-      const resultRows = query.currentPage?.results ?? [];
-      if (resultRows.length === 0) break;
-      results.push(...resultRows);
-      if (resultRows.length < pageSize) break;
-    }
-
-    return results;
-  }
-
   /**
    * Subscribes to Circles events.
    * @param avatar The avatar to subscribe to. If not provided, all events are subscribed to.
@@ -793,13 +719,17 @@ export class CirclesData implements CirclesDataInterface {
         'logIndex',
         'transactionHash',
         'group',
-        'mint',
+        'type',
+        'owner',
+        'mintPolicy',
+        'mintHandler',
         'treasury',
+        'service',
+        'feeCollection',
+        'memberCount',
         'name',
         'symbol',
-        'cidV0Digest',
-        'memberCount',
-        'trustedCount'
+        'cidV0Digest'
       ],
       sortOrder: 'DESC',
       limit: pageSize
@@ -816,7 +746,7 @@ export class CirclesData implements CirclesDataInterface {
         Type: 'FilterPredicate',
         FilterType: 'Like',
         Column: 'name',
-        Value: params.symbolStartsWith + '%'
+        Value: params.nameStartsWith + '%'
       });
     }
 
@@ -836,6 +766,15 @@ export class CirclesData implements CirclesDataInterface {
         Column: 'group',
         Value: params.groupAddressIn
       });
+    }
+
+    if (params.groupTypeIn) {
+      filter.push({
+        Type: 'FilterPredicate',
+        FilterType: 'In',
+        Column: 'type',
+        Value: params.groupTypeIn
+      })
     }
 
     if (filter.length > 1) {

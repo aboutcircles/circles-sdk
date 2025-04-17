@@ -30,6 +30,7 @@ import { ContractRunner, ContractTransactionReceipt, ZeroAddress } from 'ethers'
 import { SdkContractRunner, TransactionRequest } from '@circles-sdk/adapter';
 import { circlesConfig } from './config';
 import { V2Pathfinder } from './v2/pathfinderV2';
+import { GroupType } from '@circles-sdk/data/dist/circlesDataInterface';
 
 /**
  * The SDK interface.
@@ -560,7 +561,7 @@ export class Sdk implements SdkInterface {
       return false;
     }
 
-    const ringsDeployment = "0x3d61f0a272ec69d65f5cff097212079aafde8267";
+    const ringsDeployment = '0x3d61f0a272ec69d65f5cff097212079aafde8267';
     if (this.circlesConfig.v2HubAddress.toLowerCase() === ringsDeployment) {
       return true;
     }
@@ -706,10 +707,19 @@ export class Sdk implements SdkInterface {
   };
 
   isCoreMembersGroup = async (avatar: Address): Promise<boolean> => {
-    const results = await this.data.getCreatedCMGroups(1, {
-      groupProxyAddressIn: [avatar]
+    const results = this.data.findGroups(1, {
+      groupAddressIn: [avatar],
+      groupTypeIn: ['CrcV2_CMGroupCreated']
     });
 
-    return results.length > 0;
+    return !!(await results.getSingleRow());
+  };
+
+  getGroupType = async (avatar: Address): Promise<GroupType | undefined> => {
+    const results = this.data.findGroups(1, {
+      groupAddressIn: [avatar]
+    });
+
+    return (await results.getSingleRow())?.type;
   };
 }

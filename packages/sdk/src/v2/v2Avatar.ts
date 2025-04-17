@@ -325,6 +325,18 @@ export class V2Avatar implements AvatarInterfaceV2 {
       }
       console.log(`Approval by ${this.address} for ${this.address} successful`);
 
+      // const randomizeLeastSignificantDigits = (number: bigint) => {
+      //   const rand = BigInt(Math.floor(Math.random() * 10 ** 18)); // Generates a random number with 18 digits
+      //   const divisor = BigInt(10 ** 18); // Scale divisor for 18 decimal places
+      //   return (number / divisor) * divisor + rand; // Replace the least significant 18 digits with the random value
+      // };
+      //
+      // console.log(`amount: ${amount}`);
+      // const randomAmount = randomizeLeastSignificantDigits(amount);
+      // console.log(`Randomized amount: ${randomAmount}`);
+      //
+      // debugger;
+
       await this.transitiveTransfer(to, amount, batch, txData, useWrappedBalances, fromTokens, toTokens);
 
       return <TransactionReceipt><unknown>(await batch.run());

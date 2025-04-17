@@ -6,21 +6,19 @@ import { TrustListRow } from './rows/trustListRow';
 import { TrustRelationRow } from './rows/trustRelationRow';
 import { Observable } from './observable';
 import { CirclesEvent } from './events/events';
-import { InvitationRow } from './rows/invitationRow';
 import { GroupRow } from './rows/groupRow';
 import { GroupMembershipRow } from './rows/groupMembershipRow';
 import { TokenInfoRow } from './rows/tokenInfoRow';
 import { Address } from '@circles-sdk/utils';
 
-export interface CMGroupQueryParams {
-  ownerEquals?: string;
-  groupProxyAddressIn?: string[];
-}
+export type GroupType = 'CrcV2_RegisterGroup' | 'CrcV2_CMGroupCreated' | 'CrcV2_BaseGroupCreated';
 
 export interface GroupQueryParams {
+  ownerEquals?: string;
   nameStartsWith?: string;
   symbolStartsWith?: string;
   groupAddressIn?: string[];
+  groupTypeIn?: GroupType[];
   sortBy?: 'age_asc' | 'age_desc' | 'name_asc' | 'name_desc' | 'symbol_asc' | 'symbol_desc' | 'memberCount_desc' | 'memberCount_asc' | 'trustedCount_desc' | 'trustedCount_asc';
 }
 
