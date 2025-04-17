@@ -417,9 +417,10 @@ export class V2Avatar implements AvatarInterfaceV2 {
   ): Promise<ContractTransactionReceipt> {
     this.throwIfV2IsNotAvailable();
 
-    const standardTreasury = this.sdk.circlesConfig.standardTreasury;
-    if (!standardTreasury) {
-      throw new Error('No standard treasury address in config.');
+    const treasury = await this.sdk.v2Hub!.treasuries(group);
+
+    if (!treasury) {
+      throw new Error('No treasury address detected.');
     }
 
     // 1) Sum up requested redemption amounts
@@ -461,12 +462,12 @@ export class V2Avatar implements AvatarInterfaceV2 {
       [metadataTuple]
     );
 
-    // 4) safeTransferFrom(...) to StandardTreasury
+    // 4) safeTransferFrom(...) to the group treasury
     const groupId = addressToUInt256(group);
 
     const tx = await this.sdk.v2Hub!.safeTransferFrom(
       this.address,
-      standardTreasury,
+      treasury,
       groupId,
       totalValue,
       metadataEncoded
