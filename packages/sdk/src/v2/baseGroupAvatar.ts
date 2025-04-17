@@ -325,6 +325,6 @@ export class BaseGroupAvatar implements AvatarInterfaceV2 {
   }
 
   private NotSupportedError() {
-    return new Error('CoreMembersGroup avatar does not support this function.');
+    return new Error('BaseGroup avatar does not support this function.');
   }
 }
