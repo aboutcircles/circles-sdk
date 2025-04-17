@@ -11,3 +11,6 @@ typechain --target ethers-v6 --out-dir ./packages/abi-v2/src/inflationaryCircles
 
 typechain --target ethers-v6 --out-dir ./packages/abi-v2/src/coreMembersGroup './contract-artifacts/v2/CoreMembersGroup.json'
 typechain --target ethers-v6 --out-dir ./packages/abi-v2/src/coreMembersGroupDeployer './contract-artifacts/v2/CMGroupDeployer.json'
+
+typechain --target ethers-v6 --out-dir ./packages/abi-v2/src/baseGroup './contract-artifacts/v2/BaseGroup.json'
+typechain --target ethers-v6 --out-dir ./packages/abi-v2/src/baseGroupDeployer './contract-artifacts/v2/BaseGroupDeployer.json'

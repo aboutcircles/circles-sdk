@@ -12,3 +12,7 @@ export {CoreMembersGroup} from './coreMembersGroup';
 export {CoreMembersGroup__factory} from './coreMembersGroup/factories';
 export {CMGroupDeployer} from './coreMembersGroupDeployer';
 export {CMGroupDeployer__factory} from './coreMembersGroupDeployer/factories';
+export {BaseGroup} from './baseGroup';
+export {BaseGroup__factory} from './baseGroup/factories';
+export {BaseGroupDeployer} from './baseGroupDeployer';
+export {BaseGroupDeployer__factory} from './baseGroupDeployer/factories';
