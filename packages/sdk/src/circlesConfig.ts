@@ -12,4 +12,5 @@ export interface CirclesConfig {
   readonly baseGroupMintPolicy?: string;
   readonly standardTreasury?: string;
   readonly coreMembersGroupDeployer?: string;
+  readonly baseGroupFactory?: string;
 }
