@@ -433,13 +433,13 @@ export class Avatar implements AvatarInterfaceV2 {
 
   /**
    * Updates the owner of the group to a new address.
-   * This functionality is only available for Base Group avatars.
+   * This functionality is only available for Base or Core Members Group avatars.
    * 
    * @param owner The address of the new owner
    * @returns A promise resolving to the transaction receipt
-   * @throws Error if the avatar is not initialized or is not a Base Group avatar
+   * @throws Error if the avatar is not initialized or is not a Base or Core Members Group avatar
    */
-  setOwner = (owner: Address): Promise<ContractTransactionReceipt> => this.onlyIfBaseGroup((avatar) => avatar.setOwner(owner));
+  setOwner = (owner: Address): Promise<ContractTransactionReceipt> => this.onlyIfGroup((avatar) => avatar.setOwner(owner));
 
   /**
    * Sets the service address for the group contract.
