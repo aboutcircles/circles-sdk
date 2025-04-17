@@ -6,4 +6,4 @@ src/inflationaryCircles/**
 src/coreMembersGroup/**
 src/coreMembersGroupDeployer/**
 src/baseGroup/**
-src/baseGroupDeployer/**
+src/baseGroupFactory/**

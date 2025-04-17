@@ -12,8 +12,8 @@ import {
 import {
   CMGroupDeployer,
   CMGroupDeployer__factory,
-  BaseGroupDeployer,
-  BaseGroupDeployer__factory,
+  BaseGroupFactory,
+  BaseGroupFactory__factory,
   DemurrageCircles,
   DemurrageCircles__factory,
   Hub as HubV2,
@@ -74,7 +74,7 @@ interface SdkInterface {
   /**
    * An instance of the v2 Base Group deployer.
    */
-  baseGroupDeployer?: BaseGroupDeployer;
+  baseGroupFactory?: BaseGroupFactory;
   /**
    * Stores and retrieves profiles from the Circles profile service.
    */
@@ -182,7 +182,7 @@ export class Sdk implements SdkInterface {
   /**
    * The Base Group deployer (v2).
    */
-  readonly baseGroupDeployer?: BaseGroupDeployer;
+  readonly baseGroupFactory?: BaseGroupFactory;
   /**
    * The profiles service client.
    */
@@ -231,8 +231,8 @@ export class Sdk implements SdkInterface {
     if (this.circlesConfig.coreMembersGroupDeployer) {
       this.coreMembersGroupDeployer = CMGroupDeployer__factory.connect(this.circlesConfig.coreMembersGroupDeployer, <ContractRunner>this.contractRunner);
     }
-    if (this.circlesConfig.baseGroupDeployer) {
-      this.baseGroupDeployer = BaseGroupDeployer__factory.connect(this.circlesConfig.baseGroupDeployer, <ContractRunner>this.contractRunner);
+    if (this.circlesConfig.baseGroupFactory) {
+      this.baseGroupFactory = BaseGroupFactory__factory.connect(this.circlesConfig.baseGroupFactory, <ContractRunner>this.contractRunner);
     }
   }
 
