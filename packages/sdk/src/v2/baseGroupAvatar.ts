@@ -165,10 +165,6 @@ export class BaseGroupAvatar implements AvatarInterfaceV2 {
     return 0n;
   }
 
-  // =================================================
-  //               EXTERNAL FUNCTIONS
-  // =================================================
-
   async setOwner(owner: Address): Promise<ContractTransactionReceipt> {
     const tx = await this.baseGroup.setOwner(owner);
     const receipt = await tx.wait();
