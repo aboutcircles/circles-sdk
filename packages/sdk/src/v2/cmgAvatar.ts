@@ -163,6 +163,16 @@ export class CMGAvatar implements AvatarInterfaceV2 {
     return 0n;
   }
 
+  async setOwner(owner: Address): Promise<ContractTransactionReceipt> {
+    const tx = await this.coreMemberGroup.setOwner(owner);
+    const receipt = await tx.wait();
+    if (!receipt) {
+      throw new Error('Updating owner failed');
+    }
+
+    return receipt;
+  }
+
   async setService(service: Address): Promise<ContractTransactionReceipt> {
     const tx = await this.coreMemberGroup.setService(service);
     const receipt = await tx.wait();
