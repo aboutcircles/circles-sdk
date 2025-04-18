@@ -777,6 +777,15 @@ export class CirclesData implements CirclesDataInterface {
       })
     }
 
+    if (params.ownerEquals) {
+      filter.push({
+        Type: 'FilterPredicate',
+        FilterType: 'Equals',
+        Column: 'owner',
+        Value: params.ownerEquals
+      })
+    }
+
     if (filter.length > 1) {
       filter = [{
         Type: 'Conjunction',
