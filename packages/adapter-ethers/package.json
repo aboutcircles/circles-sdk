@@ -1,6 +1,6 @@
 {
   "name": "@circles-sdk/adapter-ethers",
-  "version": "0.22.4",
+  "version": "0.23.1",
   "description": "",
   "type": "module",
   "main": "./dist/index.js",
@@ -18,8 +18,8 @@
   },
   "dependencies": {
     "ethers": "^6.13.2",
-    "@circles-sdk/adapter": "0.22.4",
-    "@circles-sdk/utils": "0.22.4"
+    "@circles-sdk/adapter": "0.23.1",
+    "@circles-sdk/utils": "0.23.1"
   },
   "keywords": [],
   "author": "",
