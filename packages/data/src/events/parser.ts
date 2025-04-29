@@ -236,6 +236,16 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
         value: values.value ? hexToBigInt(values.value) : undefined,
         userData: values.userData ? hexToUint8Array(values.userData) : undefined
       };
+    case 'CrcV2_GroupMint':
+      return {
+        ...baseEvent,
+        $event: 'CrcV2_GroupMint',
+        group: values.group as Address,
+        sender: values.sender as Address,
+        receiver: values.receiver as Address,
+        collateral: values.collateral ? hexToBigInt(values.collateral) : undefined,
+        amount: values.amount ? hexToBigInt(values.amount) : undefined,
+      };
     case 'CrcV2_GroupRedeem':
       return {
         ...baseEvent,
@@ -340,6 +350,82 @@ const parseEventValues = (event: CirclesEventType, values: EventValues): Circles
         $event: 'CrcV2_FlowEdgesScopeSingleStarted',
         flowEdgeId: values.flowEdgeId ? hexToBigInt(values.flowEdgeId) : undefined,
         streamId: values.streamId ? hexToBigInt(values.streamId) : undefined
+      };
+    case 'CrcV2_CMGroupCreated':
+      return {
+        ...baseEvent,
+        $event: 'CrcV2_CMGroupCreated',
+        proxy: values.proxy as Address,
+        owner: values.owner as Address,
+        mintHandler: values.mintHandler as Address,
+        redemptionHandler: values.redemptionHandler as Address,
+        emitter: values.emitter as Address,
+        liquidityProvider: values.liquidityProvider as Address
+      };
+    case 'CrcV2_CirclesBackingDeployed':
+      return {
+        ...baseEvent,
+        $event: 'CrcV2_CirclesBackingDeployed',
+        backer: values.backer as Address,
+        circlesBackingInstance: values.circlesBackingInstance as Address,
+        emitter: values.emitter as Address
+      };
+    case 'CrcV2_CirclesBackingInitiated':
+      return {
+        ...baseEvent,
+        $event: 'CrcV2_CirclesBackingInitiated',
+        backer: values.backer as Address,
+        circlesBackingInstance: values.circlesBackingInstance as Address,
+        backingAsset: values.backingAsset as Address,
+        personalCirclesAddress: values.personalCirclesAddress as Address,
+        emitter: values.emitter as Address
+      };
+    case 'CrcV2_CirclesBackingCompleted':
+      return {
+        ...baseEvent,
+        $event: 'CrcV2_CirclesBackingCompleted',
+        backer: values.backer as Address,
+        circlesBackingInstance: values.circlesBackingInstance as Address,
+        lbp: values.lbp as Address,
+        emitter: values.emitter as Address
+      };
+    case 'CrcV2_LBPDeployed':
+      return {
+        ...baseEvent,
+        $event: 'CrcV2_LBPDeployed',
+        circlesBackingInstance: values.circlesBackingInstance as Address,
+        lbp: values.lbp as Address,
+        emitter: values.emitter as Address
+      };
+    case 'CrcV2_BaseGroupCreated':
+      return {
+        ...baseEvent,
+        $event: 'CrcV2_BaseGroupCreated',
+        group: values.group as Address,
+        owner: values.owner as Address,
+        mintHandler: values.mintHandler as Address,
+        treasury: values.treasury as Address
+      };
+    case 'CrcV2_BaseGroupOwnerUpdated':
+      return {
+        ...baseEvent,
+        $event: 'CrcV2_BaseGroupOwnerUpdated',
+        emitter: values.emitter as Address,
+        owner: values.owner as Address
+      };
+    case 'CrcV2_BaseGroupServiceUpdated':
+      return {
+        ...baseEvent,
+        $event: 'CrcV2_BaseGroupServiceUpdated',
+        emitter: values.emitter as Address,
+        newService: values.newService as Address
+      };
+    case 'CrcV2_BaseGroupFeeCollectionUpdated':
+      return {
+        ...baseEvent,
+        $event: 'CrcV2_BaseGroupFeeCollectionUpdated',
+        emitter: values.emitter as Address,
+        feeCollection: values.feeCollection as Address
       };
     case 'Safe_AddedOwner':
       return {
