@@ -410,6 +410,25 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
+  async getRedeemableAmount(group: Address, collateral: Address): Promise<bigint> {
+    // Define the group treasury address
+    const treasuryAddress = (await this.sdk.v2Hub!.treasuries(group)).toLowerCase();
+
+    return (await this.sdk.v2Hub?.balanceOf(treasuryAddress, BigInt(collateral))) || 0n;
+  }
+
+  /**
+   * @notice Redeems a specified amount of collateral tokens from a group's treasury
+   * @dev This function allows users to redeem collateral from a group treasury using the appropriate amount of the group tokens.
+   * For CrcV2_BaseGroupCreated groups, it uses the flowMatrix operation,
+   * while for standard groups it uses the ERC1155 safeTransferFrom approach with metadata.
+   * 
+   * @param group The address of the group from which to redeem collateral
+   * @param collateral An array of collateral token addresses to redeem (currently only supports a single token for Base groups)
+   * @param amounts An array of amounts to redeem for each corresponding collateral token (currently only supports a single amount for Base groups)
+   * 
+   * @return A Promise resolving to the transaction receipt
+   */
   async groupRedeem(
     group: Address,
     collateral: Address[],
@@ -417,68 +436,174 @@ export class V2Avatar implements AvatarInterfaceV2 {
   ): Promise<ContractTransactionReceipt> {
     this.throwIfV2IsNotAvailable();
 
-    const standardTreasury = this.sdk.circlesConfig.standardTreasury;
-    if (!standardTreasury) {
-      throw new Error('No standard treasury address in config.');
+    group = group.toLowerCase() as Address;
+    const groupType = await this.sdk.getGroupType(group);
+
+    if(groupType == "CrcV2_BaseGroupCreated") {
+      // @todo implement multicollateral redeem
+      if(collateral.length !== 1 || amounts.length !== 1) {
+        throw new Error('Cannot redeem multiple collaterals');
+      }
+
+      const selectedCollateral = collateral[0].toLowerCase() as Address;
+      // Amount to redeem from the group treasury
+      const amountToRedeem = amounts[0];
+      // Define the group treasury address
+      const treasuryAddress = (await this.sdk.v2Hub!.treasuries(group)).toLowerCase();
+      // Address of the redeemer
+      const currentAvatar = this.address.toLowerCase();
+
+      // Check if the collateral is trusted by the avatar
+      const isRedeemableCollateralTrusted = await this.trusts(selectedCollateral);
+
+      if(!isRedeemableCollateralTrusted) {
+        throw new Error('Collateral which is gonna be redeemed is not trusted');
+      }
+
+      // Check if treasury has enough collateral
+      const collateralInTreasury = (await this.sdk.v2Hub?.balanceOf(treasuryAddress, BigInt(selectedCollateral))) || 0n;
+
+      if(collateralInTreasury < amountToRedeem) {
+        throw new Error('Insufficient collateral in the group treasury');
+      }
+
+      // Construct the unsorted flow vertices array
+      const flowVerticesUnsorted =
+        [selectedCollateral, currentAvatar, group, treasuryAddress]
+          .map(address => address.toLowerCase());
+
+      // Convert to a Set to remove duplicates
+      const uniqueAddresses = [...new Set(flowVerticesUnsorted)];
+      
+      // Sort addresses in ascending order based on their numeric value
+      const flowVertices = uniqueAddresses.sort((a, b) => {
+        const aValue = BigInt(a);
+        const bValue = BigInt(b);
+        
+        if (aValue < bValue) return -1;
+        if (aValue > bValue) return 1;
+        return 0;
+      });
+
+      // Construct the flow array
+      const flow = [
+        {
+          streamSinkId: 0,
+          amount: amountToRedeem.toString()
+        },
+        {
+          streamSinkId: 1,
+          amount: amountToRedeem.toString()
+        }
+      ];
+      const sourceCoordinate = flowVertices.indexOf(currentAvatar as Address)
+      console.log(flowVertices, currentAvatar, sourceCoordinate);
+
+      // Construct the streams array
+      const streams = [
+        {
+          sourceCoordinate, // Points to sender
+          flowEdgeIds: [1],
+          data: "0x"
+        }
+      ];
+      const groupTokenIndex = flowVertices.indexOf(group as Address); 
+      const treasuryIndex = flowVertices.indexOf(treasuryAddress as Address);
+      const collateralIndex = flowVertices.indexOf(selectedCollateral as Address);
+
+      // The packed coordinates based on the example
+      let packedCoordinates = "0x";
+      [
+        groupTokenIndex, // token
+        sourceCoordinate, // from
+        treasuryIndex, // to
+        collateralIndex, // token
+        treasuryIndex, // from
+        sourceCoordinate // to
+      ].forEach(index => {
+        // Convert to hex and pad to 4 characters
+        const hexValue = index.toString(16).padStart(4, '0');
+        packedCoordinates += hexValue;
+      });
+
+      // Call the hub's operateFlowMatrix function with the constructed parameters
+      const tx = await this.sdk.v2Hub!.operateFlowMatrix(
+        flowVertices,
+        flow,
+        streams,
+        packedCoordinates
+      );
+
+      const receipt = await tx.wait();
+      if (!receipt) {
+        throw new Error('Group redeem failed');
+      }
+
+      return receipt;
+    } else {
+      const standardTreasury = this.sdk.circlesConfig.standardTreasury;
+      if (!standardTreasury) {
+        throw new Error('No standard treasury address in config.');
+      }
+
+      // 1) Sum up requested redemption amounts
+      let totalValue = 0n;
+      for (const val of amounts) {
+        totalValue += val;
+      }
+      if (totalValue === 0n) {
+        throw new Error('Cannot redeem zero amount.');
+      }
+
+      // 2) Encode the "BaseRedemptionPolicy" data:
+      //    struct BaseRedemptionPolicy {
+      //       uint256[] redemptionIds;
+      //       uint256[] redemptionValues;
+      //    }
+      // Convert each collateral address to its numeric ID:
+      const redemptionIds = collateral.map(addr => addressToUInt256(addr));
+      const baseRedemptionPolicyEncoded = AbiCoder.defaultAbiCoder().encode(
+        ['tuple(uint256[] redemptionIds, uint256[] redemptionValues)'],
+        [[redemptionIds, amounts]]
+      );
+
+      // 3) Encode the Metadata struct:
+      //    struct Metadata {
+      //       bytes32 metadataType;
+      //       bytes   metadata;         // must be empty for groupRedeem
+      //       bytes   erc1155UserData;  // your redemption policy
+      //    }
+      const metadataTuple = [
+        this.METADATATYPE_GROUPREDEEM,
+        '0x',                       // empty 'metadata' for groupRedeem
+        baseRedemptionPolicyEncoded
+      ];
+
+      // Encode as a single tuple
+      const metadataEncoded = AbiCoder.defaultAbiCoder().encode(
+        ['tuple(bytes32, bytes, bytes)'],
+        [metadataTuple]
+      );
+
+      // 4) safeTransferFrom(...) to StandardTreasury
+      const groupId = addressToUInt256(group);
+
+      const tx = await this.sdk.v2Hub!.safeTransferFrom(
+        this.address,
+        standardTreasury,
+        groupId,
+        totalValue,
+        metadataEncoded
+      );
+
+      // 5) Wait on the receipt
+      const receipt = await tx.wait();
+      if (!receipt) {
+        throw new Error('Group redeem failed');
+      }
+
+      return receipt;
     }
-
-    // 1) Sum up requested redemption amounts
-    let totalValue = 0n;
-    for (const val of amounts) {
-      totalValue += val;
-    }
-    if (totalValue === 0n) {
-      throw new Error('Cannot redeem zero amount.');
-    }
-
-    // 2) Encode the "BaseRedemptionPolicy" data:
-    //    struct BaseRedemptionPolicy {
-    //       uint256[] redemptionIds;
-    //       uint256[] redemptionValues;
-    //    }
-    // Convert each collateral address to its numeric ID:
-    const redemptionIds = collateral.map(addr => addressToUInt256(addr));
-    const baseRedemptionPolicyEncoded = AbiCoder.defaultAbiCoder().encode(
-      ['tuple(uint256[] redemptionIds, uint256[] redemptionValues)'],
-      [[redemptionIds, amounts]]
-    );
-
-    // 3) Encode the Metadata struct:
-    //    struct Metadata {
-    //       bytes32 metadataType;
-    //       bytes   metadata;         // must be empty for groupRedeem
-    //       bytes   erc1155UserData;  // your redemption policy
-    //    }
-    const metadataTuple = [
-      this.METADATATYPE_GROUPREDEEM,
-      '0x',                       // empty 'metadata' for groupRedeem
-      baseRedemptionPolicyEncoded
-    ];
-
-    // Encode as a single tuple
-    const metadataEncoded = AbiCoder.defaultAbiCoder().encode(
-      ['tuple(bytes32, bytes, bytes)'],
-      [metadataTuple]
-    );
-
-    // 4) safeTransferFrom(...) to StandardTreasury
-    const groupId = addressToUInt256(group);
-
-    const tx = await this.sdk.v2Hub!.safeTransferFrom(
-      this.address,
-      standardTreasury,
-      groupId,
-      totalValue,
-      metadataEncoded
-    );
-
-    // 5) Wait on the receipt
-    const receipt = await tx.wait();
-    if (!receipt) {
-      throw new Error('Group redeem failed');
-    }
-
-    return receipt;
   }
 
   async getProfile(): Promise<Profile | undefined> {
