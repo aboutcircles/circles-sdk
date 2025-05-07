@@ -471,16 +471,17 @@ export class V2Avatar implements AvatarInterfaceV2 {
   }
 
   /**
-   * @notice Redeems a specified amount of collateral tokens from a group's treasury
-   * @dev This function allows users to redeem collateral from a group treasury using the appropriate amount of the group tokens.
-   * For CrcV2_BaseGroupCreated groups, it uses the flowMatrix operation,
-   * while for standard groups it uses the ERC1155 safeTransferFrom approach with metadata.
+   * @notice Redeems collateral tokens from a group's treasury in exchange for group tokens
+   * @dev Allows redemption of collateral from group treasuries using equivalent group tokens.
+   * Implementation varies by group type:
+   * - For CrcV2_BaseGroupCreated: Uses flowMatrix operations with vertex coordination
+   * - For standard groups: Uses ERC1155 safeTransferFrom with encoded metadata
    * 
    * @param group The address of the group from which to redeem collateral
-   * @param collateral An array of collateral token addresses to redeem (currently only supports a single token for Base groups)
-   * @param amounts An array of amounts to redeem for each corresponding collateral token (currently only supports a single amount for Base groups)
+   * @param collateral Array of collateral token addresses to redeem
+   * @param amounts Array of collateral amounts to redeem
    * 
-   * @return A Promise resolving to the transaction receipt
+   * @return A Promise resolving to the transaction receipt upon successful redemption
    */
   async groupRedeem(
     group: Address,
@@ -493,36 +494,30 @@ export class V2Avatar implements AvatarInterfaceV2 {
     const groupType = await this.sdk.getGroupType(group);
 
     if(groupType == "CrcV2_BaseGroupCreated") {
-      // @todo implement multicollateral redeem
-      if(collateral.length !== 1 || amounts.length !== 1) {
-        throw new Error('Cannot redeem multiple collaterals');
+      if(collateral.length !== amounts.length) {
+        throw new Error('Collateral and amounts arrays must be the same length');
+      }
+
+      if(!collateral.length || !amounts.length) {
+        throw new Error('Collateral and amounts arrays cannot be empty');
       }
 
       const selectedCollateral = collateral[0].toLowerCase() as Address;
       // Amount to redeem from the group treasury
       const amountToRedeem = amounts[0];
+
+      const totalAmount = amounts.reduce((sum, current) => sum + current, 0n);
+
       // Define the group treasury address
       const treasuryAddress = (await this.sdk.v2Hub!.treasuries(group)).toLowerCase();
       // Address of the redeemer
       const currentAvatar = this.address.toLowerCase();
 
-      // Check if the collateral is trusted by the avatar
-      const isRedeemableCollateralTrusted = await this.trusts(selectedCollateral);
-
-      if(!isRedeemableCollateralTrusted) {
-        throw new Error('Collateral which is gonna be redeemed is not trusted');
-      }
-
-      // Check if treasury has enough collateral
-      const collateralInTreasury = (await this.sdk.v2Hub?.balanceOf(treasuryAddress, BigInt(selectedCollateral))) || 0n;
-
-      if(collateralInTreasury < amountToRedeem) {
-        throw new Error('Insufficient collateral in the group treasury');
-      }
+      // @todo check if the recipient trusts all the collaterals
 
       // Construct the unsorted flow vertices array
       const flowVerticesUnsorted =
-        [selectedCollateral, currentAvatar, group, treasuryAddress]
+        [...collateral, currentAvatar, group, treasuryAddress]
           .map(address => address.toLowerCase());
 
       // Convert to a Set to remove duplicates
@@ -542,20 +537,26 @@ export class V2Avatar implements AvatarInterfaceV2 {
       const flow = [
         {
           streamSinkId: 0,
-          amount: amountToRedeem.toString()
-        },
-        {
-          streamSinkId: 1,
-          amount: amountToRedeem.toString()
+          amount: totalAmount.toString()
         }
       ];
+      const flowEdgeIds: number[] = [];
+      amounts.forEach(amount => {
+        flow.push({
+          streamSinkId: 1,
+          amount: amount.toString()
+        })
+
+        flowEdgeIds.push(flowEdgeIds.length + 1)
+      });
+
       const sourceCoordinate = flowVertices.indexOf(currentAvatar as Address)
 
       // Construct the streams array
       const streams = [
         {
           sourceCoordinate, // Points to sender
-          flowEdgeIds: [1],
+          flowEdgeIds,
           data: "0x"
         }
       ];
@@ -565,14 +566,23 @@ export class V2Avatar implements AvatarInterfaceV2 {
 
       // The packed coordinates based on the example
       let packedCoordinates = "0x";
-      [
+      let coordinates = [
         groupTokenIndex, // token
         sourceCoordinate, // from
-        treasuryIndex, // to
-        collateralIndex, // token
-        treasuryIndex, // from
-        sourceCoordinate // to
-      ].forEach(index => {
+        treasuryIndex // to
+      ]
+
+      collateral.forEach((collateralToken: Address) => {
+        const collateralIndex = flowVertices.indexOf(collateralToken.toLowerCase() as Address);
+
+        coordinates.push(
+          collateralIndex,
+          treasuryIndex,
+          sourceCoordinate
+        );
+      });
+
+      coordinates.forEach((index: number) => {
         // Convert to hex and pad to 4 characters
         const hexValue = index.toString(16).padStart(4, '0');
         packedCoordinates += hexValue;
