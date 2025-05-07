@@ -1,6 +1,7 @@
 import { AvatarInterfaceV2 } from '../AvatarInterface';
 import {
   AbiCoder,
+  ContractRunner,
   ContractTransactionReceipt,
   ethers,
   formatEther, keccak256, toUtf8Bytes,
@@ -24,6 +25,7 @@ import {
 import { Profile } from '@circles-sdk/profiles';
 import { TokenType } from '@circles-sdk/data/dist/rows/tokenInfoRow';
 import { BatchRun, TransactionRequest, TransactionResponse } from '@circles-sdk/adapter';
+import { BaseGroup__factory } from '@circles-sdk/abi-v2';
 import { TransferPathStep } from '../pathfinderTypes';
 
 export class V2Avatar implements AvatarInterfaceV2 {
@@ -399,15 +401,66 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
+  /**
+   * @dev This function enables users to convert personal tokens to group tokens (gCRC)
+   *      For BaseGroup, it sends tokens to the group's BaseMintHandler contract which
+   *      handles the conversion process. For default group types, it calls the Hub's groupMint directly.
+   *      
+   *      The BaseMintHandler works as follows:
+   *      1. It receives ERC1155 tokens via safeBatchTransferFrom
+   *      2. In its onERC1155BatchReceived/onERC1155Received functions, it:
+   *         - Calls the Hub's groupMint function
+   *         - Hub mints the gCRC tokens and sends them back to the BaseMintHandler
+   *         - BaseMintHandler forwards tokens to the beneficiary (or wraps to ERC20 if requested)
+   *      
+   *      The optional `data` parameter can be set to `keccak256("TYPE_DEMURRAGE")` or `keccak256("TYPE_INFLATIONARY")` constants
+   *      to wrap the minted gCRC into specialized ERC20 tokens before returning to the beneficiary.
+   * 
+   * @param group The address of the group
+   * @param collateral An array of collateral token addresses to convert into group tokens
+   * @param amounts An array of amounts to convert, corresponding to each collateral address
+   * @param data Additional data, for BaseGroup can contain token type constants to request ERC20 wrapping
+   * @returns A promise resolving to the transaction receipt after mining
+   */
   async groupMint(group: string, collateral: string[], amounts: bigint[], data: Uint8Array): Promise<ContractTransactionReceipt> {
     this.throwIfV2IsNotAvailable();
-    const tx = await this.sdk.v2Hub!.groupMint(group, collateral, amounts, data);
-    const receipt = await tx.wait();
-    if (!receipt) {
-      throw new Error('Group mint failed');
-    }
 
-    return receipt;
+    group = group.toLowerCase();
+    const groupType = await this.sdk.getGroupType(group as Address);
+
+    if(groupType == "CrcV2_BaseGroupCreated") {
+      const baseGroup = BaseGroup__factory.connect(group, <ContractRunner>this.sdk.contractRunner);
+      
+      // Get Base Group Mint handler address
+      const baseGroupMintHandler = (await baseGroup.BASE_MINT_HANDLER()) ?? ZeroAddress;
+      // Convert collateral tokens addresses to the uint format
+      const collateralIds = collateral.map(collateralId => addressToUInt256(collateralId as Address));
+      // Send tokens to the mint handler
+      const tx = await this.sdk.v2Hub!.safeBatchTransferFrom(
+        this.address,
+        baseGroupMintHandler,
+        collateralIds,
+        amounts,
+        data
+      );
+
+      // Wait on the receipt
+      const receipt = await tx.wait();
+      if (!receipt) {
+        throw new Error('Group mint failed');
+      }
+
+      return receipt;
+    } else {
+      // For the default groups follow use the regular hub groupMint function
+      const tx = await this.sdk.v2Hub!.groupMint(group, collateral, amounts, data);
+      const receipt = await tx.wait();
+      if (!receipt) {
+        throw new Error('Group mint failed');
+      }
+
+      return receipt;
+    }
   }
 
   async getRedeemableAmount(group: Address, collateral: Address): Promise<bigint> {
@@ -497,7 +550,6 @@ export class V2Avatar implements AvatarInterfaceV2 {
         }
       ];
       const sourceCoordinate = flowVertices.indexOf(currentAvatar as Address)
-      console.log(flowVertices, currentAvatar, sourceCoordinate);
 
       // Construct the streams array
       const streams = [
