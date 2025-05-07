@@ -502,10 +502,6 @@ export class V2Avatar implements AvatarInterfaceV2 {
         throw new Error('Collateral and amounts arrays cannot be empty');
       }
 
-      const selectedCollateral = collateral[0].toLowerCase() as Address;
-      // Amount to redeem from the group treasury
-      const amountToRedeem = amounts[0];
-
       const totalAmount = amounts.reduce((sum, current) => sum + current, 0n);
 
       // Define the group treasury address
@@ -513,34 +509,29 @@ export class V2Avatar implements AvatarInterfaceV2 {
       // Address of the redeemer
       const currentAvatar = this.address.toLowerCase();
 
-      // @todo check if the recipient trusts all the collaterals
+      // @todo check if the recipient trusts all collaterals
 
-      // Construct the unsorted flow vertices array
-      const flowVerticesUnsorted =
-        [...collateral, currentAvatar, group, treasuryAddress]
-          .map(address => address.toLowerCase());
-
-      // Convert to a Set to remove duplicates
-      const uniqueAddresses = [...new Set(flowVerticesUnsorted)];
-      
-      // Sort addresses in ascending order based on their numeric value
-      const flowVertices = uniqueAddresses.sort((a, b) => {
+      const flowVertices = [
+        // Convert to a Set to remove duplicates
+        ...new Set([ // Construct the unsorted flow vertices array
+          ...collateral,
+          currentAvatar,
+          group,
+          treasuryAddress
+        ].map(address => address.toLowerCase()))
+      ].sort((a, b) => { // Sort addresses in ascending order based on their numeric value
         const aValue = BigInt(a);
         const bValue = BigInt(b);
-        
+
         if (aValue < bValue) return -1;
         if (aValue > bValue) return 1;
         return 0;
       });
 
       // Construct the flow array
-      const flow = [
-        {
-          streamSinkId: 0,
-          amount: totalAmount.toString()
-        }
-      ];
+      const flow = [{ streamSinkId: 0, amount: totalAmount.toString() }];
       const flowEdgeIds: number[] = [];
+
       amounts.forEach(amount => {
         flow.push({
           streamSinkId: 1,
@@ -551,6 +542,8 @@ export class V2Avatar implements AvatarInterfaceV2 {
       });
 
       const sourceCoordinate = flowVertices.indexOf(currentAvatar as Address)
+      const groupTokenIndex = flowVertices.indexOf(group as Address);
+      const treasuryIndex = flowVertices.indexOf(treasuryAddress as Address);
 
       // Construct the streams array
       const streams = [
@@ -560,17 +553,12 @@ export class V2Avatar implements AvatarInterfaceV2 {
           data: "0x"
         }
       ];
-      const groupTokenIndex = flowVertices.indexOf(group as Address); 
-      const treasuryIndex = flowVertices.indexOf(treasuryAddress as Address);
-      const collateralIndex = flowVertices.indexOf(selectedCollateral as Address);
 
-      // The packed coordinates based on the example
-      let packedCoordinates = "0x";
-      let coordinates = [
+      const coordinates = [
         groupTokenIndex, // token
         sourceCoordinate, // from
         treasuryIndex // to
-      ]
+      ];
 
       collateral.forEach((collateralToken: Address) => {
         const collateralIndex = flowVertices.indexOf(collateralToken.toLowerCase() as Address);
@@ -582,11 +570,10 @@ export class V2Avatar implements AvatarInterfaceV2 {
         );
       });
 
-      coordinates.forEach((index: number) => {
-        // Convert to hex and pad to 4 characters
-        const hexValue = index.toString(16).padStart(4, '0');
-        packedCoordinates += hexValue;
-      });
+      // The packed coordinates
+      const packedCoordinates = '0x' + coordinates
+        .map(index => index.toString(16).padStart(4, '0'))
+        .join('');
 
       // Call the hub's operateFlowMatrix function with the constructed parameters
       const tx = await this.sdk.v2Hub!.operateFlowMatrix(
