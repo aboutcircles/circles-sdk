@@ -729,7 +729,9 @@ export class CirclesData implements CirclesDataInterface {
         'memberCount',
         'name',
         'symbol',
-        'cidV0Digest'
+        'cidV0Digest',
+        'erc20WrapperDemurraged',
+        'erc20WrapperStatic'
       ],
       sortOrder: 'DESC',
       limit: pageSize
@@ -774,7 +776,7 @@ export class CirclesData implements CirclesDataInterface {
         FilterType: 'In',
         Column: 'type',
         Value: params.groupTypeIn
-      })
+      });
     }
 
     if (params.ownerEquals) {
@@ -783,7 +785,25 @@ export class CirclesData implements CirclesDataInterface {
         FilterType: 'Equals',
         Column: 'owner',
         Value: params.ownerEquals
-      })
+      });
+    }
+
+    if (params.mintHandlerEquals) {
+      filter.push({
+        Type: 'FilterPredicate',
+        FilterType: 'Equals',
+        Column: 'mintHandler',
+        Value: params.mintHandlerEquals
+      });
+    }
+
+    if (params.treasuryEquals) {
+      filter.push({
+        Type: 'FilterPredicate',
+        FilterType: 'Equals',
+        Column: 'treasury',
+        Value: params.treasuryEquals
+      });
     }
 
     if (filter.length > 1) {

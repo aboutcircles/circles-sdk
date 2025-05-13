@@ -14,4 +14,6 @@ export interface GroupRow extends EventRow {
   cidV0Digest: string;
   memberCount: number;
   isMember?: boolean; // Can be set by the client to indicate membership of the current avatar
+  erc20WrapperDemurraged?: string;
+  erc20WrapperStatic?: string;
 }

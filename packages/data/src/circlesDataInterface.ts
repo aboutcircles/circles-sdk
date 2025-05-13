@@ -15,6 +15,8 @@ export type GroupType = 'CrcV2_RegisterGroup' | 'CrcV2_CMGroupCreated' | 'CrcV2_
 
 export interface GroupQueryParams {
   ownerEquals?: string;
+  mintHandlerEquals?: string;
+  treasuryEquals?: string;
   nameStartsWith?: string;
   symbolStartsWith?: string;
   groupAddressIn?: string[];

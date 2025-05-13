@@ -15,28 +15,47 @@ export class V2Pathfinder {
     this.rpc = new CirclesRpc(circlesRpcUrl); // Using CirclesRpc class
   }
 
-  async getMaxFlow(from: Address, to: Address, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[]): Promise<bigint> {
+  async getMaxFlow(
+    from: Address,
+    to: Address,
+    useWrappedBalances?: boolean,
+    fromTokens?: Address[],
+    toTokens?: Address[],
+    excludeFromTokens?: Address[],
+    excludeToTokens?: Address[]): Promise<bigint> {
     const requestBody = {
       Source: from,
       Sink: to,
       TargetFlow: '99999999999999999999999999999999999999', // A large target flow
       WithWrap: useWrappedBalances,
       FromTokens: fromTokens,
-      ToTokens: toTokens
+      ToTokens: toTokens,
+      ExcludedFromTokens: excludeFromTokens,
+      ExcludedToTokens: excludeToTokens
     };
 
     const response = await this.rpc.call<MaxFlowResponse>('circlesV2_findPath', [requestBody]);
     return BigInt(response.result.maxFlow);
   }
 
-  async getPath(from: Address, to: Address, value: string, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[]): Promise<MaxFlowResponse> {
+  async getPath(
+    from: Address,
+    to: Address,
+    value: string,
+    useWrappedBalances?: boolean,
+    fromTokens?: Address[],
+    toTokens?: Address[],
+    excludeFromTokens?: Address[],
+    excludeToTokens?: Address[]): Promise<MaxFlowResponse> {
     const requestBody = {
       Source: from,
       Sink: to,
       TargetFlow: value.toString(),
       WithWrap: useWrappedBalances,
       FromTokens: fromTokens,
-      ToTokens: toTokens
+      ToTokens: toTokens,
+      ExcludedFromTokens: excludeFromTokens,
+      ExcludedToTokens: excludeToTokens
     };
 
     const response = await this.rpc.call<MaxFlowResponse>('circlesV2_findPath', [requestBody]);
@@ -116,26 +135,6 @@ export class V2Pathfinder {
       sourceCoordinate: lookUpMap[from] // Add sourceCoordinate using the lookup map
     };
   }
-
-  // async getArgsForPath(from: Address, to: Address, value: string, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[]): Promise<FlowMatrix> {
-  //   const requestBody = {
-  //     Source: from,
-  //     Sink: to,
-  //     TargetFlow: value.toString(),
-  //     WithWrap: useWrappedBalances,
-  //     FromTokens: fromTokens,
-  //     ToTokens: toTokens
-  //   };
-  //
-  //   const response = await this.rpc.call<MaxFlowResponse>('circlesV2_findPath', [requestBody]);
-  //   const transfers = response.result.transfers;
-  //
-  //   if (transfers.length > 0) {
-  //     return createFlowMatrix(from, to, value, transfers);
-  //   } else {
-  //     throw new Error('No transfers found in response from pathfinder');
-  //   }
-  // }
 }
 
 function transformToFlowVertices(transfers: TransferPathStep[], from: Address, to: Address) {

@@ -72,7 +72,14 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  async getMaxTransferableAmount(to: Address, tokenId?: Address, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[]): Promise<number> {
+  async getMaxTransferableAmount(
+    to: Address,
+    tokenId?: Address,
+    useWrappedBalances?: boolean,
+    fromTokens?: Address[],
+    toTokens?: Address[],
+    excludeFromTokens?: Address[],
+    excludeToTokens?: Address[]): Promise<number> {
     this.throwIfV2IsNotAvailable();
     to = to.toLowerCase() as Address;
 
@@ -87,7 +94,15 @@ export class V2Avatar implements AvatarInterfaceV2 {
       return tokenBalance?.circles ?? 0;
     }
 
-    const result = await this.sdk.v2Pathfinder.getMaxFlow(this.address, to, useWrappedBalances, fromTokens, toTokens);
+    const result = await this.sdk.v2Pathfinder.getMaxFlow(
+      this.address,
+      to,
+      useWrappedBalances,
+      fromTokens,
+      toTokens,
+      excludeFromTokens,
+      excludeToTokens);
+    
     return attoCirclesToCircles(result);
   }
 
@@ -144,11 +159,50 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  private async transitiveTransfer(to: Address, amount: bigint, batch: BatchRun, txData?: Uint8Array, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[]) {
+  private async transitiveTransfer(
+    to: Address,
+    amount: bigint,
+    batch: BatchRun,
+    txData?: Uint8Array,
+    useWrappedBalances?: boolean,
+    fromTokens?: Address[],
+    toTokens?: Address[],
+    excludeFromTokens?: Address[],
+    excludeToTokens?: Address[]
+  ) {
     this.throwIfV2IsNotAvailable();
     to = to.toLowerCase() as Address;
 
-    const path = await this.sdk.v2Pathfinder.getPath(this.address, to, amount.toString(), useWrappedBalances, fromTokens, toTokens);
+    // If the `to` address is a group mint handler, make sure that no group tokens of that
+    // group are included in the transfer.
+    const groupInfoByMintHandler = this.sdk.data.findGroups(1, {
+      mintHandlerEquals: to
+    });
+
+    const groupInfo = await groupInfoByMintHandler.getSingleRow();
+    const completeExcludeFromTokenList = new Set<string>();
+    if (groupInfo) {
+      completeExcludeFromTokenList.add(groupInfo.group);
+      if (groupInfo.erc20WrapperDemurraged) {
+        completeExcludeFromTokenList.add(groupInfo.erc20WrapperDemurraged);
+      }
+      if (groupInfo.erc20WrapperStatic) {
+        completeExcludeFromTokenList.add(groupInfo.erc20WrapperStatic);
+      }
+    }
+
+    excludeFromTokens?.forEach(completeExcludeFromTokenList.add);
+
+
+    const path = await this.sdk.v2Pathfinder.getPath(
+      this.address,
+      to,
+      amount.toString(),
+      useWrappedBalances,
+      fromTokens,
+      toTokens,
+      completeExcludeFromTokenList.size > 0 ? Array.from(completeExcludeFromTokenList).map(o => <Address>o) : undefined,
+      excludeToTokens);
 
     let transfers: TransferPathStep[] = path.transfers;
 
@@ -306,7 +360,16 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return receipt;
   }
 
-  async transfer(to: Address, amount: bigint, tokenAddress?: Address, txData?: Uint8Array, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[]): Promise<TransactionReceipt> {
+  async transfer(
+    to: Address,
+    amount: bigint,
+    tokenAddress?: Address,
+    txData?: Uint8Array,
+    useWrappedBalances?: boolean,
+    fromTokens?: Address[],
+    toTokens?: Address[],
+    excludeFromTokens?: Address[],
+    excludeToTokens?: Address[]): Promise<TransactionReceipt> {
     if (!this.sdk?.contractRunner?.sendBatchTransaction) {
       throw new Error('ContractRunner (or sendBatchTransaction capability) not available');
     }
@@ -337,7 +400,16 @@ export class V2Avatar implements AvatarInterfaceV2 {
       //
       // debugger;
 
-      await this.transitiveTransfer(to, amount, batch, txData, useWrappedBalances, fromTokens, toTokens);
+      await this.transitiveTransfer(
+        to,
+        amount,
+        batch,
+        txData,
+        useWrappedBalances,
+        fromTokens,
+        toTokens,
+        excludeFromTokens,
+        excludeToTokens);
 
       return <TransactionReceipt><unknown>(await batch.run());
     } else {
