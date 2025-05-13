@@ -735,4 +735,36 @@ export class Sdk implements SdkInterface {
 
     return (await results.getSingleRow())?.type;
   };
+
+  /**
+   * Checks if the `to` address is a group minter and excludes the group tokens from the transfer
+   * if that's the case.
+   * @param to The receiver of the transfer
+   * @param excludeFromTokens The existing list of tokens to exclude from the transfer
+   * @returns The complete list of tokens to exclude from the transfer
+   */
+  async getDefaultTokenExcludeList(to:Address, excludeFromTokens?: Address[]) : Promise<Address[] | undefined> {
+    const groupInfoByMintHandler = this.data.findGroups(1, {
+      mintHandlerEquals: to
+    });
+
+    const groupInfo = await groupInfoByMintHandler.getSingleRow();
+    const completeExcludeFromTokenList = new Set<string>();
+    if (groupInfo) {
+      completeExcludeFromTokenList.add(groupInfo.group);
+      if (groupInfo.erc20WrapperDemurraged) {
+        completeExcludeFromTokenList.add(groupInfo.erc20WrapperDemurraged);
+      }
+      if (groupInfo.erc20WrapperStatic) {
+        completeExcludeFromTokenList.add(groupInfo.erc20WrapperStatic);
+      }
+    }
+
+    excludeFromTokens?.forEach(completeExcludeFromTokenList.add);
+
+    if (completeExcludeFromTokenList.size == 0)
+      return undefined;
+
+    return <Address[]>Array.from(completeExcludeFromTokenList);
+  }
 }

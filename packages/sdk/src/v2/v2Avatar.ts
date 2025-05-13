@@ -83,6 +83,8 @@ export class V2Avatar implements AvatarInterfaceV2 {
     this.throwIfV2IsNotAvailable();
     to = to.toLowerCase() as Address;
 
+    excludeFromTokens = await this.sdk.getDefaultTokenExcludeList(to, excludeFromTokens);
+
     if (tokenId) {
       const tokenInfo = await this.sdk.data.getTokenInfo(tokenId);
       if (!tokenInfo) {
@@ -102,7 +104,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
       toTokens,
       excludeFromTokens,
       excludeToTokens);
-    
+
     return attoCirclesToCircles(result);
   }
 
@@ -175,24 +177,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
 
     // If the `to` address is a group mint handler, make sure that no group tokens of that
     // group are included in the transfer.
-    const groupInfoByMintHandler = this.sdk.data.findGroups(1, {
-      mintHandlerEquals: to
-    });
-
-    const groupInfo = await groupInfoByMintHandler.getSingleRow();
-    const completeExcludeFromTokenList = new Set<string>();
-    if (groupInfo) {
-      completeExcludeFromTokenList.add(groupInfo.group);
-      if (groupInfo.erc20WrapperDemurraged) {
-        completeExcludeFromTokenList.add(groupInfo.erc20WrapperDemurraged);
-      }
-      if (groupInfo.erc20WrapperStatic) {
-        completeExcludeFromTokenList.add(groupInfo.erc20WrapperStatic);
-      }
-    }
-
-    excludeFromTokens?.forEach(completeExcludeFromTokenList.add);
-
+    excludeFromTokens = await this.sdk.getDefaultTokenExcludeList(to, excludeFromTokens);
 
     const path = await this.sdk.v2Pathfinder.getPath(
       this.address,
@@ -201,7 +186,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
       useWrappedBalances,
       fromTokens,
       toTokens,
-      completeExcludeFromTokenList.size > 0 ? Array.from(completeExcludeFromTokenList).map(o => <Address>o) : undefined,
+      excludeFromTokens,
       excludeToTokens);
 
     let transfers: TransferPathStep[] = path.transfers;
