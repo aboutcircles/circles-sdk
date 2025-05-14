@@ -4,6 +4,6 @@ import { EventRow } from '../pagedQuery/eventRow';
 export interface InvitationRow extends EventRow {
   timestamp: number;
   transactionHash: string;
+  avatar: Address;
   inviter: Address;
-  invited: Address;
 }

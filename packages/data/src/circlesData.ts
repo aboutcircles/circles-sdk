@@ -671,6 +671,64 @@ export class CirclesData implements CirclesDataInterface {
   }
 
   /**
+   * Retrieves a list of accounts that were invited by a specific avatar.
+   * @param avatar The address of the avatar who sent the invitations
+   * @param accepted If true, returns accounts that accepted the invitation;
+   *                 if false, returns pending invitations
+   * @returns A list of invited addresses representing either accepted or pending invitations
+   */
+  async getInvitationsFrom(avatar: Address, accepted?: boolean): Promise<Address[]> {
+    avatar = avatar.toLowerCase() as Address;
+
+    if(accepted) {
+      // Query for accounts that have registered using this avatar as inviter
+      const circlesQuery = new CirclesQuery<InvitationRow>(this.rpc, {
+        namespace: 'CrcV2',
+        table: 'RegisterHuman',
+        columns: [
+          'avatar'
+        ],
+        filter: [
+          {
+            Type: 'FilterPredicate',
+            FilterType: 'Equals',
+            Column: 'inviter',
+            Value: avatar
+          }
+        ],
+        sortOrder: 'DESC',
+        limit: 1000
+      });
+
+      const page = await circlesQuery.queryNextPage();
+      if (!page) {
+        return [];
+      }
+
+      return circlesQuery.currentPage?.results.map(item => item.avatar) || [];
+
+    } else {
+      // Find accounts that avatar trusts without mutual trust
+      const v2Relations = await this.getAggregatedTrustRelations(avatar, 2);
+      const v2Trusted = v2Relations
+        .filter(o => o.relation == 'trusts')
+        .map(o => o.objectAvatar);
+
+      // If no trusted accounts found, return empty array
+      if (v2Trusted.length === 0) return [];
+
+      // Get avatar info for trusted accounts
+      const trustedAvatarsBatchInfo = await this.getAvatarInfoBatch(v2Trusted);
+
+      // Create a Set of registered avatars
+      const registeredAvatarsSet = new Set(trustedAvatarsBatchInfo.map(o => o.avatar));
+
+      // Return only unregistered accounts
+      return v2Trusted.filter(address => !registeredAvatarsSet.has(address));
+    }
+  }
+
+  /**
    * Gets the avatar that invited the given avatar.
    * @param avatar The address of the invited avatar.
    * @returns The address of the inviting avatar or undefined if not found.
@@ -679,7 +737,7 @@ export class CirclesData implements CirclesDataInterface {
     avatar = avatar.toLowerCase() as Address;
     const circlesQuery = new CirclesQuery<InvitationRow>(this.rpc, {
       namespace: 'CrcV2',
-      table: 'InviteHuman',
+      table: 'RegisterHuman',
       columns: [
         'inviter'
       ],
@@ -687,7 +745,7 @@ export class CirclesData implements CirclesDataInterface {
         {
           Type: 'FilterPredicate',
           FilterType: 'Equals',
-          Column: 'invited',
+          Column: 'avatar',
           Value: avatar
         }
       ],
