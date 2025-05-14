@@ -679,7 +679,7 @@ export class CirclesData implements CirclesDataInterface {
     avatar = avatar.toLowerCase() as Address;
     const circlesQuery = new CirclesQuery<InvitationRow>(this.rpc, {
       namespace: 'CrcV2',
-      table: 'InviteHuman',
+      table: 'RegisterHuman',
       columns: [
         'inviter'
       ],
@@ -687,7 +687,7 @@ export class CirclesData implements CirclesDataInterface {
         {
           Type: 'FilterPredicate',
           FilterType: 'Equals',
-          Column: 'invited',
+          Column: 'avatar',
           Value: avatar
         }
       ],
