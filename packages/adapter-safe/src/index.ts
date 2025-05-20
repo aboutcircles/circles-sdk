@@ -3,7 +3,7 @@ import {
   SdkContractRunner, TransactionRequest as SdkTransactionRequest,
   TransactionRequest, TransactionResponse as SdkTransactionResponse
 } from '@circles-sdk/adapter';
-import Safe, {SafeConfig} from "@safe-global/protocol-kit";
+import Safe, {SafeConfig, EthSafeTransaction} from "@safe-global/protocol-kit";
 import {BrowserProvider, Eip1193Provider, ethers, Provider} from "ethers";
 import {MetaTransaction, OperationType} from "ethers-multisend";
 import { Address, handleTransactionError } from '@circles-sdk/utils';
@@ -127,18 +127,24 @@ export class SafeBatchRun implements BatchRun {
     this.transactions.push(tx);
   }
 
-  async run() {
+  async getTxCalldata (): Promise<EthSafeTransaction> {
     const metaTransactions: MetaTransaction[] = this.transactions.map(tx => ({
       operation: OperationType.Call,
       to: tx.to,
       value: tx.value.toString(),
       data: tx.data
     }));
-
+    
     const tx = await this.safe.createTransaction({
       transactions: metaTransactions
     });
-    const txReceipt = await this.safe.executeTransaction(tx)
+
+    return tx;
+  }
+
+  async run() {
+    const txCallData = await this.getTxCalldata();
+    const txReceipt = await this.safe.executeTransaction(txCallData)
       .catch(error => {
         handleTransactionError(error);
       });
