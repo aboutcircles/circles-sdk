@@ -18,13 +18,24 @@ import {
 import {
   Address,
   addressToUInt256,
-  attoCirclesToCircles, attoCirclesToStaticAttoCircles,
-  cidV0ToUint8Array
+  cidV0ToUint8Array,
+  CirclesConverter
 } from '@circles-sdk/utils';
 import { Profile } from '@circles-sdk/profiles';
 import { TokenType } from '@circles-sdk/data/dist/rows/tokenInfoRow';
-import { BatchRun, TransactionRequest, TransactionResponse } from '@circles-sdk/adapter';
-import { TransferPathStep } from '../pathfinderTypes';
+import { BatchRun, TransactionResponse } from '@circles-sdk/adapter';
+import {
+  createFlowMatrix, findMaxFlow, findPath, FindPathParams, FlowMatrix,
+  getExpectedUnwrappedTokenTotals,
+  getTokenInfoMapFromPath,
+  getWrappedTokenTotalsFromPath,
+  replaceWrappedTokens,
+  shrinkPathValues
+} from '@circles-sdk/pathfinder';
+
+export const OPERATE_FLOW_MATRIX_ABI = [
+  'function operateFlowMatrix(address[] _flowVertices,(uint16,uint192)[] _flow,(uint16,uint16[],bytes)[] _streams,bytes _packed)'
+];
 
 export class V2Avatar implements AvatarInterfaceV2 {
   public readonly sdk: Sdk;
@@ -96,16 +107,18 @@ export class V2Avatar implements AvatarInterfaceV2 {
       return tokenBalance?.circles ?? 0;
     }
 
-    const result = await this.sdk.v2Pathfinder.getMaxFlow(
+    const result = await findMaxFlow(
       this.address,
-      to,
-      useWrappedBalances,
-      fromTokens,
-      toTokens,
-      excludeFromTokens,
-      excludeToTokens);
+      <FindPathParams>{
+        to,
+        useWrappedBalances,
+        fromTokens,
+        toTokens,
+        excludeFromTokens,
+        excludeToTokens
+      });
 
-    return attoCirclesToCircles(result);
+    return CirclesConverter.attoCirclesToCircles(CirclesConverter.truncateToSixDecimals(result));
   }
 
   async getMintableAmount(): Promise<number> {
@@ -175,95 +188,69 @@ export class V2Avatar implements AvatarInterfaceV2 {
     this.throwIfV2IsNotAvailable();
     to = to.toLowerCase() as Address;
 
-    // If the `to` address is a group mint handler, make sure that no group tokens of that
-    // group are included in the transfer.
     excludeFromTokens = await this.sdk.getDefaultTokenExcludeList(to, excludeFromTokens);
+    amount = CirclesConverter.truncateToSixDecimals(amount);
 
-    const path = await this.sdk.v2Pathfinder.getPath(
-      this.address,
-      to,
-      amount.toString(),
-      useWrappedBalances,
-      fromTokens,
-      toTokens,
-      excludeFromTokens,
-      excludeToTokens);
-
-    let transfers: TransferPathStep[] = path.transfers;
-
-    if (useWrappedBalances) {
-      // If wrapped balances are used, query the token info of each token to determine which are the wrapped tokens
-      const allOutgoingTokens: Record<Address, {
-        tokenOwner?: Address,
-        value: bigint
-      }> = path.transfers
-        .filter(o => o.from == this.address)
-        .reduce((p, c) => {
-          p[c.tokenOwner] = {
-            tokenOwner: undefined,
-            value: BigInt(c.value)
-          };
-          return p;
-        }, <Record<Address, { tokenOwner?: Address, value: bigint }>>{});
-
-      const allOutgoingTokenInfo = await this.sdk.data.getTokenInfoBatch(Object.keys(allOutgoingTokens) as Address[]);
-      allOutgoingTokenInfo.forEach(t => {
-        allOutgoingTokens[t.token].tokenOwner = t.tokenOwner;
-      });
-
-      // Find all wrapped tokens
-      const wrappedDemurrageTokens = allOutgoingTokenInfo.filter(o => o.type == 'CrcV2_ERC20WrapperDeployed_Demurraged');
-
-      // Add a unwrap of the required amount to the batch (demurrage)
-      for (const wrappedToken of wrappedDemurrageTokens) {
-        const demurragedWrapper = await this.sdk.getDemurragedWrapper(wrappedToken.token);
-        const amountToUnwrap = allOutgoingTokens[wrappedToken.token].value;
-        const tx = await demurragedWrapper.unwrap.populateTransaction(amountToUnwrap);
-        const unwrapTransaction: TransactionRequest = {
-          to: tx.to as Address,
-          data: tx.data,
-          value: tx.value ?? 0n
-        };
-        batch.addTransaction(unwrapTransaction);
+    const path = await findPath(
+      this.sdk.circlesConfig.circlesRpcUrl,
+      {
+        from: this.address,
+        to,
+        targetFlow: amount.toString(),
+        useWrappedBalances,
+        fromTokens,
+        toTokens,
+        excludeFromTokens,
+        excludeToTokens
       }
+    );
 
-      const wrappedInflationTokens = allOutgoingTokenInfo.filter(o => o.type == 'CrcV2_ERC20WrapperDeployed_Inflationary');
-
-      // Add a unwrap of the required amount to the batch (inflationary)
-      for (const wrappedToken of wrappedInflationTokens) {
-        const inflationaryWrapper = await this.sdk.getInflationaryWrapper(wrappedToken.token);
-        const amountToUnwrap = allOutgoingTokens[wrappedToken.token].value;
-        const convertedAmount = attoCirclesToStaticAttoCircles(amountToUnwrap);
-
-        console.log(`Unwrapping ${convertedAmount} (demurraged: ${amountToUnwrap}) from ${wrappedToken.token}`);
-
-        const tx = await inflationaryWrapper.unwrap.populateTransaction(convertedAmount);
-        const unwrapTransaction: TransactionRequest = {
-          to: tx.to as Address,
-          data: tx.data,
-          value: tx.value ?? 0n
-        };
-        batch.addTransaction(unwrapTransaction);
-      }
-
-      // Replace the addresses of the wrapper tokens with the 'tokenOwner' of the unwrapped ones
-      transfers = path.transfers.map(t => {
-        if (allOutgoingTokens[t.tokenOwner]) {
-          return <TransferPathStep>{
-            ...t,
-            tokenOwner: allOutgoingTokens[t.tokenOwner].tokenOwner
-          };
-        }
-
-        return t;
+    // approve self if necessary
+    const approvalStatus = await this.sdk.v2Hub!.isApprovedForAll(this.address, this.address);
+    if (!approvalStatus) {
+      const txData = this.sdk.v2Hub!.interface.encodeFunctionData('setApprovalForAll', [this.address, true]);
+      batch.addTransaction({
+        to: this.sdk.circlesConfig.v2HubAddress!,
+        data: txData,
+        value: 0n
       });
     }
 
-    const flowMatrix = this.sdk.v2Pathfinder.createFlowMatrix(
-      this.address
-      , to
-      , amount.toString()
-      , transfers);
+    // Determine which edges need to be unwrapped and what unwrapped values are expected
+    const tokenInfoMap = await getTokenInfoMapFromPath(this.sdk.circlesConfig.circlesRpcUrl, path);
+    const wrappedTotals = getWrappedTokenTotalsFromPath(path, tokenInfoMap);
+    const unwrappedTotals = getExpectedUnwrappedTokenTotals(wrappedTotals, tokenInfoMap);
+
+    // add unwrap calls for each wrapped token
+    const unwrapCalls = this.buildUnwrapCalls(wrappedTotals);
+    unwrapCalls.forEach(unwrap => {
+      batch.addTransaction({
+        to: unwrap.to,
+        data: unwrap.data,
+        value: 0n
+      });
+    });
+
+    // rewrite path -> all ERC-20 wrappers replaced by their avatars
+    const pathUnwrapped = replaceWrappedTokens(path, unwrappedTotals);
+
+    // remove a bit from each flow edge to account for rounding errors (only if we handle inflationary wrappers)
+    const hasInflationaryWrapper = Object.values(wrappedTotals).some(o => o[1] === 'CrcV2_ERC20WrapperDeployed_Inflationary');
+    const shrunkPath = hasInflationaryWrapper
+      ? shrinkPathValues(pathUnwrapped) // sledgehammer-shrink all values in the path by 0.0000...1%
+      : pathUnwrapped;
+
+    if (hasInflationaryWrapper) {
+      console.log(`Path before shrinking: ${JSON.stringify(pathUnwrapped, null, 2)}`);
+      console.log(`Path after shrinking: ${JSON.stringify(shrunkPath, null, 2)}`);
+    }
+
+    const flowMatrix = createFlowMatrix(
+      this.address,
+      to,
+      shrunkPath.maxFlow,
+      shrunkPath.transfers
+    );
 
     if (txData) {
       for (let i = 0; i < flowMatrix.streams.length; i++) {
@@ -271,26 +258,55 @@ export class V2Avatar implements AvatarInterfaceV2 {
       }
     }
 
-    if (!this.sdk.v2Hub) {
-      throw new Error('V2Hub not available');
-    }
-
-    const operateFlowMatrixCallData = this.sdk.v2Hub.interface.encodeFunctionData(
-      'operateFlowMatrix'
-      , [
-        flowMatrix.flowVertices,
-        flowMatrix.flowEdges,
-        flowMatrix.streams,
-        flowMatrix.packedCoordinates
-      ]);
-
-    const operateFlowMatrixTx: TransactionRequest = {
-      to: this.sdk.circlesConfig.v2HubAddress!,
-      data: operateFlowMatrixCallData,
+    const operateFlowMatrixCall = this.encodeOperateFlowMatrix(this.sdk.circlesConfig.v2HubAddress!, flowMatrix);
+    batch.addTransaction({
+      to: operateFlowMatrixCall.to,
+      data: operateFlowMatrixCall.data,
       value: 0n
-    };
+    });
+  }
 
-    batch.addTransaction(operateFlowMatrixTx);
+  /**
+   * Build one unwrap() call per wrapped token that the sender must execute
+   * before the path runs. Works for both inflationary and demurraged wrappers.
+   */
+  private buildUnwrapCalls(
+    totals: Record<string, [bigint, string]>
+  ) {
+    const WRAPPER_ERC20_TOKEN_ABI = [
+      'function unwrap(uint256 _amount)'
+    ];
+    const iface = new ethers.Interface(WRAPPER_ERC20_TOKEN_ABI);
+
+    return Object.entries(totals).map(([wrapperAddr, [amtDemurraged, wrapperType]]) => {
+      const needsStaticAmount = wrapperType === 'CrcV2_ERC20WrapperDeployed_Inflationary';
+
+      const amountForUnwrap = needsStaticAmount
+        ? CirclesConverter.attoCirclesToAttoStaticCircles(amtDemurraged)
+        : amtDemurraged; // 1:1 for demurraged wrappers
+
+      return {
+        to: wrapperAddr as Address,
+        data: iface.encodeFunctionData('unwrap', [amountForUnwrap.toString()])
+      };
+    });
+  }
+
+  /**
+   * Encode Hub.operateFlowMatrix calldata for on‑chain execution.
+   */
+  private encodeOperateFlowMatrix(
+    hubAddress: Address,
+    fm: FlowMatrix
+  ) {
+    const iface = new ethers.Interface(OPERATE_FLOW_MATRIX_ABI);
+    const data = iface.encodeFunctionData('operateFlowMatrix', [
+      fm.flowVertices,
+      fm.flowEdges.map((e) => [e.streamSinkId, e.amount]),
+      fm.streams.map((s) => [s.sourceCoordinate, s.flowEdgeIds, s.data]),
+      fm.packedCoordinates
+    ]);
+    return { to: hubAddress, data };
   }
 
   private async directTransfer(to: Address, amount: bigint, tokenAddress: Address, txData?: Uint8Array): Promise<TransactionReceipt> {
@@ -361,29 +377,6 @@ export class V2Avatar implements AvatarInterfaceV2 {
 
     if (!tokenAddress) {
       const batch = this.sdk.contractRunner.sendBatchTransaction();
-
-      const approvalStatus = await this.sdk.v2Hub!.isApprovedForAll(this.address, this.address);
-      if (!approvalStatus) {
-        const tx = this.sdk.v2Hub!.interface.encodeFunctionData('setApprovalForAll', [this.address, true]);
-        batch.addTransaction({
-          to: this.sdk.circlesConfig.v2HubAddress!,
-          data: tx,
-          value: 0n
-        });
-      }
-      console.log(`Approval by ${this.address} for ${this.address} successful`);
-
-      // const randomizeLeastSignificantDigits = (number: bigint) => {
-      //   const rand = BigInt(Math.floor(Math.random() * 10 ** 18)); // Generates a random number with 18 digits
-      //   const divisor = BigInt(10 ** 18); // Scale divisor for 18 decimal places
-      //   return (number / divisor) * divisor + rand; // Replace the least significant 18 digits with the random value
-      // };
-      //
-      // console.log(`amount: ${amount}`);
-      // const randomAmount = randomizeLeastSignificantDigits(amount);
-      // console.log(`Randomized amount: ${randomAmount}`);
-      //
-      // debugger;
 
       await this.transitiveTransfer(
         to,

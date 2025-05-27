@@ -12,7 +12,7 @@ import {
   TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
-import { Address, crcToTc, cidV0ToUint8Array } from '@circles-sdk/utils';
+import { Address, cidV0ToUint8Array, CirclesConverter } from '@circles-sdk/utils';
 import { TransactionResponse } from '@circles-sdk/adapter';
 
 export class V1Avatar implements AvatarInterface {
@@ -97,7 +97,8 @@ export class V1Avatar implements AvatarInterface {
       return 0;
     }
 
-    return crcToTc(new Date(), BigInt(transferPath.maxFlow));
+    const attoCircles = CirclesConverter.attoCrcToAttoCircles(BigInt(transferPath.maxFlow), BigInt(Date.now() / 1000));
+    return CirclesConverter.attoCirclesToCircles(attoCircles);
   }
 
   /**
@@ -214,7 +215,10 @@ export class V1Avatar implements AvatarInterface {
     }
 
     const availableCrcToMint = await this.v1Token.look();
-    return crcToTc(new Date(), availableCrcToMint);
+    const attoCircles = CirclesConverter.attoCrcToAttoCircles(availableCrcToMint, BigInt(Date.now() / 1000));
+    const mintableCircles = CirclesConverter.attoCirclesToCircles(attoCircles);
+
+    return mintableCircles;
   }
 
   async personalMint(): Promise<ContractTransactionReceipt> {
