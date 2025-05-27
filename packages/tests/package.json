@@ -12,6 +12,7 @@
     "@circles-sdk/sdk": "../sdk",
     "@circles-sdk/data": "../data",
     "@circles-sdk/utils": "../utils",
+    "@circles-sdk/pathfinder": "../pathfinder",
     "ethers": "^6.13.2",
     "multihashes": "^4.0.3"
   },
