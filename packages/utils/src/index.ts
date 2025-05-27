@@ -1,98 +1,6 @@
-import { BigNumber } from 'bignumber.js';
 import { ethers } from 'ethers';
 import multihash from 'multihashes';
 import { Address } from './type';
-
-const CirclesInceptionTimestamp = new Date('2020-10-15T00:00:00.000Z').getTime();
-const OneDayInMilliseconds = new BigNumber(86400).multipliedBy(1000);
-const OneCirclesYearInDays = new BigNumber(365.25);
-const OneCirclesYearInMilliseconds = OneCirclesYearInDays.multipliedBy(24).multipliedBy(60).multipliedBy(60).multipliedBy(1000);
-const Beta = 1.0001987074682146291562714890133039617432343970799554367508;
-
-function getCrcPayoutAt(timestamp: number): number {
-  const daysSinceCirclesInception = new BigNumber(timestamp - CirclesInceptionTimestamp).dividedBy(OneDayInMilliseconds);
-  const circlesYearsSince = new BigNumber(timestamp - CirclesInceptionTimestamp).dividedBy(OneCirclesYearInMilliseconds);
-  const daysInCurrentCirclesYear = daysSinceCirclesInception.mod(OneCirclesYearInDays);
-
-  const initialDailyCrcPayout = new BigNumber(8);
-  let circlesPayoutInCurrentYear = initialDailyCrcPayout;
-  let previousCirclesPerDayValue = initialDailyCrcPayout;
-
-  for (let index = 0; index < circlesYearsSince.toNumber(); index++) {
-    previousCirclesPerDayValue = circlesPayoutInCurrentYear;
-    circlesPayoutInCurrentYear = circlesPayoutInCurrentYear.multipliedBy(1.07);
-  }
-
-  const x = previousCirclesPerDayValue;
-  const y = circlesPayoutInCurrentYear;
-  const a = daysInCurrentCirclesYear.dividedBy(OneCirclesYearInDays);
-
-  return x.multipliedBy(new BigNumber(1).minus(a)).plus(y.multipliedBy(a)).toNumber();
-}
-
-/**
- * Converts a CRC amount to a TC amount.
- * @param timestamp The point in time when the CRC transaction happened.
- * @param amount The CRC value of the transaction (bigint in wei).
- * @return The TC value of the transaction (as float).
- */
-export function crcToTc(timestamp: Date, amount: bigint): number {
-  const amountCrc = new BigNumber(amount.toString()).shiftedBy(-18);
-  const payoutAtTimestamp = new BigNumber(getCrcPayoutAt(timestamp.getTime()));
-  return amountCrc.div(payoutAtTimestamp).times(24).toNumber();
-}
-
-/**
- * Converts a TC amount to a CRC amount.
- * @param timestamp The point in time when the CRC transaction happened.
- * @param amount The TC value of the transaction.
- */
-export function tcToCrc(timestamp: Date, amount: number): bigint {
-  const bnTc = new BigNumber(amount);
-  const payoutAtTimestamp = new BigNumber(getCrcPayoutAt(timestamp.getTime()));
-  const crcFloat = bnTc.times(payoutAtTimestamp).div(24);
-  const attoCrc = crcFloat.shiftedBy(18).integerValue(BigNumber.ROUND_FLOOR);
-  return BigInt(attoCrc.toFixed(0));
-}
-
-export function staticCirclesToCircles(value: number): number {
-  const now = new Date().getTime();
-  const daysSinceInception = Math.floor((now - CirclesInceptionTimestamp) / 86400000);
-  const f = Math.pow(Beta, daysSinceInception);
-  return value / f;
-}
-
-export function attoCirclesToCircles(weiBalance: bigint): number {
-  return new BigNumber(weiBalance.toString()).shiftedBy(-18).toNumber();
-}
-
-export function circlesToAttoCircles(circlesBalance: number): bigint {
-  const val = new BigNumber(circlesBalance).shiftedBy(18).integerValue(BigNumber.ROUND_FLOOR);
-  return BigInt(val.toFixed(0));
-}
-
-export function staticCirclesToAttoCircles(value: number): bigint {
-  const circles = staticCirclesToCircles(value);
-  return circlesToAttoCircles(circles);
-}
-
-export function staticAttoCirclesToAttoCircles(value: bigint): bigint {
-  const staticCircles = new BigNumber(value.toString()).shiftedBy(-18).toNumber();
-  return staticCirclesToAttoCircles(staticCircles);
-}
-
-export function circlesToStaticCircles(value: number, timestamp?: number): number {
-  timestamp = timestamp ?? new Date().getTime();
-  const daysSinceInception = Math.floor((timestamp - CirclesInceptionTimestamp) / 86400000);
-  const f = Math.pow(Beta, daysSinceInception);
-  return value * f;
-}
-
-export function attoCirclesToStaticAttoCircles(value: bigint, timestamp?: number): bigint {
-  const circles = new BigNumber(value.toString()).shiftedBy(-18).toNumber();
-  const sc = circlesToStaticCircles(circles, timestamp);
-  return circlesToAttoCircles(sc);
-}
 
 /**
  * Converts a CIDv0 string to a UInt8Array, stripping the hashing algorithm identifier.
@@ -334,20 +242,20 @@ export function parseError(errorData: string): ethers.ErrorDescription | null {
 
 function getCustomErrorFragment(errorText: string) {
   const abi = [
-      "error Error(string)"
+    'error Error(string)'
   ];
-  
+
   const iface = new ethers.Interface(abi);
-  const errorFragment = iface.getError("Error");
-  const encodedError = iface.encodeErrorResult("Error", [errorText]);
-  const decodedError = iface.decodeErrorResult("Error", encodedError);
-  
+  const errorFragment = iface.getError('Error');
+  const encodedError = iface.encodeErrorResult('Error', [errorText]);
+  const decodedError = iface.decodeErrorResult('Error', encodedError);
+
   return {
-      fragment: errorFragment,
-      name: errorFragment?.name,
-      args: decodedError,
-      signature: errorFragment?.format(),
-      selector: iface.getFunction("Error")?.selector
+    fragment: errorFragment,
+    name: errorFragment?.name,
+    args: decodedError,
+    signature: errorFragment?.format(),
+    selector: iface.getFunction('Error')?.selector
   };
 }
 
@@ -370,7 +278,8 @@ export function handleTransactionError(e: any): never {
     throw new Error(JSON.stringify(getCustomErrorFragment(e.info.error.message), null, 2));
   }
 
-  throw new Error(JSON.stringify(getCustomErrorFragment("Unknown"), null, 2));
+  throw new Error(JSON.stringify(getCustomErrorFragment('Unknown'), null, 2));
 }
 
 export type { Address } from './type';
+export { CirclesConverter } from './circlesConverter';

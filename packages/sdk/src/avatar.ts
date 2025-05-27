@@ -1,5 +1,5 @@
 import { V1Avatar } from './v1/v1Avatar';
-import { ContractTransactionReceipt, parseEther, TransactionReceipt } from 'ethers';
+import { ContractTransactionReceipt, TransactionReceipt } from 'ethers';
 import { Sdk } from './sdk';
 import { AvatarInterface, AvatarInterfaceV2 } from './AvatarInterface';
 import {
@@ -10,7 +10,7 @@ import {
 } from '@circles-sdk/data';
 import { V2Avatar } from './v2/v2Avatar';
 import { CirclesEvent } from '@circles-sdk/data';
-import { Address, tcToCrc } from '@circles-sdk/utils';
+import { Address, CirclesConverter } from '@circles-sdk/utils';
 import { Profile } from '@circles-sdk/profiles';
 import { TokenBalanceRow } from '@circles-sdk/data';
 import { TransactionResponse } from '@circles-sdk/adapter';
@@ -106,7 +106,7 @@ export class Avatar implements AvatarInterfaceV2 {
       case 2:
         if (this._groupType === 'CrcV2_CMGroupCreated') {
           this._avatar = CMGroup();
-        } else if(this._groupType === 'CrcV2_BaseGroupCreated') {
+        } else if (this._groupType === 'CrcV2_BaseGroupCreated') {
           this._avatar = BaseGroup();
         } else if (!hasV1) {
           this._avatar = v2Person();
@@ -117,7 +117,7 @@ export class Avatar implements AvatarInterfaceV2 {
           // Handle edge case: organization migrated to v2 but still have v1 account
           // without token which is recognized as `isStopped == false`
           let isStopped = false;
-          if(isHuman) {
+          if (isHuman) {
             isStopped = await v1Avatar.v1Token?.stopped() || false;
             this._avatar = isStopped ? v2Person() : v1Person();
           } else {
@@ -233,11 +233,16 @@ export class Avatar implements AvatarInterfaceV2 {
   transfer(to: Address, amount: bigint, token?: Address, txData?: Uint8Array, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[]): Promise<TransactionReceipt>;
   transfer(to: Address, amount: number | bigint, token?: Address, txData?: Uint8Array, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[]): Promise<TransactionReceipt> {
     if (typeof amount === 'number') {
-      const sendValue = this?.avatarInfo?.version === 1
-        ? tcToCrc(new Date(), amount)
-        : parseEther(amount.toString());
+      if (this.avatarInfo?.version === 1) {
+        const sendAttoCircles = CirclesConverter.circlesToAttoCircles(amount);
+        const sendAttoCrc = CirclesConverter.attoCirclesToAttoCrc(sendAttoCircles, BigInt(Date.now() / 1000));
 
-      return this.onlyIfInitialized(() => this._avatar!.transfer(to, sendValue, token, txData, useWrappedBalances, fromTokens, toTokens));
+        return this.onlyIfInitialized(() => this._avatar!.transfer(to, sendAttoCrc, token, txData, useWrappedBalances, fromTokens, toTokens));
+      } else {
+        const sendAttoCircles = CirclesConverter.circlesToAttoCircles(amount);
+
+        return this.onlyIfInitialized(() => this._avatar!.transfer(to, sendAttoCircles, token, txData, useWrappedBalances, fromTokens, toTokens));
+      }
     }
     return this.onlyIfInitialized(() => this._avatar!.transfer(to, amount, token, txData, useWrappedBalances, fromTokens, toTokens));
   }
@@ -434,7 +439,7 @@ export class Avatar implements AvatarInterfaceV2 {
   /**
    * Updates the owner of the group to a new address.
    * This functionality is only available for Base or Core Members Group avatars.
-   * 
+   *
    * @param owner The address of the new owner
    * @returns A promise resolving to the transaction receipt
    * @throws Error if the avatar is not initialized or is not a Base or Core Members Group avatar
@@ -479,7 +484,7 @@ export class Avatar implements AvatarInterfaceV2 {
   /**
    * Sets or updates a membership condition for the group.
    * This functionality is only available for Base Group avatars.
-   * 
+   *
    * @param condition The address representing a membership condition
    * @param enabled Boolean flag indicating whether the condition should be enabled or disabled
    * @returns A promise resolving to the transaction receipt
@@ -490,7 +495,7 @@ export class Avatar implements AvatarInterfaceV2 {
   /**
    * Registers a short name for the group using a nonce value.
    * This functionality is only available for Base Group avatars.
-   * 
+   *
    * @param nonce A user-provided nonce to handle name collisions or concurrency issues
    * @returns A promise resolving to the transaction receipt
    * @throws Error if the avatar is not initialized or is not a Base Group avatar or if registration fails
@@ -500,7 +505,7 @@ export class Avatar implements AvatarInterfaceV2 {
   /**
    * Establishes trust relationships with multiple addresses in a single transaction with expiry conditions.
    * This functionality is only available for Base Group avatars.
-   * 
+   *
    * @param members An array of addresses to trust
    * @param expiry Optional timestamp when the trust relationships will expire (defaults to 0)
    * @returns A promise resolving to the transaction receipt
