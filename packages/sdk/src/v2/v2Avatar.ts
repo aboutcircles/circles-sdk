@@ -422,11 +422,11 @@ export class V2Avatar implements AvatarInterfaceV2 {
    * @param data Additional data, for BaseGroup can contain token type constants to request ERC20 wrapping
    * @returns A promise resolving to the transaction receipt after mining
    */
-  async groupMint(group: string, collateral: string[], amounts: bigint[], data: Uint8Array): Promise<ContractTransactionReceipt> {
+  async groupMint(group: Address, collateral: Address[], amounts: bigint[], data: Uint8Array): Promise<ContractTransactionReceipt> {
     this.throwIfV2IsNotAvailable();
 
-    group = group.toLowerCase();
-    const groupType = await this.sdk.getGroupType(group as Address);
+    group = group.toLowerCase() as Address;
+    const groupType = await this.sdk.getGroupType(group);
 
     if(groupType == "CrcV2_BaseGroupCreated") {
       const baseGroup = BaseGroup__factory.connect(group, <ContractRunner>this.sdk.contractRunner);
