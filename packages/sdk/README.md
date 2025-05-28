@@ -445,27 +445,27 @@ type Invitation = {
   logIndex: number;
   timestamp: number;
   transactionHash: string;
+  avatar: Address;
   inviter: Address;
-  invited: Address;
 };
 
 const query = new CirclesQuery<Invitation>(this.rpc, {
   namespace: 'CrcV2',
-  table: 'InviteHuman',
+  table: 'RegisterHuman',
   columns: [
     'blockNumber',
     'transactionIndex',
     'logIndex',
     'timestamp',
     'transactionHash',
-    'inviter',
-    'invited'
+    'avatar',
+    'inviter'
   ],
   filter: [
     {
       Type: 'FilterPredicate',
       FilterType: 'Equals',
-      Column: 'inviter',
+      Column: 'avatar',
       Value: signerAddress.toLowerCase()
     }
   ],

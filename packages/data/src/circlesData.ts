@@ -21,8 +21,7 @@ import { TrustListRow } from './rows/trustListRow';
 import { TokenBalanceRow } from './rows/tokenBalanceRow';
 import {
   Address,
-  attoCirclesToCircles,
-  attoCirclesToStaticAttoCircles, circlesToAttoCircles, crcToTc, hexStringToUint8Array, tcToCrc,
+  CirclesConverter, hexStringToUint8Array,
   uint8ArrayToCidV0
 } from '@circles-sdk/utils';
 import { TrustRelation, TrustRelationRow } from './rows/trustRelationRow';
@@ -99,11 +98,13 @@ function calculateBalances(row: TransactionHistoryRow) {
   if (row.version === 1) {
     // The .circles property actually contains `crc` values here
     const attoCrc: bigint = BigInt((<any>row).value);
-    const crc: number = attoCirclesToCircles(attoCrc);
-    const circles: number = crcToTc(new Date(row.timestamp * 1000), attoCrc);
-    const attoCircles: bigint = circlesToAttoCircles(circles);
-    const staticAttoCircles: bigint = attoCirclesToStaticAttoCircles(attoCircles);
-    const staticCircles: number = attoCirclesToCircles(staticAttoCircles);
+    const crc: number = CirclesConverter.attoCirclesToCircles(attoCrc);
+
+    const attoCircles: bigint = CirclesConverter.attoCrcToAttoCircles(attoCrc, BigInt(row.timestamp));
+    const circles: number = CirclesConverter.attoCirclesToCircles(attoCircles);
+
+    const staticAttoCircles: bigint = CirclesConverter.attoCirclesToAttoStaticCircles(attoCircles, BigInt(row.timestamp));
+    const staticCircles: number = CirclesConverter.attoCirclesToCircles(staticAttoCircles);
 
     return Promise.resolve({
       attoCircles,
@@ -116,11 +117,13 @@ function calculateBalances(row: TransactionHistoryRow) {
   } else {
     // The .circles property contains the `circles` value
     const attoCircles: bigint = BigInt((<any>row).value);
-    const circles: number = attoCirclesToCircles(attoCircles);
-    const attoCrc: bigint = tcToCrc(new Date(row.timestamp * 1000), circles);
-    const crc: number = attoCirclesToCircles(attoCrc);
-    const staticAttoCircles: bigint = attoCirclesToStaticAttoCircles(attoCircles);
-    const staticCircles: number = attoCirclesToCircles(staticAttoCircles);
+    const circles: number = CirclesConverter.attoCirclesToCircles(attoCircles);
+
+    const attoCrc: bigint = CirclesConverter.attoCirclesToAttoCrc(attoCircles, BigInt(row.timestamp));
+    const crc: number = CirclesConverter.attoCirclesToCircles(attoCrc);
+
+    const staticAttoCircles: bigint = CirclesConverter.attoCirclesToAttoStaticCircles(attoCircles, BigInt(row.timestamp));
+    const staticCircles: number = CirclesConverter.attoCirclesToCircles(staticAttoCircles);
 
     return Promise.resolve({
       attoCircles,
@@ -595,7 +598,7 @@ export class CirclesData implements CirclesDataInterface {
       results.push(...resultRows);
       if (resultRows.length < 1000) break;
     }
-    
+
     return results;
   }
 
@@ -671,6 +674,64 @@ export class CirclesData implements CirclesDataInterface {
   }
 
   /**
+   * Retrieves a list of accounts that were invited by a specific avatar.
+   * @param avatar The address of the avatar who sent the invitations
+   * @param accepted If true, returns accounts that accepted the invitation;
+   *                 if false, returns pending invitations
+   * @returns A list of invited addresses representing either accepted or pending invitations
+   */
+  async getInvitationsFrom(avatar: Address, accepted?: boolean): Promise<Address[]> {
+    avatar = avatar.toLowerCase() as Address;
+
+    if (accepted) {
+      // Query for accounts that have registered using this avatar as inviter
+      const circlesQuery = new CirclesQuery<InvitationRow>(this.rpc, {
+        namespace: 'CrcV2',
+        table: 'RegisterHuman',
+        columns: [
+          'avatar'
+        ],
+        filter: [
+          {
+            Type: 'FilterPredicate',
+            FilterType: 'Equals',
+            Column: 'inviter',
+            Value: avatar
+          }
+        ],
+        sortOrder: 'DESC',
+        limit: 1000
+      });
+
+      const page = await circlesQuery.queryNextPage();
+      if (!page) {
+        return [];
+      }
+
+      return circlesQuery.currentPage?.results.map(item => item.avatar) || [];
+
+    } else {
+      // Find accounts that avatar trusts without mutual trust
+      const v2Relations = await this.getAggregatedTrustRelations(avatar, 2);
+      const v2Trusted = v2Relations
+        .filter(o => o.relation == 'trusts')
+        .map(o => o.objectAvatar);
+
+      // If no trusted accounts found, return empty array
+      if (v2Trusted.length === 0) return [];
+
+      // Get avatar info for trusted accounts
+      const trustedAvatarsBatchInfo = await this.getAvatarInfoBatch(v2Trusted);
+
+      // Create a Set of registered avatars
+      const registeredAvatarsSet = new Set(trustedAvatarsBatchInfo.map(o => o.avatar));
+
+      // Return only unregistered accounts
+      return v2Trusted.filter(address => !registeredAvatarsSet.has(address));
+    }
+  }
+
+  /**
    * Gets the avatar that invited the given avatar.
    * @param avatar The address of the invited avatar.
    * @returns The address of the inviting avatar or undefined if not found.
@@ -679,7 +740,7 @@ export class CirclesData implements CirclesDataInterface {
     avatar = avatar.toLowerCase() as Address;
     const circlesQuery = new CirclesQuery<InvitationRow>(this.rpc, {
       namespace: 'CrcV2',
-      table: 'InviteHuman',
+      table: 'RegisterHuman',
       columns: [
         'inviter'
       ],
@@ -687,7 +748,7 @@ export class CirclesData implements CirclesDataInterface {
         {
           Type: 'FilterPredicate',
           FilterType: 'Equals',
-          Column: 'invited',
+          Column: 'avatar',
           Value: avatar
         }
       ],
@@ -729,7 +790,9 @@ export class CirclesData implements CirclesDataInterface {
         'memberCount',
         'name',
         'symbol',
-        'cidV0Digest'
+        'cidV0Digest',
+        'erc20WrapperDemurraged',
+        'erc20WrapperStatic'
       ],
       sortOrder: 'DESC',
       limit: pageSize
@@ -774,7 +837,7 @@ export class CirclesData implements CirclesDataInterface {
         FilterType: 'In',
         Column: 'type',
         Value: params.groupTypeIn
-      })
+      });
     }
 
     if (params.ownerEquals) {
@@ -783,7 +846,25 @@ export class CirclesData implements CirclesDataInterface {
         FilterType: 'Equals',
         Column: 'owner',
         Value: params.ownerEquals
-      })
+      });
+    }
+
+    if (params.mintHandlerEquals) {
+      filter.push({
+        Type: 'FilterPredicate',
+        FilterType: 'Equals',
+        Column: 'mintHandler',
+        Value: params.mintHandlerEquals
+      });
+    }
+
+    if (params.treasuryEquals) {
+      filter.push({
+        Type: 'FilterPredicate',
+        FilterType: 'Equals',
+        Column: 'treasury',
+        Value: params.treasuryEquals
+      });
     }
 
     if (filter.length > 1) {

@@ -2,6 +2,7 @@ import { Avatar } from './avatar';
 import { CirclesConfig } from './circlesConfig';
 import { V1Pathfinder } from './v1/pathfinderV1';
 import { AvatarInterface } from './AvatarInterface';
+import { EthSafeTransaction } from "@safe-global/protocol-kit";
 import {
   Hub as HubV1,
   Hub__factory as HubV1Factory,
@@ -113,7 +114,7 @@ interface SdkInterface {
    * @param profile The profile data of the avatar.
    * @trustRelations An optional list of trust relations to migrate.
    */
-  migrateAvatar: (inviter: Address, avatar: Address, profile: Profile, trustRelations?: string[]) => Promise<void>;
+  migrateAvatar: (inviter: Address, avatar: Address, profile: Profile, trustRelations?: string[]) => Promise<void | EthSafeTransaction>;
 
   /**
    * Creates or updates a user profile.
@@ -420,7 +421,9 @@ export class Sdk implements SdkInterface {
     inviter: Address,
     avatar: Address,
     profile: Profile,
-    trustRelations?: string[]): Promise<void> => {
+    trustRelations?: string[],
+    isRawCalldata?: boolean
+  ): Promise<void | EthSafeTransaction> => {
     inviter = inviter.toLowerCase() as Address;
     avatar = avatar.toLowerCase() as Address;
     if (!this.v2Hub) {
@@ -549,8 +552,17 @@ export class Sdk implements SdkInterface {
       }
 
       // Run the batch
-      const batchResponse = await batch.run();
-      console.log('Batch transaction response:', batchResponse);
+      if(isRawCalldata) {
+        if(!batch.getTxCalldata) {
+          throw new Error('Contract runner does not support raw call data');
+        }
+        console.log('Return raw tx calldata');
+
+        return await batch.getTxCalldata();
+      } else {
+        const batchResponse = await batch.run();
+        console.log('Batch transaction response:', batchResponse);
+      }
     } else {
       throw new Error('Avatar is not a V1 avatar');
     }
@@ -735,4 +747,36 @@ export class Sdk implements SdkInterface {
 
     return (await results.getSingleRow())?.type;
   };
+
+  /**
+   * Checks if the `to` address is a group minter and excludes the group tokens from the transfer
+   * if that's the case.
+   * @param to The receiver of the transfer
+   * @param excludeFromTokens The existing list of tokens to exclude from the transfer
+   * @returns The complete list of tokens to exclude from the transfer
+   */
+  async getDefaultTokenExcludeList(to:Address, excludeFromTokens?: Address[]) : Promise<Address[] | undefined> {
+    const groupInfoByMintHandler = this.data.findGroups(1, {
+      mintHandlerEquals: to
+    });
+
+    const groupInfo = await groupInfoByMintHandler.getSingleRow();
+    const completeExcludeFromTokenList = new Set<string>();
+    if (groupInfo) {
+      completeExcludeFromTokenList.add(groupInfo.group);
+      if (groupInfo.erc20WrapperDemurraged) {
+        completeExcludeFromTokenList.add(groupInfo.erc20WrapperDemurraged);
+      }
+      if (groupInfo.erc20WrapperStatic) {
+        completeExcludeFromTokenList.add(groupInfo.erc20WrapperStatic);
+      }
+    }
+
+    excludeFromTokens?.forEach(completeExcludeFromTokenList.add);
+
+    if (completeExcludeFromTokenList.size == 0)
+      return undefined;
+
+    return <Address[]>Array.from(completeExcludeFromTokenList);
+  }
 }

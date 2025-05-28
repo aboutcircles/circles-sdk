@@ -1,3 +1,4 @@
+import { EthSafeTransaction } from "@safe-global/protocol-kit";
 import { Address } from '@circles-sdk/utils';
 
 export type TransactionRequest = {
@@ -68,6 +69,11 @@ export type SdkContractRunner = {
  *
  * @param {TransactionRequest} tx - The transaction to be added to the batch run.
  *
+ * @method getTxCalldata
+ * Creates the calldata for the batch call.
+ *
+ * @param {EthSafeTransaction} tx - The transaction data for the batch run.
+ *
  * @method run
  * Executes all the transactions in the batch run. Returns a promise that resolves to a ContractTransactionReceipt.
  *
@@ -75,5 +81,6 @@ export type SdkContractRunner = {
  */
 export interface BatchRun {
   addTransaction: (tx: TransactionRequest) => void;
+  getTxCalldata?: () => Promise<EthSafeTransaction>;
   run: () => Promise<TransactionResponse>;
 }

@@ -36,9 +36,18 @@ export interface AvatarInterface {
    * @param useWrappedBalances If wrapped Circles should be considered in the transfers.
    * @param fromTokens If specified, makes sure that only the given tokens are used at the source.
    * @param toTokens If specified, makes sure that only the given tokens arrive at the sink.
+   * @param excludeFromTokens If specified, makes sure that the given tokens are not used at the source.
+   * @param excludeToTokens If specified, makes sure that the given tokens are not used at the sink.
    * @returns The maximum amount that can be transferred.
    */
-  getMaxTransferableAmount(to: Address, tokenId?: Address, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[]): Promise<number>;
+  getMaxTransferableAmount(
+    to: Address,
+    tokenId?: Address,
+    useWrappedBalances?: boolean,
+    fromTokens?: Address[],
+    toTokens?: Address[],
+    excludeFromTokens?: Address[],
+    excludeToTokens?: Address[]): Promise<number>;
 
   /**
    * Transfers Circles to another avatar.
@@ -52,8 +61,19 @@ export interface AvatarInterface {
    * @param useWrappedBalances If wrapped Circles should be considered in the transfers.
    * @param fromTokens If specified, makes sure that only the given tokens are used at the source.
    * @param toTokens If specified, makes sure that only the given tokens arrive at the sink.
+   * @param excludeFromTokens If specified, makes sure that the given tokens are not used at the source.
+   * @param excludeToTokens If specified, makes sure that the given tokens are not used at the sink.
    */
-  transfer(to: Address, amount: bigint, token?: Address, txData?: Uint8Array, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[]): Promise<TransactionReceipt>;
+  transfer(
+    to: Address,
+    amount: bigint,
+    token?: Address,
+    txData?: Uint8Array,
+    useWrappedBalances?: boolean,
+    fromTokens?: Address[],
+    toTokens?: Address[],
+    excludeFromTokens?: Address[],
+    excludeToTokens?: Address[]): Promise<TransactionReceipt>;
 
   /**
    * Trusts another avatar. Trusting an avatar means you're willing to accept Circles that have been issued by this avatar.
