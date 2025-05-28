@@ -1,4 +1,3 @@
-import { CirclesRpc } from '@circles-sdk/data';
 import { Address, CirclesConverter } from '@circles-sdk/utils';
 import {
   findMaxFlow, findPath,
@@ -7,12 +6,10 @@ import {
 } from '@circles-sdk/pathfinder';
 
 export class V2Pathfinder {
-  private readonly rpc: CirclesRpc;
   private readonly rpcUrl: string;
 
   constructor(circlesRpcUrl: string) {
     this.rpcUrl = circlesRpcUrl;
-    this.rpc = new CirclesRpc(circlesRpcUrl); // Using CirclesRpc class
   }
 
   async getMaxFlow(
@@ -26,8 +23,9 @@ export class V2Pathfinder {
     to = to.toLowerCase() as Address;
 
     const result = await findMaxFlow(
-      from,
+      this.rpcUrl,
       <FindPathParams>{
+        from,
         to,
         useWrappedBalances,
         fromTokens,
