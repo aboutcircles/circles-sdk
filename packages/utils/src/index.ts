@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 import multihash from 'multihashes';
-import { Address } from './type';
+import { Address, BaseGroupMintType } from './type';
 
 /**
  * Converts a CIDv0 string to a UInt8Array, stripping the hashing algorithm identifier.
@@ -281,5 +281,21 @@ export function handleTransactionError(e: any): never {
   throw new Error(JSON.stringify(getCustomErrorFragment('Unknown'), null, 2));
 }
 
-export type { Address } from './type';
+// Utility function to generate mint data based on type
+export function generateBaseGroupMintData(mintType: BaseGroupMintType): Uint8Array {
+  switch (mintType) {
+    case 'ERC1155':
+      return new Uint8Array(0);
+    case 'TYPE_INFLATIONARY':
+      const hashTypeInflationary = ethers.keccak256(ethers.toUtf8Bytes("TYPE_INFLATIONARY"));
+      return ethers.getBytes(hashTypeInflationary);
+    case 'TYPE_DEMURRAGE':
+      const hashDemurage = ethers.keccak256(ethers.toUtf8Bytes("TYPE_DEMURRAGE"));
+      return ethers.getBytes(hashDemurage);
+    default:
+      throw new Error(`Unsupported token type: ${mintType}`);
+  }
+}
+
+export { type Address, BaseGroupMintType } from './type';
 export { CirclesConverter } from './circlesConverter';

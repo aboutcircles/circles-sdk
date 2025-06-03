@@ -25,6 +25,7 @@ import {
 import { Profile } from '@circles-sdk/profiles';
 import { TokenType } from '@circles-sdk/data/dist/rows/tokenInfoRow';
 import { BatchRun, TransactionResponse } from '@circles-sdk/adapter';
+import { BaseGroup__factory } from '@circles-sdk/abi-v2';
 import {
   createFlowMatrix, findMaxFlow, findPath, FindPathParams, FlowMatrix,
   getExpectedUnwrappedTokenTotals,
