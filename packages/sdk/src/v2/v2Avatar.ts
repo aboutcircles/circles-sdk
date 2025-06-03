@@ -109,8 +109,9 @@ export class V2Avatar implements AvatarInterfaceV2 {
     }
 
     const result = await findMaxFlow(
-      this.address,
+      this.sdk.circlesConfig.circlesRpcUrl,
       <FindPathParams>{
+        from: this.address,
         to,
         useWrappedBalances,
         fromTokens,
