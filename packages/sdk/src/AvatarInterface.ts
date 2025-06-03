@@ -173,11 +173,20 @@ export interface AvatarInterfaceV2 extends AvatarInterface {
    * Redeems collateral from a group in exchange for the group tokens.
    *
    * @param group - The address of the group to redeem from.
-   * @param collateral - An array of collateral addresses involved in the redemption.
+   * @param collaterals - An array of collateral addresses involved in the redemption.
    * @param amounts - An array of amounts corresponding to the collateral to redeem.
    * @return A promise that resolves to the transaction receipt of the redemption.
    */
-  groupRedeem(group: Address, collateral: Address[], amounts: bigint[]): Promise<ContractTransactionReceipt>;
+  groupRedeem(group: Address, collaterals: Address[], amounts: bigint[]): Promise<ContractTransactionReceipt | TransactionReceipt>;
+
+  /**
+   * Automatically redeems collateral tokens from a Base Group's treasury
+   * 
+   * @param group The address of the Base Group from which to redeem collateral tokens
+   * @param amount The amount of group tokens to redeem for collateral (must be > 0 and <= max redeemable)
+   * @return A Promise resolving to the transaction receipt upon successful automatic redemption
+   */
+  groupRedeemAuto?(group: Address, amount: bigint): Promise<TransactionReceipt>;
 
   /**
    * Wraps ERC115 Circles into demurraged ERC20 Circles.
