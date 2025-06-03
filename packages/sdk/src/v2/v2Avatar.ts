@@ -527,27 +527,27 @@ export class V2Avatar implements AvatarInterfaceV2 {
    * - For standard groups: Uses ERC1155 safeTransferFrom with encoded metadata
    * 
    * @param group The address of the group from which to redeem collateral
-   * @param collateral Array of collateral token addresses to redeem
+   * @param collaterals Array of collateral token addresses to redeem
    * @param amounts Array of collateral amounts to redeem
    * 
    * @return A Promise resolving to the transaction receipt upon successful redemption
    */
   async groupRedeem(
     group: Address,
-    collateral: Address[],
+    collaterals: Address[],
     amounts: bigint[]
-  ): Promise<ContractTransactionReceipt> {
+  ): Promise<ContractTransactionReceipt | TransactionReceipt> {
     this.throwIfV2IsNotAvailable();
 
     group = group.toLowerCase() as Address;
     const groupType = await this.sdk.getGroupType(group);
 
     if(groupType == "CrcV2_BaseGroupCreated") {
-      if(collateral.length !== amounts.length) {
+      if(collaterals.length !== amounts.length) {
         throw new Error('Collateral and amounts arrays must be the same length');
       }
 
-      if(!collateral.length || !amounts.length) {
+      if(!collaterals.length || !amounts.length) {
         throw new Error('Collateral and amounts arrays cannot be empty');
       }
 
@@ -558,17 +558,42 @@ export class V2Avatar implements AvatarInterfaceV2 {
       // Address of the redeemer
       const currentAvatar = this.address.toLowerCase();
 
-      // @todo check if the recipient trusts all collaterals
+      // Check if the recipient trusts all collaterals
+      for (const collateral of collaterals) {
+        const isTrusted = await this.trusts(collateral);
+        if (!isTrusted) {
+          throw new Error(`Collateral ${collateral} is not trusted`);
+        }
+      }
+
+      if (!this.sdk?.contractRunner?.sendBatchTransaction) {
+        throw new Error('ContractRunner (or sendBatchTransaction capability) not available');
+      }
+
+      const batch = this.sdk.contractRunner.sendBatchTransaction();
+      // Check if the account is approved as operator
+      const approvalStatus = await this.sdk.v2Hub!.isApprovedForAll(this.address, this.address);
+
+      if (!approvalStatus) {
+        const tx = this.sdk.v2Hub!.interface.encodeFunctionData('setApprovalForAll', [this.address, true]);
+        batch.addTransaction({
+          to: this.sdk.circlesConfig.v2HubAddress!,
+          data: tx,
+          value: 0n
+        });
+      }
 
       const flowVertices = [
         // Convert to a Set to remove duplicates
-        ...new Set([ // Construct the unsorted flow vertices array
-          ...collateral,
+        ...new Set([
+          // Construct the unsorted flow vertices array
+          ...collaterals,
           currentAvatar,
           group,
           treasuryAddress
         ].map(address => address.toLowerCase()))
-      ].sort((a, b) => { // Sort addresses in ascending order based on their numeric value
+      ].sort((a, b) => {
+        // Sort addresses in ascending order based on their numeric value
         const aValue = BigInt(a);
         const bValue = BigInt(b);
 
@@ -585,9 +610,9 @@ export class V2Avatar implements AvatarInterfaceV2 {
         flow.push({
           streamSinkId: 1,
           amount: amount.toString()
-        })
+        });
 
-        flowEdgeIds.push(flowEdgeIds.length + 1)
+        flowEdgeIds.push(flowEdgeIds.length + 1);
       });
 
       const sourceCoordinate = flowVertices.indexOf(currentAvatar as Address)
@@ -609,8 +634,8 @@ export class V2Avatar implements AvatarInterfaceV2 {
         treasuryIndex // to
       ];
 
-      collateral.forEach((collateralToken: Address) => {
-        const collateralIndex = flowVertices.indexOf(collateralToken.toLowerCase() as Address);
+      collaterals.forEach((collateral: Address) => {
+        const collateralIndex = flowVertices.indexOf(collateral.toLowerCase() as Address);
 
         coordinates.push(
           collateralIndex,
@@ -624,20 +649,26 @@ export class V2Avatar implements AvatarInterfaceV2 {
         .map(index => index.toString(16).padStart(4, '0'))
         .join('');
 
-      // Call the hub's operateFlowMatrix function with the constructed parameters
-      const tx = await this.sdk.v2Hub!.operateFlowMatrix(
+      const tx = this.sdk.v2Hub!.interface.encodeFunctionData('operateFlowMatrix', [
         flowVertices,
         flow,
         streams,
         packedCoordinates
-      );
+      ]);
 
-      const receipt = await tx.wait();
+      batch.addTransaction({
+        to: this.sdk.circlesConfig.v2HubAddress!,
+        data: tx,
+        value: 0n
+      });
+
+      // Call the hub's operateFlowMatrix function with the constructed parameters
+      const receipt = await batch.run();
       if (!receipt) {
         throw new Error('Group redeem failed');
       }
 
-      return receipt;
+      return <TransactionReceipt><unknown>(receipt);
     } else {
       const standardTreasury = this.sdk.circlesConfig.standardTreasury;
       if (!standardTreasury) {
@@ -659,7 +690,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
       //       uint256[] redemptionValues;
       //    }
       // Convert each collateral address to its numeric ID:
-      const redemptionIds = collateral.map(addr => addressToUInt256(addr));
+      const redemptionIds = collaterals.map(collateral => addressToUInt256(collateral));
       const baseRedemptionPolicyEncoded = AbiCoder.defaultAbiCoder().encode(
         ['tuple(uint256[] redemptionIds, uint256[] redemptionValues)'],
         [[redemptionIds, amounts]]
@@ -702,6 +733,79 @@ export class V2Avatar implements AvatarInterfaceV2 {
 
       return receipt;
     }
+  }
+  
+  /**
+   * @notice Automatically redeems collateral tokens from a Base Group's treasury
+   * @dev Performs automatic redemption by determining trusted collaterals and using pathfinder for optimal flow.
+   * 
+   * Only supports CrcV2_BaseGroupCreated group types. The function uses the v2 pathfinder to determine
+   * the optimal redemption path and validates that sufficient liquidity exists before attempting redemption.
+   * 
+   * @param group The address of the Base Group from which to redeem collateral tokens
+   * @param amount The amount of group tokens to redeem for collateral (must be > 0 and <= max redeemable)
+   * 
+   * @return A Promise resolving to the transaction receipt upon successful automatic redemption
+   * 
+   */
+  async groupRedeemAuto(
+    group: Address,
+    amount: bigint
+  ): Promise<TransactionReceipt> {
+    this.throwIfV2IsNotAvailable();
+
+    group = group.toLowerCase() as Address;
+    const groupType = await this.sdk.getGroupType(group);
+
+    if (groupType !== "CrcV2_BaseGroupCreated")
+      throw new Error('Only Base Groups support this method');
+
+    // Address of the redeemer
+    const currentAvatar = this.address.toLowerCase() as Address;
+
+    // Define the group treasury address
+    const treasuryAddress = (await this.sdk.v2Hub!.treasuries(group)).toLowerCase();
+
+    // Get list of all tokens in the treasury
+    const treasuryTokens = (await this.sdk.data.getTokenBalances(treasuryAddress as Address))
+      .filter(balance => balance.isErc1155)
+      .map(balance => balance.tokenAddress);
+
+    const trustRelationships = await this.sdk.data.getAggregatedTrustRelations(currentAvatar, 2);
+    // Get list of tokens to expect from pathfinder
+    const expectedToTokens = trustRelationships.filter(trustObject => {
+      if(
+        (trustObject.relation === "mutuallyTrusts" || trustObject.relation === "trusts") &&
+        treasuryTokens.includes(trustObject.objectAvatar)
+      ) return true;
+    }).map(trustObject => trustObject.objectAvatar);
+
+    // Check if enough tokens as amount
+    const getMaxRedeemableAmount = await this.sdk.v2Pathfinder.getMaxFlow(
+      currentAvatar,
+      currentAvatar,
+      false,
+      [group],
+      expectedToTokens
+    );
+
+    if (BigInt(getMaxRedeemableAmount) < amount)
+      throw new Error(`Specified amount ${amount} exceeds max tokens flow ${getMaxRedeemableAmount}`);
+    
+    const receipt = await this.transfer(
+      currentAvatar,
+      amount,
+      undefined,
+      undefined,
+      false,
+      [group],
+      expectedToTokens
+    )
+
+    if (!receipt) {
+      throw new Error('Group redeem failed');
+    }
+    return receipt;
   }
 
   async getProfile(): Promise<Profile | undefined> {

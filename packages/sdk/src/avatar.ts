@@ -336,11 +336,28 @@ export class Avatar implements AvatarInterfaceV2 {
    * Facilitates the redemption process for a specified group using the provided collateral and amounts.
    *
    * @param group - The address of the group for which the operation is being performed.
-   * @param collateral - An array of collateral addresses to redeem.
+   * @param collaterals - An array of collateral addresses to redeem.
    * @param amounts - An array of amounts corresponding to each collateral.
    * @returns A promise that resolves to the transaction receipt of the redemption process.
    */
-  groupRedeem = (group: Address, collateral: Address[], amounts: bigint[]): Promise<ContractTransactionReceipt> => this.onlyIfV2((avatar) => avatar.groupRedeem(group, collateral, amounts));
+  groupRedeem = (group: Address, collaterals: Address[], amounts: bigint[]): Promise<ContractTransactionReceipt | TransactionReceipt> => this.onlyIfV2((avatar) => avatar.groupRedeem(group, collaterals, amounts));
+
+  /**
+   * Automatically redeems collateral tokens from a Base Group's treasury
+   * 
+   * @param group The address of the Base Group from which to redeem collateral tokens
+   * @param amount The amount of group tokens to redeem for collateral (must be > 0 and <= max redeemable)
+   * @return A Promise resolving to the transaction receipt upon successful automatic redemption
+   */
+  groupRedeemAuto = (group: Address, amount: bigint): Promise<TransactionReceipt> => {
+    return this.onlyIfV2((avatar) => {
+      if (!avatar.groupRedeemAuto) {
+        throw new Error('groupRedeemAuto method is not implemented');
+      }
+
+      return avatar.groupRedeemAuto(group, amount);
+    });
+  }
 
   /**
    * Wraps the specified amount of personal Circles into demurraged ERC20 tokens for use outside the Circles protocol.
