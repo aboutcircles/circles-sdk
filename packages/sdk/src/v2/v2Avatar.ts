@@ -379,7 +379,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
     }
 
     if (!tokenAddress) {
-      // Detect if avatar tries to unwrap tokens and directly initiate unwrap if it is the case
+      // Detect tokens unwrap attempts and trigger unwrap execution directly
       if(
         this.address.toLowerCase() === to.toLowerCase() &&
         fromTokens?.length === 1 &&
