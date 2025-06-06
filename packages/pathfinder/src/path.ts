@@ -92,12 +92,11 @@ export function replaceWrappedTokens(
 
 export function shrinkPathValues(
   path: PathfindingResult,
+  sink: string,
   retainBps: bigint = BigInt(999_999_999_999)
 ): PathfindingResult {
-  type Edge = TransferStep & { _idx: number };
-
   const incomingToSink = new Map<string, bigint>();
-  const scaled: Edge[] = [];
+  const scaled: TransferStep[] = [];
 
   const DENOM = BigInt(1_000_000_000_000);
 
@@ -108,29 +107,42 @@ export function shrinkPathValues(
       return; // drop sub‑unit flows
     }
 
-    scaled.push({ ...edge, value: scaledValue.toString(), _idx: i });
+    scaled.push({ ...edge, value: scaledValue.toString() });
     incomingToSink.set(edge.to, (incomingToSink.get(edge.to) ?? BigInt(0)) + scaledValue);
   });
 
-  const senders = new Set(scaled.map((e) => e.from.toLowerCase()));
-  const sink = scaled.find((e) => !senders.has(e.to.toLowerCase()))?.to;
-
   const maxFlow = sink ? incomingToSink.get(sink.toLowerCase()) ?? BigInt(0) : BigInt(0);
-
-  // Re‑establish original order for deterministic unit tests
-  scaled.sort((a, b) => a._idx - b._idx);
 
   return {
     maxFlow: maxFlow.toString(),
-    transfers: scaled.map(({ _idx, ...rest }) => rest)
+    transfers: scaled
   };
 }
 
-export function assertNoNettedFlowMismatch(path: PathfindingResult): void {
-  const { source, sink } = getSourceAndSink(path);
+export function assertNoNettedFlowMismatch(
+  path: PathfindingResult,
+  overrideSource?: string,
+  overrideSink?: string
+): void {
   const net = computeNettedFlow(path);
+  const { source, sink } = getSourceAndSink(path, overrideSource, overrideSink);
+
+  const endpointsCoincide = source === sink;
 
   net.forEach((balance, addr) => {
+    /* ----------------------------------------------------------------
+     * Closed-loop case → every vertex must net to zero
+     * -------------------------------------------------------------- */
+    if (endpointsCoincide) {
+      if (balance !== BigInt(0)) {
+        throw new Error(`Vertex ${addr} is unbalanced: ${balance}`);
+      }
+      return; // done – nothing else to check for this addr
+    }
+
+    /* ----------------------------------------------------------------
+     * Ordinary DAG case → classic source / sink / intermediate rules
+     * -------------------------------------------------------------- */
     const isSource = addr === source;
     const isSink = addr === sink;
 
@@ -147,7 +159,7 @@ export function assertNoNettedFlowMismatch(path: PathfindingResult): void {
   });
 }
 
-function getSourceAndSink(path: PathfindingResult): {
+function getSourceAndSink(path: PathfindingResult, overrideSource?: string, overrideSink?: string): {
   source: string;
   sink: string;
 } {
@@ -157,11 +169,11 @@ function getSourceAndSink(path: PathfindingResult): {
   const source = [...senders].find((a) => !receivers.has(a));
   const sink = [...receivers].find((a) => !senders.has(a));
 
-  if (!source || !sink) {
-    throw new Error("Could not determine unique source / sink");
+  if (!(source ?? overrideSource) || !(sink ?? overrideSink)) {
+    throw new Error('Could not determine unique source / sink');
   }
 
-  return { source, sink };
+  return { source: (source ?? overrideSource)!, sink: (sink ?? overrideSink)! };
 }
 
 export function computeNettedFlow(path: PathfindingResult): Map<string, bigint> {
