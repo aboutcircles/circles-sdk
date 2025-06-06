@@ -1,6 +1,6 @@
 {
   "name": "@circles-sdk/pathfinder",
-  "version": "0.27.3",
+  "version": "0.28.0",
   "description": "",
   "type": "module",
   "main": "./dist/index.js",
@@ -17,8 +17,8 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@circles-sdk/utils": "0.27.3",
-    "@circles-sdk/data": "0.27.3",
+    "@circles-sdk/utils": "0.28.0",
+    "@circles-sdk/data": "0.28.0",
     "ethers": "^6.13.2"
   },
   "devDependencies": {
