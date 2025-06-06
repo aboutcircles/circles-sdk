@@ -1,9 +1,0 @@
-import { parseError } from '@circles-sdk/sdk';
-
-describe('error decoder', () => {
-  it('should decode error codes', async () => {
-    const error = "0x03dee4c5000000000000000000000000d70c8d2b989ca61fd484ee61feceaf59a169524300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004563918244f40000000000000000000000000000d70c8d2b989ca61fd484ee61feceaf59a1695243";
-    const decoded = parseError(error);
-    console.log(decoded);
-  });
-});

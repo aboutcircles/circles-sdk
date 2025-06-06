@@ -1,86 +1,81 @@
-import { ethers } from "ethers";
+import { hexlify, keccak256, toUtf8Bytes } from 'ethers';
+
+// export const NAMESPACE = Uint8Array.from(Buffer.from(keccak256(toUtf8Bytes('CIRCLESv2:RESERVED_DATA')).substring(2).slice(0, 16), 'hex'));
+export const DATA_NAMESPACE = Uint8Array.from([[16, 32, 224, 192, 39, 46, 71, 223]]);
+export const VERSION = 0x01;
+export const TAIL = Uint8Array.from([0xde, 0xad, 0xbe, 0xef]);
+
+export enum Codec {
+  RAW = 0x55,
+  CBOR = 0x51,
+  DAG_CBOR = 0x71,
+  CIDV1 = 0x01,
+  UTF8 = 0x7f,
+}
+
+const u32be = (n: number): Uint8Array =>
+  Uint8Array.from([
+    (n >>> 24) & 0xff,
+    (n >>> 16) & 0xff,
+    (n >>> 8) & 0xff,
+    n & 0xff
+  ]);
+
+function u8Concat(chunks: readonly Uint8Array[]): Uint8Array {
+  let len = 0;
+  for (const c of chunks) len += c.length;
+  const out = new Uint8Array(len);
+  let off = 0;
+  for (const c of chunks) {
+    out.set(c, off);
+    off += c.length;
+  }
+  return out;
+}
 
 /**
- * Circles attaches a message to a transfer with the layout
- *   [32-byte MARKER][4-byte big-endian LENGTH][UTF-8 DATA]
- *
- * Indexers look for the marker and parse the trailing bytes as UTF-8.
+ * Encode a payload with a header and tail.
+ * @param payload The payload as Uint8Array.
+ * @param codec The codec to use for encoding the payload.
+ * @param withTail Whether to append the tail bytes (default: true).
  */
-export class TransferMessageEncoder {
-  /** 32-byte marker recognised by indexers */
-  public readonly MARKER = ethers.keccak256(
-    ethers.toUtf8Bytes("CIRCLESv2:RESERVED_DATA:UTF8_TRANSFER_MESSAGE")
+export function encode(
+  payload: Uint8Array,
+  codec: Codec = Codec.UTF8,
+  withTail = true
+): Uint8Array {
+  if (payload.length > 0xffffffff) throw new Error('payload too big');
+
+  const header = Uint8Array.of(
+    VERSION,
+    codec,
+    ...u32be(payload.length)
   );
 
-  /**
-   * Encode a human-readable message for a transfer.
-   *
-   * @param message UTF-8 text to embed.
-   * @returns Hex string (`0x…`) ready for the `data` field.
-   */
-  encodeMessage(message: string): string {
-    const messageBytes = ethers.toUtf8Bytes(message);
-    const markerBytes = ethers.getBytes(this.MARKER);
+  return withTail
+    ? u8Concat([DATA_NAMESPACE, header, payload, TAIL])
+    : u8Concat([DATA_NAMESPACE, header, payload]);
+}
 
-    const len = messageBytes.length;
-    if (len > 0xffffffff) {
-      throw new Error("Message exceeds 4 GiB – cannot encode.");
-    }
+export type Decoded = { codec: number; payload: Uint8Array } | null;
 
-    // 4-byte big-endian length prefix
-    const lengthBytes = Uint8Array.from([
-      (len >>> 24) & 0xff,
-      (len >>> 16) & 0xff,
-      (len >>> 8) & 0xff,
-      len & 0xff,
-    ]);
+export function decode(buf: Uint8Array, withTail = true): Decoded {
+  if (buf.length < 14) return null;
+  if (withTail && buf.length < 18) return null;
 
-    const full = ethers.concat([markerBytes, lengthBytes, messageBytes]);
-    return ethers.hexlify(full); // => 0x…
+  for (let i = 0; i < DATA_NAMESPACE.length; i++) {
+    if (buf[i] !== DATA_NAMESPACE[i]) return null;
   }
+  if (buf[8] !== VERSION) return null;
 
-  /**
-   * Decode the embedded message from transfer data.
-   *
-   * @param data Raw bytes (Buffer | Uint8Array) or hex string.
-   */
-  decodeMessage(data: Uint8Array | string): string {
-    // Normalise to Uint8Array
-    const bytes =
-      typeof data === "string"
-        ? ethers.getBytes(data)
-        : new Uint8Array(data); // covers Buffer & Uint8Array
+  const codec = buf[9];
+  const len = (buf[10] << 24) | (buf[11] << 16) | (buf[12] << 8) | buf[13];
+  if (buf.length < 14 + len) return null;
 
-    const markerBytes = ethers.getBytes(this.MARKER);
-    const markerSize = markerBytes.length; // 32
-    const lengthSize = 4;
+  if (withTail && buf.length !== 14 + len + 4) return null;
 
-    if (bytes.length < markerSize + lengthSize) {
-      throw new Error("Data too short – cannot contain a message.");
-    }
-
-    // Marker check
-    for (let i = 0; i < markerSize; i++) {
-      if (bytes[i] !== markerBytes[i]) {
-        throw new Error("Marker mismatch – not a Circles message.");
-      }
-    }
-
-    // Read uint32 length (big-endian)
-    const lengthOffset = markerSize;
-    const msgLen =
-      (bytes[lengthOffset] << 24) |
-      (bytes[lengthOffset + 1] << 16) |
-      (bytes[lengthOffset + 2] << 8) |
-      bytes[lengthOffset + 3];
-
-    const start = markerSize + lengthSize;
-    const end = start + msgLen;
-
-    if (bytes.length < end) {
-      throw new Error("Data truncated – incomplete message.");
-    }
-
-    return ethers.toUtf8String(bytes.slice(start, end));
-  }
+  return {
+    codec,
+    payload: buf.subarray(14, 14 + len)
+  };
 }

@@ -6,5 +6,6 @@ export { CirclesConfig } from './circlesConfig';
 export { AvatarRow, TrustListRow, TrustRelationRow } from '@circles-sdk/data';
 export { AvatarInterface, AvatarInterfaceV2 } from './AvatarInterface';
 export { V1Pathfinder } from './v1/pathfinderV1';
-export { MaxFlowResponse, TransferPathStep } from './pathfinderTypes'
+export { MaxFlowResponse, TransferPathStep } from './pathfinderTypes';
 export { circlesConfig } from './config';
+export { encode, decode, Codec, TAIL, DATA_NAMESPACE } from './v2/transferMessage';
