@@ -52,6 +52,76 @@ type Call = {
 };
 
 describe('transfer wrapped tokens along a path', () => {
+  it('should also work when sender == receiver', async () => {
+    const excludeFromTokens = await getDefaultTokenExcludeList(circlesRpcUrl, SOURCE_SAFE_ADDRESS as Address);
+
+    const transferPath = await findPath(circlesRpcUrl, {
+      from: SOURCE_SAFE_ADDRESS as Address,
+      to: SOURCE_SAFE_ADDRESS as Address,
+      targetFlow: AMOUNT,
+      useWrappedBalances: WITH_WRAP,
+      excludeFromTokens: excludeFromTokens,
+      toTokens: [SOURCE_SAFE_ADDRESS as Address]
+    });
+
+    assertNoNettedFlowMismatch(transferPath, SOURCE_SAFE_ADDRESS, SOURCE_SAFE_ADDRESS);
+
+    const tokenInfoMap = await getTokenInfoMapFromPath(circlesRpcUrl, transferPath);
+    const wrappedTotals = getWrappedTokenTotalsFromPath(transferPath, tokenInfoMap);
+    const unwrappedTotals = getExpectedUnwrappedTokenTotals(wrappedTotals, tokenInfoMap);
+    const pathUnwrapped = replaceWrappedTokens(transferPath, unwrappedTotals);
+    console.log(`Path pre-replacement:`, transferPath);
+    console.log(`Path post-replacement:`, pathUnwrapped);
+
+    const hasInflationaryWrapper = Object.values(wrappedTotals).some(o => o[1] === 'CrcV2_ERC20WrapperDeployed_Inflationary');
+    const shrunkPath = hasInflationaryWrapper
+      ? shrinkPathValues(pathUnwrapped, SOURCE_SAFE_ADDRESS) // sledgehammer-shrink all values in the path by 0.0000...1%
+      : pathUnwrapped;
+
+    console.log(`Path post-shrinking:`, shrunkPath);
+    assertNoNettedFlowMismatch(shrunkPath, SOURCE_SAFE_ADDRESS, SOURCE_SAFE_ADDRESS);
+
+    const fm = createFlowMatrix(
+      SOURCE_SAFE_ADDRESS as Address,
+      SOURCE_SAFE_ADDRESS as Address,
+      shrunkPath.maxFlow,
+      shrunkPath.transfers
+    );
+
+    await assertAllVerticesRegistered(circlesRpcUrl, HUB_ADDRESS, fm.flowVertices);
+    await assertVerticesStrictlyAscending(fm.flowVertices);
+    console.log(`Total flow before shrinking: ${transferPath.maxFlow}`);
+    console.log(`Total flow after shrinking: ${shrunkPath.maxFlow}`);
+    const hubCall: Call = encodeOperateFlowMatrix(HUB_ADDRESS, fm);
+    const subCalls: Call[] = [
+      buildSelfApprovalCall(HUB_ADDRESS, SOURCE_SAFE_ADDRESS),
+      ...buildUnwrapCalls(wrappedTotals),
+      hubCall
+    ];
+    const multiSendCall = encodeMultiSendForSafe(subCalls);
+    const safeIface = new ethers.Interface(SAFE_ABI);
+    const safeCalldata = safeIface.encodeFunctionData('execTransaction', [
+      multiSendCall.to,
+      0,
+      multiSendCall.data,
+      1,          // DELEGATECALL
+      0, 0, 0,
+      ethers.ZeroAddress,
+      ethers.ZeroAddress,
+      buildPreValidatedSig(SAFE_OWNER)
+    ]);
+    const gas = await provider.estimateGas({
+      from: SAFE_OWNER,
+      to: SOURCE_SAFE_ADDRESS,
+      data: safeCalldata
+    });
+    console.log('Gas:', gas.toString());
+    if (gas === BigInt(0)) {
+      throw new Error('Gas estimation returned 0 – path likely too long for a single block.');
+    }
+    expect(gas).toBeGreaterThan(0);
+  });
+
   it(
     'should return an executable path with wrapped tokens',
     async () => {
@@ -83,7 +153,7 @@ describe('transfer wrapped tokens along a path', () => {
 
       const hasInflationaryWrapper = Object.values(wrappedTotals).some(o => o[1] === 'CrcV2_ERC20WrapperDeployed_Inflationary');
       const shrunkPath = hasInflationaryWrapper
-        ? shrinkPathValues(pathUnwrapped) // sledgehammer-shrink all values in the path by 0.0000...1%
+        ? shrinkPathValues(pathUnwrapped, SINK_ADDRESS) // sledgehammer-shrink all values in the path by 0.0000...1%
         : pathUnwrapped;
 
       console.log(`Path post-shrinking:`, shrunkPath);

@@ -238,13 +238,8 @@ export class V2Avatar implements AvatarInterfaceV2 {
     // remove a bit from each flow edge to account for rounding errors (only if we handle inflationary wrappers)
     const hasInflationaryWrapper = Object.values(wrappedTotals).some(o => o[1] === 'CrcV2_ERC20WrapperDeployed_Inflationary');
     const shrunkPath = hasInflationaryWrapper
-      ? shrinkPathValues(pathUnwrapped) // sledgehammer-shrink all values in the path by 0.0000...1%
+      ? shrinkPathValues(pathUnwrapped, to) // sledgehammer-shrink all values in the path by 0.0000...1%
       : pathUnwrapped;
-
-    if (hasInflationaryWrapper) {
-      console.log(`Path before shrinking: ${JSON.stringify(pathUnwrapped, null, 2)}`);
-      console.log(`Path after shrinking: ${JSON.stringify(shrunkPath, null, 2)}`);
-    }
 
     const flowMatrix = createFlowMatrix(
       this.address,
