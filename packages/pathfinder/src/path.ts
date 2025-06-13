@@ -2,7 +2,7 @@ import {
   PathfindingResult,
   TransferStep
 } from './types';
-import { CirclesData, CirclesRpc, TokenInfoRow } from '@circles-sdk/data';
+import { CirclesData, TokenInfoRow } from '@circles-sdk/data';
 import { Address, CirclesConverter } from '@circles-sdk/utils';
 
 export async function getTokenInfoMapFromPath(
@@ -16,7 +16,7 @@ export async function getTokenInfoMapFromPath(
     uniqueAddresses.add(t.tokenOwner.toLowerCase());
   });
 
-  const circlesData = new CirclesData(new CirclesRpc(rpcUrl));
+  const circlesData = new CirclesData(rpcUrl);
   const batch = await circlesData.getTokenInfoBatch(
     Array.from(uniqueAddresses) as Address[]
   );
@@ -57,20 +57,13 @@ export function getExpectedUnwrappedTokenTotals(
     const info = tokenInfoMap.get(wrapperAddr.toLowerCase());
     if (!info) return;
 
-    const isDemurraged = type === 'CrcV2_ERC20WrapperDeployed_Demurraged';
-    const isInflationary = type === 'CrcV2_ERC20WrapperDeployed_Inflationary';
+    if (type === 'CrcV2_ERC20WrapperDeployed_Demurraged') {
+      unwrapped[wrapperAddr] = [total, info.tokenOwner];
+    }
 
-    const unwrapAmount = isDemurraged
-      ? total
-      : isInflationary
-        ? CirclesConverter.attoCirclesToAttoStaticCircles(total)
-        : total;
-
-    const availableAfterUnwrap = isDemurraged
-      ? unwrapAmount
-      : CirclesConverter.attoStaticCirclesToAttoCircles(unwrapAmount);
-
-    unwrapped[wrapperAddr] = [availableAfterUnwrap, info.tokenOwner];
+    if (type === 'CrcV2_ERC20WrapperDeployed_Inflationary') {
+      unwrapped[wrapperAddr] = [CirclesConverter.attoStaticCirclesToAttoCircles(total), info.tokenOwner];
+    }
   });
 
   return unwrapped;
@@ -100,7 +93,7 @@ export function shrinkPathValues(
 
   const DENOM = BigInt(1_000_000_000_000);
 
-  path.transfers.forEach((edge, i) => {
+  path.transfers.forEach((edge) => {
     const scaledValue = (BigInt(edge.value) * retainBps) / DENOM;
     const isZero = scaledValue === BigInt(0);
     if (isZero) {

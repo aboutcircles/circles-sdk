@@ -1,5 +1,6 @@
 import { PathfindingResult } from './types.js';
 import { Address } from '@circles-sdk/utils';
+import { CirclesRpc } from '@circles-sdk/data';
 
 export interface FindPathParams {
   from: Address,
@@ -28,40 +29,18 @@ export async function findPath(
     excludeToTokens
   }: FindPathParams
 ): Promise<PathfindingResult> {
-  const requestBody = {
-    jsonrpc: '2.0',
-    id: 1,
-    method: 'circlesV2_findPath',
-    params: [
-      {
-        Source: from,
-        Sink: to,
-        TargetFlow: targetFlow,
-        WithWrap: useWrappedBalances,
-        FromTokens: fromTokens,
-        ToTokens: toTokens,
-        ExcludedFromTokens: excludeFromTokens,
-        ExcludedToTokens: excludeToTokens
-      }
-    ]
-  } as const;
+  const res = await new CirclesRpc(rpcUrl).call<PathfindingResult>('circlesV2_findPath', [{
+    Source: from,
+    Sink: to,
+    TargetFlow: targetFlow,
+    WithWrap: useWrappedBalances,
+    FromTokens: fromTokens,
+    ToTokens: toTokens,
+    ExcludedFromTokens: excludeFromTokens,
+    ExcludedToTokens: excludeToTokens
+  }]);
 
-  const res = await fetch(rpcUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(requestBody)
-  });
-
-  if (!res.ok) {
-    throw new Error(`Pathfinder RPC returned HTTP ${res.status}`);
-  }
-
-  const json = await res.json();
-  if (!json.result) {
-    throw new Error(`Pathfinder RPC error: ${JSON.stringify(json.error ?? json)}`);
-  }
-
-  return json.result as PathfindingResult;
+  return res.result;
 }
 
 export async function findMaxFlow(

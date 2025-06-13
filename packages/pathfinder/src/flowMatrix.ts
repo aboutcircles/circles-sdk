@@ -1,6 +1,9 @@
-import { FlowEdge, FlowMatrix, Stream, TransferStep } from './types';
+import { FlowMatrix, TransferStep } from './types';
 import { packCoordinates, transformToFlowVertices } from './packing';
 import { Address } from '@circles-sdk/utils';
+import { TypeDefinitions } from '@circles-sdk/abi-v2/dist/hub/Hub';
+import FlowEdgeStruct = TypeDefinitions.FlowEdgeStruct;
+import StreamStruct = TypeDefinitions.StreamStruct;
 
 /**
  * Create an ABI‑ready FlowMatrix object from a list of TransferSteps.
@@ -20,7 +23,7 @@ export function createFlowMatrix(
     receiver
   );
 
-  const flowEdges: FlowEdge[] = transfers.map((t) => {
+  const flowEdges: FlowEdgeStruct[] = transfers.map((t) => {
     const isTerminal = t.to.toLowerCase() === receiver;
     return {
       streamSinkId: isTerminal ? 1 : 0,
@@ -43,7 +46,7 @@ export function createFlowMatrix(
     .map((e, i) => (e.streamSinkId === 1 ? i : -1))
     .filter((i) => i !== -1);
 
-  const streams: Stream[] = [
+  const streams: StreamStruct[] = [
     {
       sourceCoordinate: idx[sender],
       flowEdgeIds: termEdgeIds,
