@@ -2,9 +2,12 @@ import { AvatarInterfaceV2 } from '../AvatarInterface';
 import {
   AbiCoder,
   ContractRunner,
+  ContractTransaction,
   ContractTransactionReceipt,
   ethers,
-  formatEther, keccak256, toUtf8Bytes,
+  formatEther,
+  keccak256,
+  toUtf8Bytes,
   TransactionReceipt,
   ZeroAddress
 } from 'ethers';
@@ -16,23 +19,18 @@ import {
   TransactionHistoryRow,
   TrustRelationRow
 } from '@circles-sdk/data';
-import {
-  Address,
-  addressToUInt256,
-  cidV0ToUint8Array,
-  CirclesConverter
-} from '@circles-sdk/utils';
+import { Address, addressToUInt256, cidV0ToUint8Array, CirclesConverter } from '@circles-sdk/utils';
 import { Profile } from '@circles-sdk/profiles';
 import { TokenType } from '@circles-sdk/data/dist/rows/tokenInfoRow';
-import { BatchRun, TransactionResponse } from '@circles-sdk/adapter';
+import { BatchRun, TransactionRequest, TransactionResponse } from '@circles-sdk/adapter';
 import { BaseGroup__factory } from '@circles-sdk/abi-v2';
 import {
-  createFlowMatrix, findMaxFlow, findPath, FindPathParams, FlowMatrix,
-  getExpectedUnwrappedTokenTotals,
-  getTokenInfoMapFromPath,
-  getWrappedTokenTotalsFromPath,
-  replaceWrappedTokens,
-  shrinkPathValues
+  createFlowMatrix,
+  findMaxFlow,
+  findPath,
+  FindPathParams,
+  FlowMatrix,
+  getTokenInfoMapFromPath
 } from '@circles-sdk/pathfinder';
 
 export const OPERATE_FLOW_MATRIX_ABI = [
@@ -189,11 +187,45 @@ export class V2Avatar implements AvatarInterfaceV2 {
     excludeToTokens?: Address[]
   ) {
     this.throwIfV2IsNotAvailable();
-    to = to.toLowerCase() as Address;
 
+    to = to.toLowerCase() as Address;
     excludeFromTokens = await this.sdk.getDefaultTokenExcludeList(to, excludeFromTokens);
     amount = CirclesConverter.truncateToSixDecimals(amount);
 
+    /*
+      1) Ask the pathfinder for a transfer path.
+
+      2) Collect all wrapped-token edges that originate at the **sender**:
+         a) static wrappers (type = CrcV2_ERC20WrapperDeployed_Inflationary)
+         b) demurraged wrappers (type = CrcV2_ERC20WrapperDeployed_Demurraged)
+
+      3) For every *static* wrapper found in 2 a), fetch the sender’s **entire**
+         static balance (in atto-static circles).
+
+      4) Build `unwrap()` calls
+           – static wrappers: unwrap *full* balance
+           – demurraged wrappers: unwrap **exact** amount needed by the path
+         → after this step the Safe holds plain atto-Circles for every wrapper
+           token that will be moved.
+
+      5) Rewrite the path so that each wrapped edge now references the real
+         token owner (`tokenOwner = underlying ERC-1155 ID`), and
+         – keep a running total of how many demurraged units of every static
+           wrapper will actually be spent.
+
+      6) For each static wrapper:
+           remaining = (unwrapped total) − (spent in step 5)
+         Add a `Hub.wrap(realOwner, remaining, 1)` call so the leftover
+         Circles are re-wrapped to static ERC-20 after the transfer.
+         (Demurraged wrappers have no leftovers by design.)
+
+      7) Build the `FlowMatrix` from the rewritten transfers.
+
+      8) Assemble the Safe MultiSend in *strict* order
+           self-approval → all unwraps → operateFlowMatrix → all re-wraps
+
+      9) Ask the Safe for a gas estimate; abort if it returns 0.
+    */
     const path = await findPath(
       this.sdk.circlesConfig.circlesRpcUrl,
       {
@@ -208,103 +240,160 @@ export class V2Avatar implements AvatarInterfaceV2 {
       }
     );
 
-    // approve self if necessary
-    const approvalStatus = await this.sdk.v2Hub!.isApprovedForAll(this.address, this.address);
-    if (!approvalStatus) {
-      const txData = this.sdk.v2Hub!.interface.encodeFunctionData('setApprovalForAll', [this.address, true]);
-      batch.addTransaction({
-        to: this.sdk.circlesConfig.v2HubAddress!,
-        data: txData,
-        value: 0n
+    const wrapCalls: TransactionRequest[] = [];
+    const unwrapCalls: TransactionRequest[] = [];
+
+    // Get the token info for all tokens in the path
+    const tokenInfoMap = await getTokenInfoMapFromPath(this.sdk.circlesConfig.circlesRpcUrl, path);
+
+    // Find all wrapped edges (can only originate from the sender)
+    const allWrappedEdges = path.transfers
+      .filter(o => o.from == this.avatarInfo.avatar)
+      .filter(o => !!tokenInfoMap.get(o.tokenOwner.toLowerCase())?.type.startsWith('CrcV2_ERC20WrapperDeployed'));
+
+    // Filter the static edges
+    const wrappedStaticEdges = allWrappedEdges.filter(o => tokenInfoMap.get(o.tokenOwner.toLowerCase())?.type === 'CrcV2_ERC20WrapperDeployed_Inflationary');
+    const wrapedStaticEdgeTotalsByToken: Record<string, bigint> = {};
+    wrappedStaticEdges.forEach(o => {
+      if (!wrapedStaticEdgeTotalsByToken[o.tokenOwner]) {
+        wrapedStaticEdgeTotalsByToken[o.tokenOwner] = BigInt(0);
+      }
+      wrapedStaticEdgeTotalsByToken[o.tokenOwner] += BigInt(o.value);
+    });
+
+    // Filter the demurraged edges
+    const wrappedDemurragedEdges = allWrappedEdges.filter(o => tokenInfoMap.get(o.tokenOwner.toLowerCase())?.type === 'CrcV2_ERC20WrapperDeployed_Demurraged');
+    const wrappedDemurragedEdgeTotalsByToken: Record<string, bigint> = {};
+    wrappedDemurragedEdges.forEach(o => {
+      if (!wrappedDemurragedEdgeTotalsByToken[o.tokenOwner]) {
+        wrappedDemurragedEdgeTotalsByToken[o.tokenOwner] = BigInt(0);
+      }
+      wrappedDemurragedEdgeTotalsByToken[o.tokenOwner] += BigInt(o.value);
+    });
+
+    const WRAPPER_ERC20_TOKEN_ABI = [
+      'function unwrap(uint256 _amount)'
+    ];
+
+    // Unwrap all used static wrapped tokens fully
+    const usedStaticTokenCount = Object.keys(wrapedStaticEdgeTotalsByToken).length;
+    const wrappedStaticBalanceByTokenInStaticUnits: Record<string, bigint> = {};
+    if (usedStaticTokenCount > 0) {
+      const senderWrappedStaticTotals = await this.getStaticWrappedTokenTotalsFromSender(this.address);
+
+      const relevantWrappedStaticBalances = senderWrappedStaticTotals.filter(o => !!wrapedStaticEdgeTotalsByToken[o.tokenAddress]);
+      relevantWrappedStaticBalances.forEach(o => {
+        wrappedStaticBalanceByTokenInStaticUnits[o.tokenAddress] = BigInt(o.staticAttoCircles);
+
+        unwrapCalls.push({
+          to: o.tokenAddress as Address,
+          data: new ethers.Interface(WRAPPER_ERC20_TOKEN_ABI).encodeFunctionData('unwrap', [BigInt(o.staticAttoCircles)]),
+          value: 0n
+        });
       });
     }
 
-    // Determine which edges need to be unwrapped and what unwrapped values are expected
-    const tokenInfoMap = await getTokenInfoMapFromPath(this.sdk.circlesConfig.circlesRpcUrl, path);
-    const wrappedTotals = getWrappedTokenTotalsFromPath(path, tokenInfoMap);
-    const unwrappedTotals = getExpectedUnwrappedTokenTotals(wrappedTotals, tokenInfoMap);
-
-    // add unwrap calls for each wrapped token
-    const unwrapCalls = this.buildUnwrapCalls(wrappedTotals);
-    unwrapCalls.forEach(unwrap => {
-      batch.addTransaction({
-        to: unwrap.to,
-        data: unwrap.data,
-        value: 0n
+    // Unwrap all used demurraged wrapped tokens exactly
+    const usedDemurragedTokenCount = Object.keys(wrappedDemurragedEdgeTotalsByToken).length;
+    if (usedDemurragedTokenCount > 0) {
+      Object.entries(wrappedDemurragedEdgeTotalsByToken).forEach(([wrapperAddr, total]) => {
+        unwrapCalls.push({
+          to: wrapperAddr as Address,
+          data: new ethers.Interface(WRAPPER_ERC20_TOKEN_ABI).encodeFunctionData('unwrap', [total]),
+          value: 0n
+        });
       });
+    }
+
+    // From this point on, we have enough (unwrapped, demurraged) tokens of each kind to
+    // facilitate the transfer. However, the returned path still contains the wrapped token
+    // addresses as "tokenOwner". We need to look up the real token owner and replace it
+    // in the path (we create a copy).
+    const unwrappedStaticTokensUsedInDemurragedUnits: Record<string, bigint> = {};
+
+    const unwrappedTransfers = path.transfers.map(o => {
+      const tokenInfo = tokenInfoMap.get(o.tokenOwner.toLowerCase());
+      if (tokenInfo && tokenInfo.type.startsWith('CrcV2_ERC20WrapperDeployed')) {
+        // Use the opportunity to also do some bookkeeping about how many demurraged tokens
+        // from the unwrapped static tokens have been used so far. We need this to later know
+        // how many demurraged tokens we have left to wrap them again.
+        if (tokenInfo.type === 'CrcV2_ERC20WrapperDeployed_Inflationary') {
+          if (!unwrappedStaticTokensUsedInDemurragedUnits[tokenInfo.token]) {
+            unwrappedStaticTokensUsedInDemurragedUnits[tokenInfo.token] = BigInt(0);
+          }
+          unwrappedStaticTokensUsedInDemurragedUnits[tokenInfo.token] += BigInt(o.value);
+        }
+
+        return {
+          ...o,
+          tokenOwner: tokenInfo.tokenOwner
+        };
+      }
+      return o;
     });
 
-    // rewrite path -> all ERC-20 wrappers replaced by their avatars
-    const pathUnwrapped = replaceWrappedTokens(path, unwrappedTotals);
+    // Calculate what's left after the transfer for each static token and prepare the wrap calls
+    await Promise.all(Object.entries(unwrappedStaticTokensUsedInDemurragedUnits).map(async ([token, totalUsedDemurraged]) => {
+      const totalStaticTokenBalance = wrappedStaticBalanceByTokenInStaticUnits[token];
+      const totalDemurragedTokenBalance = CirclesConverter.attoStaticCirclesToAttoCircles(totalStaticTokenBalance);
+      const remainingDemurragedBalance = totalDemurragedTokenBalance - totalUsedDemurraged;
 
-    // remove a bit from each flow edge to account for rounding errors (only if we handle inflationary wrappers)
-    const hasInflationaryWrapper = Object.values(wrappedTotals).some(o => o[1] === 'CrcV2_ERC20WrapperDeployed_Inflationary');
-    const shrunkPath = hasInflationaryWrapper
-      ? shrinkPathValues(pathUnwrapped, to) // sledgehammer-shrink all values in the path by 0.0000...1%
-      : pathUnwrapped;
+      // Add the wrap call for the remaining static balance
+      const realTokenOwner = tokenInfoMap.get(token.toLowerCase())?.tokenOwner;
+      if (!realTokenOwner) {
+        throw new Error(`Token owner not found for token: ${token}`);
+      }
+      const wrapTx = await this.sdk.v2Hub!.wrap.populateTransaction(realTokenOwner, remainingDemurragedBalance, 1);
+      wrapCalls.push({
+        to: wrapTx.to as Address,
+        data: wrapTx.data,
+        value: 0n
+      });
+    }));
 
-    const flowMatrix = createFlowMatrix(
+    // Finally, we can create the flow matrix with the unwrapped transfers
+    const flowMatrix: FlowMatrix = createFlowMatrix(
       this.address,
       to,
-      shrunkPath.maxFlow,
-      shrunkPath.transfers
+      path.maxFlow,
+      unwrappedTransfers
     );
 
+    // If we have data, attach it to the streams
     if (txData) {
       for (let i = 0; i < flowMatrix.streams.length; i++) {
         flowMatrix.streams[i].data = txData || new Uint8Array(0);
       }
     }
 
-    const operateFlowMatrixCall = this.encodeOperateFlowMatrix(this.sdk.circlesConfig.v2HubAddress!, flowMatrix);
-    batch.addTransaction({
-      to: operateFlowMatrixCall.to,
-      data: operateFlowMatrixCall.data,
-      value: 0n
-    });
-  }
+    // Create the operateFlowMatrix call
+    const operateFlowMatrixCall = await this.sdk.v2Hub!.operateFlowMatrix.populateTransaction(
+      flowMatrix.flowVertices,
+      flowMatrix.flowEdges,
+      flowMatrix.streams,
+      flowMatrix.packedCoordinates
+    );
 
-  /**
-   * Build one unwrap() call per wrapped token that the sender must execute
-   * before the path runs. Works for both inflationary and demurraged wrappers.
-   */
-  private buildUnwrapCalls(
-    totals: Record<string, [bigint, string]>
-  ) {
-    const WRAPPER_ERC20_TOKEN_ABI = [
-      'function unwrap(uint256 _amount)'
+    const selfApprovalCall = await this.sdk.v2Hub!.setApprovalForAll.populateTransaction(this.address, true);
+    if (!selfApprovalCall) {
+      throw new Error('Failed to create self-approval call');
+    }
+
+    // Prepare the Safe multi-send call
+    const subCalls: ContractTransaction[] = [
+      selfApprovalCall,
+      ...unwrapCalls,
+      operateFlowMatrixCall,
+      ...wrapCalls
     ];
-    const iface = new ethers.Interface(WRAPPER_ERC20_TOKEN_ABI);
 
-    return Object.entries(totals).map(([wrapperAddr, [amtDemurraged, wrapperType]]) => {
-      const needsStaticAmount = wrapperType === 'CrcV2_ERC20WrapperDeployed_Inflationary';
-
-      const amountForUnwrap = needsStaticAmount
-        ? CirclesConverter.attoCirclesToAttoStaticCircles(amtDemurraged)
-        : amtDemurraged; // 1:1 for demurraged wrappers
-
-      return {
-        to: wrapperAddr as Address,
-        data: iface.encodeFunctionData('unwrap', [amountForUnwrap.toString()])
-      };
+    subCalls.forEach(call => {
+      batch.addTransaction({
+        to: call.to as Address,
+        data: call.data,
+        value: 0n
+      });
     });
-  }
-
-  /**
-   * Encode Hub.operateFlowMatrix calldata for on‑chain execution.
-   */
-  private encodeOperateFlowMatrix(
-    hubAddress: Address,
-    fm: FlowMatrix
-  ) {
-    const iface = new ethers.Interface(OPERATE_FLOW_MATRIX_ABI);
-    const data = iface.encodeFunctionData('operateFlowMatrix', [
-      fm.flowVertices,
-      fm.flowEdges.map((e) => [e.streamSinkId, e.amount]),
-      fm.streams.map((s) => [s.sourceCoordinate, s.flowEdgeIds, s.data]),
-      fm.packedCoordinates
-    ]);
-    return { to: hubAddress, data };
   }
 
   private async directTransfer(to: Address, amount: bigint, tokenAddress: Address, txData?: Uint8Array): Promise<TransactionReceipt> {
@@ -451,17 +540,17 @@ export class V2Avatar implements AvatarInterfaceV2 {
    * @dev This function enables users to convert personal tokens to group tokens (gCRC)
    *      For BaseGroup, it sends tokens to the group's BaseMintHandler contract which
    *      handles the conversion process. For default group types, it calls the Hub's groupMint directly.
-   *      
+   *
    *      The BaseMintHandler works as follows:
    *      1. It receives ERC1155 tokens via safeBatchTransferFrom
    *      2. In its onERC1155BatchReceived/onERC1155Received functions, it:
    *         - Calls the Hub's groupMint function
    *         - Hub mints the gCRC tokens and sends them back to the BaseMintHandler
    *         - BaseMintHandler forwards tokens to the beneficiary (or wraps to ERC20 if requested)
-   *      
+   *
    *      The optional `data` parameter can be set to `keccak256("TYPE_DEMURRAGE")` or `keccak256("TYPE_INFLATIONARY")` constants
    *      to wrap the minted gCRC into specialized ERC20 tokens before returning to the beneficiary.
-   * 
+   *
    * @param group The address of the group
    * @param collateral An array of collateral token addresses to convert into group tokens
    * @param amounts An array of amounts to convert, corresponding to each collateral address
@@ -474,9 +563,9 @@ export class V2Avatar implements AvatarInterfaceV2 {
     group = group.toLowerCase() as Address;
     const groupType = await this.sdk.getGroupType(group);
 
-    if(groupType == "CrcV2_BaseGroupCreated") {
+    if (groupType == 'CrcV2_BaseGroupCreated') {
       const baseGroup = BaseGroup__factory.connect(group, <ContractRunner>this.sdk.contractRunner);
-      
+
       // Get Base Group Mint handler address
       const baseGroupMintHandler = (await baseGroup.BASE_MINT_HANDLER()) ?? ZeroAddress;
       // Convert collateral tokens addresses to the uint format
@@ -522,11 +611,11 @@ export class V2Avatar implements AvatarInterfaceV2 {
    * Implementation varies by group type:
    * - For CrcV2_BaseGroupCreated: Uses flowMatrix operations with vertex coordination
    * - For standard groups: Uses ERC1155 safeTransferFrom with encoded metadata
-   * 
+   *
    * @param group The address of the group from which to redeem collateral
    * @param collaterals Array of collateral token addresses to redeem
    * @param amounts Array of collateral amounts to redeem
-   * 
+   *
    * @return A Promise resolving to the transaction receipt upon successful redemption
    */
   async groupRedeem(
@@ -539,12 +628,12 @@ export class V2Avatar implements AvatarInterfaceV2 {
     group = group.toLowerCase() as Address;
     const groupType = await this.sdk.getGroupType(group);
 
-    if(groupType == "CrcV2_BaseGroupCreated") {
-      if(collaterals.length !== amounts.length) {
+    if (groupType == 'CrcV2_BaseGroupCreated') {
+      if (collaterals.length !== amounts.length) {
         throw new Error('Collateral and amounts arrays must be the same length');
       }
 
-      if(!collaterals.length || !amounts.length) {
+      if (!collaterals.length || !amounts.length) {
         throw new Error('Collateral and amounts arrays cannot be empty');
       }
 
@@ -612,7 +701,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
         flowEdgeIds.push(flowEdgeIds.length + 1);
       });
 
-      const sourceCoordinate = flowVertices.indexOf(currentAvatar as Address)
+      const sourceCoordinate = flowVertices.indexOf(currentAvatar as Address);
       const groupTokenIndex = flowVertices.indexOf(group as Address);
       const treasuryIndex = flowVertices.indexOf(treasuryAddress as Address);
 
@@ -621,7 +710,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
         {
           sourceCoordinate, // Points to sender
           flowEdgeIds,
-          data: "0x"
+          data: '0x'
         }
       ];
 
@@ -731,19 +820,19 @@ export class V2Avatar implements AvatarInterfaceV2 {
       return receipt;
     }
   }
-  
+
   /**
    * @notice Automatically redeems collateral tokens from a Base Group's treasury
    * @dev Performs automatic redemption by determining trusted collaterals and using pathfinder for optimal flow.
-   * 
+   *
    * Only supports CrcV2_BaseGroupCreated group types. The function uses the v2 pathfinder to determine
    * the optimal redemption path and validates that sufficient liquidity exists before attempting redemption.
-   * 
+   *
    * @param group The address of the Base Group from which to redeem collateral tokens
    * @param amount The amount of group tokens to redeem for collateral (must be > 0 and <= max redeemable)
-   * 
+   *
    * @return A Promise resolving to the transaction receipt upon successful automatic redemption
-   * 
+   *
    */
   async groupRedeemAuto(
     group: Address,
@@ -754,7 +843,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
     group = group.toLowerCase() as Address;
     const groupType = await this.sdk.getGroupType(group);
 
-    if (groupType !== "CrcV2_BaseGroupCreated")
+    if (groupType !== 'CrcV2_BaseGroupCreated')
       throw new Error('Only Base Groups support this method');
 
     // Address of the redeemer
@@ -771,8 +860,8 @@ export class V2Avatar implements AvatarInterfaceV2 {
     const trustRelationships = await this.sdk.data.getAggregatedTrustRelations(currentAvatar, 2);
     // Get list of tokens to expect from pathfinder
     const expectedToTokens = trustRelationships.filter(trustObject => {
-      if(
-        (trustObject.relation === "mutuallyTrusts" || trustObject.relation === "trusts") &&
+      if (
+        (trustObject.relation === 'mutuallyTrusts' || trustObject.relation === 'trusts') &&
         treasuryTokens.includes(trustObject.objectAvatar)
       ) return true;
     }).map(trustObject => trustObject.objectAvatar);
@@ -788,7 +877,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
 
     if (BigInt(getMaxRedeemableAmount) < amount)
       throw new Error(`Specified amount ${amount} exceeds max tokens flow ${getMaxRedeemableAmount}`);
-    
+
     const receipt = await this.transfer(
       currentAvatar,
       amount,
@@ -797,7 +886,7 @@ export class V2Avatar implements AvatarInterfaceV2 {
       false,
       [group],
       expectedToTokens
-    )
+    );
 
     if (!receipt) {
       throw new Error('Group redeem failed');
@@ -944,5 +1033,23 @@ export class V2Avatar implements AvatarInterfaceV2 {
     if (!this.sdk.nameRegistry) {
       throw new Error('Name registry is not available');
     }
+  }
+
+  private async getStaticWrappedTokenTotalsFromSender(senderAddress: string): Promise<{
+    tokenAddress: string;
+    tokenOwner: string;
+    tokenType: string;
+    staticAttoCircles: string;
+    attoCircles: string;
+  }[]> {
+    const res = await this.sdk.circlesRpc.call<{
+      tokenAddress: string;
+      tokenOwner: string;
+      tokenType: string;
+      staticAttoCircles: string;
+      attoCircles: string;
+    }[]>('circles_getTokenBalances', [senderAddress]);
+
+    return res.result.filter(o => o.tokenType == 'CrcV2_ERC20WrapperDeployed_Inflationary');
   }
 }

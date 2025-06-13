@@ -139,8 +139,12 @@ function calculateBalances(row: TransactionHistoryRow) {
 export class CirclesData implements CirclesDataInterface {
   readonly rpc: CirclesRpc;
 
-  constructor(rpc: CirclesRpc) {
-    this.rpc = rpc;
+  constructor(rpc: CirclesRpc | string) {
+    if (typeof rpc === 'string') {
+      this.rpc = new CirclesRpc(rpc);
+    } else {
+      this.rpc = rpc;
+    }
   }
 
   /**

@@ -174,7 +174,6 @@ describe('transfer wrapped tokens along a path', () => {
       excludeFromTokens: excludeFromTokens
     });
 
-
     let logString = ``;
     const wrapCalls: Call[] = [];
     const unwrapCalls: Call[] = [];
@@ -342,6 +341,9 @@ describe('transfer wrapped tokens along a path', () => {
       );
 
       logString += `Flow matrix created with ${fm.flowVertices.length} vertices and ${fm.flowEdges.length} edges.\n`;
+
+      await assertAllVerticesRegistered(circlesRpcUrl, HUB_ADDRESS, fm.flowVertices);
+      await assertVerticesStrictlyAscending(fm.flowVertices);
 
       // Create the operateFlowMatrix call
       const hubCall = encodeOperateFlowMatrix(HUB_ADDRESS, fm);

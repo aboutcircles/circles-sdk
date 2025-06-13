@@ -2,7 +2,7 @@ import {
   PathfindingResult,
   TransferStep
 } from './types';
-import { CirclesData, CirclesRpc, TokenInfoRow } from '@circles-sdk/data';
+import { CirclesData, TokenInfoRow } from '@circles-sdk/data';
 import { Address, CirclesConverter } from '@circles-sdk/utils';
 
 export async function getTokenInfoMapFromPath(
@@ -16,7 +16,7 @@ export async function getTokenInfoMapFromPath(
     uniqueAddresses.add(t.tokenOwner.toLowerCase());
   });
 
-  const circlesData = new CirclesData(new CirclesRpc(rpcUrl));
+  const circlesData = new CirclesData(rpcUrl);
   const batch = await circlesData.getTokenInfoBatch(
     Array.from(uniqueAddresses) as Address[]
   );
@@ -93,7 +93,7 @@ export function shrinkPathValues(
 
   const DENOM = BigInt(1_000_000_000_000);
 
-  path.transfers.forEach((edge, i) => {
+  path.transfers.forEach((edge) => {
     const scaledValue = (BigInt(edge.value) * retainBps) / DENOM;
     const isZero = scaledValue === BigInt(0);
     if (isZero) {
