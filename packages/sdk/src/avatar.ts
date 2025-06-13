@@ -517,7 +517,15 @@ export class Avatar implements AvatarInterfaceV2 {
    * @returns A promise resolving to the transaction receipt
    * @throws Error if the avatar is not initialized or is not a Base Group avatar or if registration fails
    */
-  registerShortNameWithNonce = (nonce: number): Promise<ContractTransactionReceipt> => this.onlyIfBaseGroup((avatar) => avatar.registerShortNameWithNonce(nonce));
+  registerShortNameWithNonce = (nonce: number): Promise<ContractTransactionReceipt> => {
+    if (this._avatar instanceof BaseGroupAvatar) {
+      return (<BaseGroupAvatar>this._avatar).registerShortNameWithNonce(nonce);
+    }
+    if (this._avatar instanceof V2Avatar) {
+      return (<V2Avatar>this._avatar).registerShortNameWithNonce(nonce);
+    }
+    throw new Error('Avatar is not initialized or is not a Base Group or V2 avatar');
+  };
 
   /**
    * Establishes trust relationships with multiple addresses in a single transaction with expiry conditions.

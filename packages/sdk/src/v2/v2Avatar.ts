@@ -828,6 +828,19 @@ export class V2Avatar implements AvatarInterfaceV2 {
     return undefined;
   }
 
+  async registerShortNameWithNonce(nonce: number): Promise<ContractTransactionReceipt> {
+    const tx = await this.sdk.nameRegistry?.registerShortNameWithNonce(nonce);
+    if (!tx) {
+      throw new Error('Failed to register short name with nonce');
+    }
+    const receipt = await tx.wait();
+    if (!receipt) {
+      throw new Error('Registering short name with nonce failed');
+    }
+
+    return receipt;
+  }
+
   async updateProfile(profile: Profile): Promise<string> {
     const result = await this.sdk?.profiles?.create(profile);
     if (!result) {
