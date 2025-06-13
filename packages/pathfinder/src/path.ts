@@ -57,20 +57,13 @@ export function getExpectedUnwrappedTokenTotals(
     const info = tokenInfoMap.get(wrapperAddr.toLowerCase());
     if (!info) return;
 
-    const isDemurraged = type === 'CrcV2_ERC20WrapperDeployed_Demurraged';
-    const isInflationary = type === 'CrcV2_ERC20WrapperDeployed_Inflationary';
+    if (type === 'CrcV2_ERC20WrapperDeployed_Demurraged') {
+      unwrapped[wrapperAddr] = [total, info.tokenOwner];
+    }
 
-    const unwrapAmount = isDemurraged
-      ? total
-      : isInflationary
-        ? CirclesConverter.attoCirclesToAttoStaticCircles(total)
-        : total;
-
-    const availableAfterUnwrap = isDemurraged
-      ? unwrapAmount
-      : CirclesConverter.attoStaticCirclesToAttoCircles(unwrapAmount);
-
-    unwrapped[wrapperAddr] = [availableAfterUnwrap, info.tokenOwner];
+    if (type === 'CrcV2_ERC20WrapperDeployed_Inflationary') {
+      unwrapped[wrapperAddr] = [CirclesConverter.attoStaticCirclesToAttoCircles(total), info.tokenOwner];
+    }
   });
 
   return unwrapped;
