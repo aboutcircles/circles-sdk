@@ -64,6 +64,40 @@ export class CirclesConverter {
     return result;
   }
 
+  /** 1.0 in 1 × 10³⁶ representation. */
+  private static readonly ONE_36 =
+    1_000_000_000_000_000_000_000_000_000_000_000_000_000n; // 1e36
+
+  /** 0.93^(1 / 365.25) scaled to 1e36 (rounded half-up). */
+  private static readonly GAMMA_36 =
+    999_801_332_008_598_957_430_613_406_568_191_166n;
+
+  /** 1 / GAMMA scaled to 1e36 (rounded half-up). */
+  private static readonly BETA_36 =
+    1_000_198_707_468_214_629_156_271_489_013_303_962n;
+
+  /** (a · b) / 1e36 – stays inside the 1e36 domain. */
+  private static mul36(a: bigint, b: bigint): bigint {
+    return (a * b) / this.ONE_36;
+  }
+
+  /** Exponentiation for 1e36-scaled factors. */
+  private static pow36(base36: bigint, exp: bigint): bigint {
+    let result = this.ONE_36;
+    let base = base36;
+    let e = exp;
+
+    while (e > 0n) {
+      const isOdd = (e & 1n) === 1n;
+      if (isOdd) {
+        result = this.mul36(result, base);
+      }
+      base = this.mul36(base, base);
+      e >>= 1n;
+    }
+    return result;
+  }
+
 
   // ───────────────────────────── API: human units ─────────────────────────────
 
@@ -119,6 +153,36 @@ export class CirclesConverter {
     nowUnixSeconds: bigint = BigInt(Math.floor(Date.now() / 1000))
   ): bigint {
     return this.inflationaryToDemurrage(staticCircles, this.dayFromTimestamp(nowUnixSeconds));
+  }
+
+  /** Inflationary → demurraged (exact, reversible). */
+  static inflationaryToDemurrageExact(inflationary: bigint, day: bigint): bigint {
+    const factor = this.pow36(this.GAMMA_36, day);
+    return (inflationary * factor) / this.ONE_36;
+  }
+
+  /** Demurraged → inflationary (inverse of the above, exact). */
+  static demurrageToInflationaryExact(demurraged: bigint, day: bigint): bigint {
+    const factor = this.pow36(this.BETA_36, day);
+    return (demurraged * factor) / this.ONE_36;
+  }
+
+  /** Demurraged atto-circles → static atto-circles “today” (loss-less). */
+  static attoCirclesToAttoStaticCirclesExact(
+    demurraged: bigint,
+    nowUnixSeconds: bigint = BigInt(Math.floor(Date.now() / 1000))
+  ): bigint {
+    const day = this.dayFromTimestamp(nowUnixSeconds);
+    return this.demurrageToInflationaryExact(demurraged, day);
+  }
+
+  /** Static atto-circles → demurraged atto-circles “today” (loss-less). */
+  static attoStaticCirclesToAttoCirclesExact(
+    staticCircles: bigint,
+    nowUnixSeconds: bigint = BigInt(Math.floor(Date.now() / 1000))
+  ): bigint {
+    const day = this.dayFromTimestamp(nowUnixSeconds);
+    return this.inflationaryToDemurrageExact(staticCircles, day);
   }
 
   // ───────────────────── utilities for 6‑decimal truncation ───────────────────
