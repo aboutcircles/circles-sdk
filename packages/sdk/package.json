@@ -21,6 +21,7 @@
     "@circles-sdk/abi-v2": "0.29.1",
     "@circles-sdk/data": "0.29.1",
     "@circles-sdk/profiles": "0.29.1",
+    "@circles-sdk/pathfinder": "0.29.1",
     "@circles-sdk/adapter-ethers": "0.29.1",
     "ethers": "^6.13.2",
     "multihashes": "^4.0.3"
