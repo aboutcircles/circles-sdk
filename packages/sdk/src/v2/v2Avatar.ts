@@ -385,8 +385,10 @@ export class V2Avatar implements AvatarInterfaceV2 {
         fromTokens?.length === 1 &&
         toTokens?.length === 1
       ) {
-        const tokenFrom = await this.sdk.data.getTokenInfo(fromTokens[0]);
-        const tokenTo = await this.sdk.data.getTokenInfo(toTokens[0]);
+        const [tokenFrom, tokenTo] = await Promise.all([
+          this.sdk.data.getTokenInfo(fromTokens[0]),
+          this.sdk.data.getTokenInfo(toTokens[0])
+        ]);
 
         if(
           tokenFrom?.tokenOwner === tokenTo?.tokenOwner &&
