@@ -394,10 +394,11 @@ export class V2Avatar implements AvatarInterfaceV2 {
           tokenFrom?.tokenOwner === tokenTo?.tokenOwner &&
           tokenTo?.type === 'CrcV2_RegisterHuman'
         ) {
-          if (tokenFrom?.type === 'CrcV2_ERC20WrapperDeployed_Inflationary')
+          if (tokenFrom?.type === 'CrcV2_ERC20WrapperDeployed_Inflationary') {
             return await this.unwrapInflationErc20(tokenFrom?.token, amount);
-          else if (tokenFrom?.type === 'CrcV2_ERC20WrapperDeployed_Demurraged')
+          } else if (tokenFrom?.type === 'CrcV2_ERC20WrapperDeployed_Demurraged') {
             return await this.unwrapDemurrageErc20(tokenFrom?.token, amount);
+          }
         }
       }
 
