@@ -463,6 +463,29 @@ export class V2Avatar implements AvatarInterfaceV2 {
     }
 
     if (!tokenAddress) {
+      // Detect tokens unwrap attempts and trigger unwrap execution directly
+      if(
+        this.address.toLowerCase() === to.toLowerCase() &&
+        fromTokens?.length === 1 &&
+        toTokens?.length === 1
+      ) {
+        const [tokenFrom, tokenTo] = await Promise.all([
+          this.sdk.data.getTokenInfo(fromTokens[0]),
+          this.sdk.data.getTokenInfo(toTokens[0])
+        ]);
+
+        if(
+          tokenFrom?.tokenOwner === tokenTo?.tokenOwner &&
+          tokenTo?.type === 'CrcV2_RegisterHuman'
+        ) {
+          if (tokenFrom?.type === 'CrcV2_ERC20WrapperDeployed_Inflationary') {
+            return await this.unwrapInflationErc20(tokenFrom?.token, amount);
+          } else if (tokenFrom?.type === 'CrcV2_ERC20WrapperDeployed_Demurraged') {
+            return await this.unwrapDemurrageErc20(tokenFrom?.token, amount);
+          }
+        }
+      }
+
       const batch = this.sdk.contractRunner.sendBatchTransaction();
 
       await this.transitiveTransfer(
