@@ -235,7 +235,7 @@ export class Avatar implements AvatarInterfaceV2 {
     if (typeof amount === 'number') {
       if (this.avatarInfo?.version === 1) {
         const sendAttoCircles = CirclesConverter.circlesToAttoCircles(amount);
-        const sendAttoCrc = CirclesConverter.attoCirclesToAttoCrc(sendAttoCircles, BigInt(Date.now() / 1000));
+        const sendAttoCrc = CirclesConverter.attoCirclesToAttoCrc(sendAttoCircles, BigInt(Math.floor(Date.now() / 1000)));
 
         return this.onlyIfInitialized(() => this._avatar!.transfer(to, sendAttoCrc, token, txData, useWrappedBalances, fromTokens, toTokens));
       } else {

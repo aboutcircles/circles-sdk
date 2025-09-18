@@ -97,7 +97,7 @@ export class V1Avatar implements AvatarInterface {
       return 0;
     }
 
-    const attoCircles = CirclesConverter.attoCrcToAttoCircles(BigInt(transferPath.maxFlow), BigInt(Date.now() / 1000));
+    const attoCircles = CirclesConverter.attoCrcToAttoCircles(BigInt(transferPath.maxFlow), BigInt(Math.floor(Date.now() / 1000)));
     return CirclesConverter.attoCirclesToCircles(attoCircles);
   }
 
@@ -215,7 +215,7 @@ export class V1Avatar implements AvatarInterface {
     }
 
     const availableCrcToMint = await this.v1Token.look();
-    const attoCircles = CirclesConverter.attoCrcToAttoCircles(availableCrcToMint, BigInt(Date.now() / 1000));
+    const attoCircles = CirclesConverter.attoCrcToAttoCircles(availableCrcToMint, BigInt(Math.floor(Date.now() / 1000)));
     const mintableCircles = CirclesConverter.attoCirclesToCircles(attoCircles);
 
     return mintableCircles;
