@@ -17,9 +17,9 @@ import { TransactionResponse } from '@circles-sdk/adapter';
 import { BaseGroup, BaseGroup__factory } from '@circles-sdk/abi-v2';
 
 import { Sdk } from '../sdk';
-import { AvatarInterfaceV2 } from '../AvatarInterface';
+import { AvatarInterface } from '../AvatarInterface';
 
-export class BaseGroupAvatar implements AvatarInterfaceV2 {
+export class BaseGroupAvatar implements AvatarInterface {
   public readonly sdk: Sdk;
 
   get address(): Address {

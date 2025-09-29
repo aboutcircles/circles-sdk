@@ -1,7 +1,6 @@
-import { V1Avatar } from './v1/v1Avatar';
 import { ContractTransactionReceipt, TransactionReceipt } from 'ethers';
 import { Sdk } from './sdk';
-import { AvatarInterface, AvatarInterfaceV2 } from './AvatarInterface';
+import { AvatarInterface } from './AvatarInterface';
 import {
   AvatarRow,
   CirclesQuery, GroupType, Observable,
@@ -21,7 +20,7 @@ import { BaseGroupAvatar } from './v2/baseGroupAvatar';
  * An Avatar represents a user registered at Circles.
  * It provides methods to interact with the Circles protocol, such as minting, transferring and trusting other avatars.
  */
-export class Avatar implements AvatarInterfaceV2 {
+export class Avatar implements AvatarInterface {
 
   public readonly address: Address;
 
@@ -90,8 +89,7 @@ export class Avatar implements AvatarInterfaceV2 {
       throw new Error('Avatar is not signed up at Circles');
     }
 
-    const { version, hasV1 } = this._avatarInfo;
-    const v1Person = () => new V1Avatar(this._sdk, this._avatarInfo!);
+    const { version } = this._avatarInfo;
     const v2Person = () => new V2Avatar(this._sdk, this._avatarInfo!);
     const CMGroup = () => new CMGAvatar(this._sdk, this._avatarInfo!);
     const BaseGroup = () => new BaseGroupAvatar(this._sdk, this._avatarInfo!);
@@ -100,34 +98,14 @@ export class Avatar implements AvatarInterfaceV2 {
 
     switch (version) {
       case 1:
-        this._avatar = v1Person();
-        break;
-
+        throw new Error('v1 avatars are not supported, please migrate to v2 with the migration tool');
       case 2:
         if (this._groupType === 'CrcV2_CMGroupCreated') {
           this._avatar = CMGroup();
         } else if (this._groupType === 'CrcV2_BaseGroupCreated') {
           this._avatar = BaseGroup();
-        } else if (!hasV1) {
-          this._avatar = v2Person();
         } else {
-          const v1Avatar = v1Person();
-          const isHuman = await v1Avatar.avatarInfo.isHuman;
-
-          // Handle edge case: organization migrated to v2 but still have v1 account
-          // without token which is recognized as `isStopped == false`
-          let isStopped = false;
-          if (isHuman) {
-            isStopped = await v1Avatar.v1Token?.stopped() || false;
-            this._avatar = isStopped ? v2Person() : v1Person();
-          } else {
-            this._avatar = v2Person();
-          }
-
-          const avatarInfo = this._avatar.avatarInfo;
-          if (avatarInfo) {
-            avatarInfo.v1Stopped = isStopped;
-          }
+          this._avatar = v2Person();
         }
         break;
 
@@ -147,15 +125,9 @@ export class Avatar implements AvatarInterfaceV2 {
     return func();
   }
 
-  private onlyIfV2<T>(func: (avatar: AvatarInterfaceV2) => T) {
-    if (!this._avatar || this._avatarInfo?.version !== 2) {
-      throw new Error('Avatar is not initialized or is not a v2 avatar');
-    }
-    return func(<AvatarInterfaceV2>this._avatar);
-  }
 
   private onlyIfCoreMembersGroup<T>(func: (avatar: CMGAvatar) => T) {
-    if (!this._avatar || this._avatarInfo?.version !== 2 || this._groupType !== 'CrcV2_CMGroupCreated') {
+    if (!this._avatar || this._groupType !== 'CrcV2_CMGroupCreated') {
 
       throw new Error('CoreMembersGroup avatar is not initialized or is not a v2 avatar');
     }
@@ -163,7 +135,7 @@ export class Avatar implements AvatarInterfaceV2 {
   }
 
   private onlyIfBaseGroup<T>(func: (avatar: BaseGroupAvatar) => T) {
-    if (!this._avatar || this._avatarInfo?.version !== 2 || this._groupType !== 'CrcV2_BaseGroupCreated') {
+    if (!this._avatar || this._groupType !== 'CrcV2_BaseGroupCreated') {
 
       throw new Error('BaseGroup avatar is not initialized or is not a v2 avatar');
     }
@@ -171,7 +143,7 @@ export class Avatar implements AvatarInterfaceV2 {
   }
 
   private onlyIfGroup<T>(func: (avatar: CMGAvatar | BaseGroupAvatar) => T) {
-    if (!this._avatar || this._avatarInfo?.version !== 2 || (this._groupType !== 'CrcV2_CMGroupCreated' && this._groupType !== 'CrcV2_BaseGroupCreated')) {
+    if (!this._avatar || (this._groupType !== 'CrcV2_CMGroupCreated' && this._groupType !== 'CrcV2_BaseGroupCreated')) {
 
       throw new Error('Group avatar is not initialized or is not a v2 avatar');
     }
@@ -233,16 +205,8 @@ export class Avatar implements AvatarInterfaceV2 {
   transfer(to: Address, amount: bigint, token?: Address, txData?: Uint8Array, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[]): Promise<TransactionReceipt>;
   transfer(to: Address, amount: number | bigint, token?: Address, txData?: Uint8Array, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[]): Promise<TransactionReceipt> {
     if (typeof amount === 'number') {
-      if (this.avatarInfo?.version === 1) {
-        const sendAttoCircles = CirclesConverter.circlesToAttoCircles(amount);
-        const sendAttoCrc = CirclesConverter.attoCirclesToAttoCrc(sendAttoCircles, BigInt(Date.now() / 1000));
-
-        return this.onlyIfInitialized(() => this._avatar!.transfer(to, sendAttoCrc, token, txData, useWrappedBalances, fromTokens, toTokens));
-      } else {
-        const sendAttoCircles = CirclesConverter.circlesToAttoCircles(amount);
-
-        return this.onlyIfInitialized(() => this._avatar!.transfer(to, sendAttoCircles, token, txData, useWrappedBalances, fromTokens, toTokens));
-      }
+      const sendAttoCircles = CirclesConverter.circlesToAttoCircles(amount);
+      return this.onlyIfInitialized(() => this._avatar!.transfer(to, sendAttoCircles, token, txData, useWrappedBalances, fromTokens, toTokens));
     }
     return this.onlyIfInitialized(() => this._avatar!.transfer(to, amount, token, txData, useWrappedBalances, fromTokens, toTokens));
   }
@@ -330,7 +294,7 @@ export class Avatar implements AvatarInterfaceV2 {
    * @param data Additional data for the minting operation.
    * @returns The transaction receipt.
    */
-  groupMint = (group: Address, collateral: Address[], amounts: bigint[], data: Uint8Array): Promise<ContractTransactionReceipt> => this.onlyIfV2((avatar) => avatar.groupMint(group, collateral, amounts, data));
+  groupMint = (group: Address, collateral: Address[], amounts: bigint[], data: Uint8Array): Promise<ContractTransactionReceipt> => this.onlyIfInitialized(() => (<AvatarInterface>this._avatar!).groupMint(group, collateral, amounts, data));
 
   /**
    * Facilitates the redemption process for a specified group using the provided collateral and amounts.
@@ -340,7 +304,7 @@ export class Avatar implements AvatarInterfaceV2 {
    * @param amounts - An array of amounts corresponding to each collateral.
    * @returns A promise that resolves to the transaction receipt of the redemption process.
    */
-  groupRedeem = (group: Address, collaterals: Address[], amounts: bigint[]): Promise<ContractTransactionReceipt | TransactionReceipt> => this.onlyIfV2((avatar) => avatar.groupRedeem(group, collaterals, amounts));
+  groupRedeem = (group: Address, collaterals: Address[], amounts: bigint[]): Promise<ContractTransactionReceipt | TransactionReceipt> => this.onlyIfInitialized(() => (<AvatarInterface>this._avatar!).groupRedeem(group, collaterals, amounts));
 
   /**
    * Automatically redeems collateral tokens from a Base Group's treasury
@@ -350,7 +314,8 @@ export class Avatar implements AvatarInterfaceV2 {
    * @return A Promise resolving to the transaction receipt upon successful automatic redemption
    */
   groupRedeemAuto = (group: Address, amount: bigint): Promise<TransactionReceipt> => {
-    return this.onlyIfV2((avatar) => {
+    return this.onlyIfInitialized(() => {
+      const avatar = <AvatarInterface>this._avatar!;
       if (!avatar.groupRedeemAuto) {
         throw new Error('groupRedeemAuto method is not implemented');
       }
@@ -365,31 +330,31 @@ export class Avatar implements AvatarInterfaceV2 {
    * @param avatarAddress The address of the avatar whose Circles should be wrapped.
    * @param amount The amount of Circles to wrap.
    */
-  wrapDemurrageErc20 = (avatarAddress: Address, amount: bigint): Promise<Address> => this.onlyIfV2((avatar) => avatar.wrapDemurrageErc20(avatarAddress, amount));
+  wrapDemurrageErc20 = (avatarAddress: Address, amount: bigint): Promise<Address> => this.onlyIfInitialized(() => (<AvatarInterface>this._avatar!).wrapDemurrageErc20(avatarAddress, amount));
   /**
    * Wraps the specified amount of inflation Circles into ERC20 tokens for use outside the Circles protocol.
    * In contrast to demurraged tokens, these token's balance does not change over time.
    * @param avatarAddress The address of the avatar whose Circles should be wrapped.
    * @param amount The amount of Circles to wrap.
    */
-  wrapInflationErc20 = (avatarAddress: Address, amount: bigint): Promise<Address> => this.onlyIfV2((avatar) => avatar.wrapInflationErc20(avatarAddress, amount));
+  wrapInflationErc20 = (avatarAddress: Address, amount: bigint): Promise<Address> => this.onlyIfInitialized(() => (<AvatarInterface>this._avatar!).wrapInflationErc20(avatarAddress, amount));
   /**
    * Unwraps the specified amount of demurraged ERC20 Circles back to personal Circles.
    * @param tokenAddress The token address of the ERC20 Circles.
    * @param amount The amount of ERC20 Circles to unwrap.
    */
-  unwrapDemurrageErc20 = (tokenAddress: Address, amount: bigint): Promise<ContractTransactionReceipt> => this.onlyIfV2((avatar) => avatar.unwrapDemurrageErc20(tokenAddress, amount));
+  unwrapDemurrageErc20 = (tokenAddress: Address, amount: bigint): Promise<ContractTransactionReceipt> => this.onlyIfInitialized(() => (<AvatarInterface>this._avatar!).unwrapDemurrageErc20(tokenAddress, amount));
   /**
    * Unwraps the specified amount of inflation ERC20 Circles back to personal Circles.
    * @param avatarAddress The address of the avatar whose Circles should be unwrapped.
    * @param amount The amount of ERC20 Circles to unwrap.
    */
-  unwrapInflationErc20 = (avatarAddress: Address, amount: bigint): Promise<ContractTransactionReceipt> => this.onlyIfV2((avatar) => avatar.unwrapInflationErc20(avatarAddress, amount));
+  unwrapInflationErc20 = (avatarAddress: Address, amount: bigint): Promise<ContractTransactionReceipt> => this.onlyIfInitialized(() => (<AvatarInterface>this._avatar!).unwrapInflationErc20(avatarAddress, amount));
   /**
    * Invite a human avatar to join Circles.
    * @param avatar The address of any human controlled wallet.
    */
-  inviteHuman = (avatar: Address): Promise<TransactionResponse> => this.onlyIfV2((_avatar) => _avatar.inviteHuman(avatar));
+  inviteHuman = (avatar: Address): Promise<TransactionResponse> => this.onlyIfInitialized(() => (<AvatarInterface>this._avatar!).inviteHuman(avatar));
   /**
    * Updates the avatar's metadata (profile).
    * @param cid The IPFS content identifier of the metadata (Qm....).
@@ -401,14 +366,14 @@ export class Avatar implements AvatarInterfaceV2 {
    * Gets the profile that's associated with the avatar or returns `undefined` if no profile is associated.
    * @returns The profile or `undefined`.
    */
-  getProfile = (): Promise<Profile | undefined> => this.onlyIfV2((_avatar) => _avatar.getProfile());
+  getProfile = (): Promise<Profile | undefined> => this.onlyIfInitialized(() => (<AvatarInterface>this._avatar!).getProfile());
 
   /**
    * Updates the avatar's profile.
    * @param profile The new profile.
    * @returns The IPFS CID of the updated profile.
    */
-  updateProfile = (profile: Profile): Promise<string> => this.onlyIfV2((_avatar) => _avatar.updateProfile(profile));
+  updateProfile = (profile: Profile): Promise<string> => this.onlyIfInitialized(() => (<AvatarInterface>this._avatar!).updateProfile(profile));
 
   /**
    * Gets the total supply of either this avatar's Personal or Group Circles.

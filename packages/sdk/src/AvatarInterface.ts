@@ -7,8 +7,9 @@ import { Profile } from '@circles-sdk/profiles';
 import { TransactionResponse } from '@circles-sdk/adapter';
 import { Address } from '@circles-sdk/utils';
 
+
 /**
- * An Avatar represents a user registered at Circles.
+ * An Avatar represents a user registered at Circles v2.
  */
 export interface AvatarInterface {
   /**
@@ -154,12 +155,7 @@ export interface AvatarInterface {
    * @param cid The IPFS CID of the metadata.
    */
   updateMetadata(cid: string): Promise<ContractTransactionReceipt>;
-}
 
-/**
- * V2 avatars have additional capabilities that are described in this interface.
- */
-export interface AvatarInterfaceV2 extends AvatarInterface {
   /**
    * Uses holdings of the avatar as collateral to mint new group tokens.
    * @param group The group which is minting the tokens.

@@ -1,4 +1,4 @@
-import { AvatarInterfaceV2 } from '../AvatarInterface';
+import { AvatarInterface } from '../AvatarInterface';
 import {
   AbiCoder,
   ContractRunner,
@@ -37,7 +37,7 @@ export const OPERATE_FLOW_MATRIX_ABI = [
   'function operateFlowMatrix(address[] _flowVertices,(uint16,uint192)[] _flow,(uint16,uint16[],bytes)[] _streams,bytes _packed)'
 ];
 
-export class V2Avatar implements AvatarInterfaceV2 {
+export class V2Avatar implements AvatarInterface {
   public readonly sdk: Sdk;
 
   get address(): Address {

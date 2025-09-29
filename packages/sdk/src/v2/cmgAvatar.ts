@@ -17,9 +17,9 @@ import { TransactionResponse } from '@circles-sdk/adapter';
 import { CoreMembersGroup, CoreMembersGroup__factory } from '@circles-sdk/abi-v2';
 
 import { Sdk } from '../sdk';
-import { AvatarInterfaceV2 } from '../AvatarInterface';
+import { AvatarInterface } from '../AvatarInterface';
 
-export class CMGAvatar implements AvatarInterfaceV2 {
+export class CMGAvatar implements AvatarInterface {
   public readonly sdk: Sdk;
 
   get address(): Address {
