@@ -318,14 +318,7 @@ export class CMGAvatar implements AvatarInterface {
    * Returns '0' for organizations or if the avatar is not signed up at Circles.
    */
   async getTotalSupply(): Promise<bigint> {
-    this.throwIfV2IsNotAvailable();
     return await this.sdk.v2Hub!.totalSupply(this.address);
-  }
-
-  private throwIfV2IsNotAvailable() {
-    if (!this.sdk.circlesConfig.v2HubAddress) {
-      throw new Error('V2 is not available');
-    }
   }
 
   private NotSupportedError() {

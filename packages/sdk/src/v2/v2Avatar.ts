@@ -91,7 +91,6 @@ export class V2Avatar implements AvatarInterface {
     toTokens?: Address[],
     excludeFromTokens?: Address[],
     excludeToTokens?: Address[]): Promise<number> {
-    this.throwIfV2IsNotAvailable();
     to = to.toLowerCase() as Address;
 
     excludeFromTokens = await this.sdk.getDefaultTokenExcludeList(to, excludeFromTokens);
@@ -123,7 +122,6 @@ export class V2Avatar implements AvatarInterface {
   }
 
   async getMintableAmount(): Promise<number> {
-    this.throwIfV2IsNotAvailable();
     const [a, _, __] = await this.sdk.v2Hub!.calculateIssuance(this.address);
     return parseFloat(formatEther(a));
   }
@@ -154,7 +152,6 @@ export class V2Avatar implements AvatarInterface {
   }
 
   async personalMint(): Promise<ContractTransactionReceipt> {
-    this.throwIfV2IsNotAvailable();
     const tx = await this.sdk.v2Hub!.personalMint();
     const receipt = await tx.wait();
     if (!receipt) {
@@ -165,7 +162,6 @@ export class V2Avatar implements AvatarInterface {
   }
 
   async stop(): Promise<ContractTransactionReceipt> {
-    this.throwIfV2IsNotAvailable();
     const tx = await this.sdk.v2Hub!.stop();
     const receipt = await tx.wait();
     if (!receipt) {
@@ -186,8 +182,6 @@ export class V2Avatar implements AvatarInterface {
     excludeFromTokens?: Address[],
     excludeToTokens?: Address[]
   ) {
-    this.throwIfV2IsNotAvailable();
-
     to = to.toLowerCase() as Address;
     excludeFromTokens = await this.sdk.getDefaultTokenExcludeList(to, excludeFromTokens);
     amount = CirclesConverter.truncateToSixDecimals(amount);
@@ -506,8 +500,6 @@ export class V2Avatar implements AvatarInterface {
   }
 
   async trust(avatar: Address | Address[]): Promise<TransactionResponse> {
-    this.throwIfV2IsNotAvailable();
-
     if (!this.sdk?.contractRunner?.sendBatchTransaction) {
       throw new Error('ContractRunner (or sendBatchTransaction capability) not available');
     }
@@ -533,8 +525,6 @@ export class V2Avatar implements AvatarInterface {
   }
 
   async untrust(avatar: Address | Address[]): Promise<TransactionResponse> {
-    this.throwIfV2IsNotAvailable();
-
     if (!this.sdk?.contractRunner?.sendBatchTransaction) {
       throw new Error('ContractRunner (or sendBatchTransaction capability) not available');
     }
@@ -581,8 +571,6 @@ export class V2Avatar implements AvatarInterface {
    * @returns A promise resolving to the transaction receipt after mining
    */
   async groupMint(group: Address, collateral: Address[], amounts: bigint[], data: Uint8Array): Promise<ContractTransactionReceipt> {
-    this.throwIfV2IsNotAvailable();
-
     group = group.toLowerCase() as Address;
     const groupType = await this.sdk.getGroupType(group);
 
@@ -646,8 +634,6 @@ export class V2Avatar implements AvatarInterface {
     collaterals: Address[],
     amounts: bigint[]
   ): Promise<ContractTransactionReceipt | TransactionReceipt> {
-    this.throwIfV2IsNotAvailable();
-
     group = group.toLowerCase() as Address;
     const groupType = await this.sdk.getGroupType(group);
 
@@ -861,8 +847,6 @@ export class V2Avatar implements AvatarInterface {
     group: Address,
     amount: bigint
   ): Promise<TransactionReceipt> {
-    this.throwIfV2IsNotAvailable();
-
     group = group.toLowerCase() as Address;
     const groupType = await this.sdk.getGroupType(group);
 
@@ -1022,8 +1006,6 @@ export class V2Avatar implements AvatarInterface {
    * @param avatar The address of the avatar to invite. Can be either a v1 address or an address that's not signed up yet.
    */
   async inviteHuman(avatar: Address): Promise<TransactionResponse> {
-    this.throwIfV2IsNotAvailable();
-
     const avatarInfo = await this.sdk.data.getAvatarInfo(avatar);
     if (avatarInfo?.version == 2) {
       throw new Error('Avatar is already a v2 avatar');
@@ -1042,14 +1024,7 @@ export class V2Avatar implements AvatarInterface {
    * Returns '0' for organizations or if the avatar is not signed up at Circles.
    */
   async getTotalSupply(): Promise<bigint> {
-    this.throwIfV2IsNotAvailable();
     return await this.sdk.v2Hub!.totalSupply(this.address);
-  }
-
-  private throwIfV2IsNotAvailable() {
-    if (!this.sdk.circlesConfig.v2HubAddress) {
-      throw new Error('V2 is not available');
-    }
   }
 
   private throwIfNameRegistryIsNotAvailable() {
