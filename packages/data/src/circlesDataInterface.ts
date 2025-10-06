@@ -86,11 +86,10 @@ export interface CirclesDataInterface {
   getTrustRelations(avatar: Address, pageSize: number): CirclesQuery<TrustListRow>;
 
   /**
-   * Gets all trust relations of an avatar and groups mutual trust relations together.
+   * Gets all v2 trust relations of an avatar and groups mutual trust relations together.
    * @param avatar The address to get the trust relations for.
-   * @param version The version of the trust relations to get (default: undefined - queries both).
    */
-  getAggregatedTrustRelations(avatar: Address, version?: number): Promise<TrustRelationRow[]>;
+  getAggregatedTrustRelations(avatar: Address): Promise<TrustRelationRow[]>;
 
   /**
    * Subscribes to Circles events.

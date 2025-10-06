@@ -223,7 +223,7 @@ export class BaseGroupAvatar implements AvatarInterface {
   }
 
   async getTrustRelations(): Promise<TrustRelationRow[]> {
-    return this.sdk.data.getAggregatedTrustRelations(this.address, 2);
+    return this.sdk.data.getAggregatedTrustRelations(this.address);
   }
 
   async getBalances(): Promise<TokenBalanceRow[]> {

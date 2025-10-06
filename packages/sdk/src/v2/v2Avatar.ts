@@ -144,7 +144,7 @@ export class V2Avatar implements AvatarInterface {
   }
 
   async getTrustRelations(): Promise<TrustRelationRow[]> {
-    return this.sdk.data.getAggregatedTrustRelations(this.address, 2);
+    return this.sdk.data.getAggregatedTrustRelations(this.address);
   }
 
   async getBalances(): Promise<TokenBalanceRow[]> {
@@ -864,7 +864,7 @@ export class V2Avatar implements AvatarInterface {
       .filter(balance => balance.isErc1155)
       .map(balance => balance.tokenAddress);
 
-    const trustRelationships = await this.sdk.data.getAggregatedTrustRelations(currentAvatar, 2);
+    const trustRelationships = await this.sdk.data.getAggregatedTrustRelations(currentAvatar);
     // Get list of tokens to expect from pathfinder
     const expectedToTokens = trustRelationships.filter(trustObject => {
       if (

@@ -272,7 +272,7 @@ export class CirclesData implements CirclesDataInterface {
   }
 
   /**
-   * Gets the current incoming and outgoing trust relations of an address.
+   * Gets the current incoming and outgoing v2 trust relations of an address.
    * Expired or revoked trust relations are not included.
    * @param avatar The address to get the trust list for.
    * @param pageSize The maximum number of trust relations per page.
@@ -299,19 +299,31 @@ export class CirclesData implements CirclesDataInterface {
       filter: [
         {
           Type: 'Conjunction',
-          ConjunctionType: 'Or',
+          ConjunctionType: 'And',
           Predicates: [
             {
               Type: 'FilterPredicate',
               FilterType: 'Equals',
-              Column: 'trustee',
-              Value: avatar
+              Column: 'version',
+              Value: 2
             },
             {
-              Type: 'FilterPredicate',
-              FilterType: 'Equals',
-              Column: 'truster',
-              Value: avatar
+              Type: 'Conjunction',
+              ConjunctionType: 'Or',
+              Predicates: [
+                {
+                  Type: 'FilterPredicate',
+                  FilterType: 'Equals',
+                  Column: 'trustee',
+                  Value: avatar
+                },
+                {
+                  Type: 'FilterPredicate',
+                  FilterType: 'Equals',
+                  Column: 'truster',
+                  Value: avatar
+                }
+              ]
             }
           ]
         }
@@ -320,29 +332,22 @@ export class CirclesData implements CirclesDataInterface {
   }
 
   /**
-   * Gets all trust relations of an avatar and groups mutual trust relations together.
-   * @param avatarAddress The address to get the trust relations for.
-   * @param version The version of the trust relations to get (default: undefined - queries both).
-   */
-  /**
-   * Retrieves and aggregates trust relations for a given avatar.
+   * Retrieves and aggregates v2 trust relations for a given avatar.
    *
-   * - Fetches all trust relations involving the avatar.
+   * - Fetches all v2 trust relations involving the avatar.
    * - Groups trust relations based on the counterpart (truster/trustee).
    * - Determines the type of relationship: mutual trust, trusts, or trusted by.
-   * - Handles cases where relationships differ across versions and includes detailed metadata.
    *
    * @param avatarAddress The address of the avatar to retrieve trust relations for.
-   * @param version Optional version filter (defaults to retrieving all versions).
-   * @returns Aggregated trust relations, including relation type, versions, and timestamp.
+   * @returns Aggregated v2 trust relations, including relation type and timestamp.
    */
-  async getAggregatedTrustRelations(avatarAddress: Address, version?: number): Promise<TrustRelationRow[]> {
+  async getAggregatedTrustRelations(avatarAddress: Address): Promise<TrustRelationRow[]> {
     avatarAddress = avatarAddress.toLowerCase() as Address;
     const pageSize = 1000;
     const trustsQuery = this.getTrustRelations(avatarAddress, pageSize);
     let trustListRows: TrustListRow[] = [];
 
-    // Fetch all trust relations
+    // Fetch all v2 trust relations
     while (await trustsQuery.queryNextPage()) {
       const resultRows = trustsQuery.currentPage?.results ?? [];
       if (resultRows.length === 0) break;
@@ -350,66 +355,39 @@ export class CirclesData implements CirclesDataInterface {
       if (resultRows.length < pageSize) break;
     }
 
-    // Filter by version if provided
-    if (version !== undefined) {
-      trustListRows = trustListRows.filter(row => row.version === version);
-    }
-
-    // Group trust list rows by truster and trustee
-    const trustBucket: { [avatar: Address]: { rows: TrustListRow[]; version: Set<number> } } = {};
+    // Group trust list rows by counterpart avatar
+    const trustBucket: { [avatar: Address]: TrustListRow[] } = {};
     trustListRows.forEach(row => {
-      const addToBucket = (key: Address) => {
-        if (!trustBucket[key]) {
-          trustBucket[key] = { rows: [], version: new Set() };
-        }
-        trustBucket[key].rows.push(row);
-        trustBucket[key].version.add(row.version);
-      };
+      const counterpart = row.truster !== avatarAddress ? row.truster : row.trustee;
 
-      if (row.truster !== avatarAddress) {
-        addToBucket(row.truster);
+      if (!trustBucket[counterpart]) {
+        trustBucket[counterpart] = [];
       }
-      if (row.trustee !== avatarAddress) {
-        addToBucket(row.trustee);
-      }
+      trustBucket[counterpart].push(row);
     });
 
     // Determine trust relations
     return Object.entries(trustBucket)
       .filter(([avatar]) => avatar !== avatarAddress)
-      .map(([avatar, { rows, version }]) => {
-        const versionRelations: { [key: number]: TrustRelation } = {};
+      .map(([avatar, rows]) => {
         const maxTimestamp = Math.max(...rows.map(o => o.timestamp));
 
-        // Process each version separately
-        Array.from(version).forEach(ver => {
-          const versionRows = rows.filter(row => row.version === ver);
-
-          if (versionRows.length === 2) {
-            versionRelations[ver] = 'mutuallyTrusts';
-          } else if (versionRows[0]?.trustee === avatarAddress) {
-            versionRelations[ver] = 'trustedBy';
-          } else if (versionRows[0]?.truster === avatarAddress) {
-            versionRelations[ver] = 'trusts';
-          } else {
-            throw new Error(`Unexpected trust list row for version ${ver}. Couldn't determine trust relation.`);
-          }
-        });
-
-        // Combine relations for all versions
-        const distinctRelations = Array.from(new Set(Object.values(versionRelations)));
-
-        // If relations differ between versions, mark as "variesByVersion"
-        const combinedRelation =
-          distinctRelations.length === 1 ? distinctRelations[0] : 'variesByVersion';
+        let relation: TrustRelation;
+        if (rows.length === 2) {
+          relation = 'mutuallyTrusts';
+        } else if (rows[0]?.trustee === avatarAddress) {
+          relation = 'trustedBy';
+        } else if (rows[0]?.truster === avatarAddress) {
+          relation = 'trusts';
+        } else {
+          throw new Error(`Unexpected trust list row. Couldn't determine trust relation.`);
+        }
 
         return {
           subjectAvatar: avatarAddress,
-          relation: combinedRelation,
+          relation: relation,
           objectAvatar: avatar as Address,
-          timestamp: maxTimestamp,
-          versions: Array.from(version),
-          versionSpecificRelations: versionRelations
+          timestamp: maxTimestamp
         };
       });
   }
@@ -650,7 +628,7 @@ export class CirclesData implements CirclesDataInterface {
 
     // Find all avatars trusting the given avatar.
     // (mutual trust cannot exist in invitation state - to trust back, the avatar must be on v2 already)
-    const v2Relations = await this.getAggregatedTrustRelations(avatar, 2);
+    const v2Relations = await this.getAggregatedTrustRelations(avatar);
     const v2Trusters = v2Relations
       .filter(o => o.relation == 'trustedBy')
       .map(o => o.objectAvatar);
@@ -716,7 +694,7 @@ export class CirclesData implements CirclesDataInterface {
 
     } else {
       // Find accounts that avatar trusts without mutual trust
-      const v2Relations = await this.getAggregatedTrustRelations(avatar, 2);
+      const v2Relations = await this.getAggregatedTrustRelations(avatar);
       const v2Trusted = v2Relations
         .filter(o => o.relation == 'trusts')
         .map(o => o.objectAvatar);
