@@ -10,7 +10,8 @@ export interface FindPathParams {
   fromTokens?: Address[],
   toTokens?: Address[],
   excludeFromTokens?: Address[],
-  excludeToTokens?: Address[]
+  excludeToTokens?: Address[],
+  maxTransfers?: number
 }
 
 /**
@@ -26,7 +27,8 @@ export async function findPath(
     fromTokens,
     toTokens,
     excludeFromTokens,
-    excludeToTokens
+    excludeToTokens,
+    maxTransfers = 300
   }: FindPathParams
 ): Promise<PathfindingResult> {
   const res = await new CirclesRpc(rpcUrl).call<PathfindingResult>('circlesV2_findPath', [{
@@ -34,6 +36,7 @@ export async function findPath(
     Sink: to,
     TargetFlow: targetFlow,
     WithWrap: useWrappedBalances,
+    MaxTransfers: maxTransfers,
     FromTokens: fromTokens,
     ToTokens: toTokens,
     ExcludedFromTokens: excludeFromTokens,
@@ -52,7 +55,8 @@ export async function findMaxFlow(
     fromTokens,
     toTokens,
     excludeFromTokens,
-    excludeToTokens
+    excludeToTokens,
+    maxTransfers
   }: Omit<FindPathParams, 'targetFlow'>
 ): Promise<bigint> {
   const targetFlow = '9999999999999999999999999999999999999';
@@ -64,7 +68,8 @@ export async function findMaxFlow(
     fromTokens,
     toTokens,
     excludeFromTokens,
-    excludeToTokens
+    excludeToTokens,
+    maxTransfers
   });
 
   return BigInt(path.maxFlow);

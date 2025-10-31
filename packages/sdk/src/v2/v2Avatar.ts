@@ -90,7 +90,8 @@ export class V2Avatar implements AvatarInterfaceV2 {
     fromTokens?: Address[],
     toTokens?: Address[],
     excludeFromTokens?: Address[],
-    excludeToTokens?: Address[]): Promise<number> {
+    excludeToTokens?: Address[],
+    maxTransfers?: number): Promise<number> {
     this.throwIfV2IsNotAvailable();
     to = to.toLowerCase() as Address;
 
@@ -116,7 +117,8 @@ export class V2Avatar implements AvatarInterfaceV2 {
         fromTokens,
         toTokens,
         excludeFromTokens,
-        excludeToTokens
+        excludeToTokens,
+        maxTransfers
       });
 
     return CirclesConverter.attoCirclesToCircles(CirclesConverter.truncateToSixDecimals(result));
@@ -184,7 +186,8 @@ export class V2Avatar implements AvatarInterfaceV2 {
     fromTokens?: Address[],
     toTokens?: Address[],
     excludeFromTokens?: Address[],
-    excludeToTokens?: Address[]
+    excludeToTokens?: Address[],
+    maxTransfers?: number
   ) {
     this.throwIfV2IsNotAvailable();
 
@@ -236,7 +239,8 @@ export class V2Avatar implements AvatarInterfaceV2 {
         fromTokens,
         toTokens,
         excludeFromTokens,
-        excludeToTokens
+        excludeToTokens,
+        maxTransfers
       }
     );
 
@@ -457,7 +461,8 @@ export class V2Avatar implements AvatarInterfaceV2 {
     fromTokens?: Address[],
     toTokens?: Address[],
     excludeFromTokens?: Address[],
-    excludeToTokens?: Address[]): Promise<TransactionReceipt> {
+    excludeToTokens?: Address[],
+    maxTransfers?: number): Promise<TransactionReceipt> {
     if (!this.sdk?.contractRunner?.sendBatchTransaction) {
       throw new Error('ContractRunner (or sendBatchTransaction capability) not available');
     }
@@ -497,7 +502,8 @@ export class V2Avatar implements AvatarInterfaceV2 {
         fromTokens,
         toTokens,
         excludeFromTokens,
-        excludeToTokens);
+        excludeToTokens,
+        maxTransfers);
 
       return <TransactionReceipt><unknown>(await batch.run());
     } else {

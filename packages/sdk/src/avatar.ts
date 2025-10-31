@@ -211,10 +211,20 @@ export class Avatar implements AvatarInterfaceV2 {
    * @param useWrappedBalances If wrapped Circles should be considered in the transfers.
    * @param fromTokens If specified, makes sure that only the given tokens are used at the source.
    * @param toTokens If specified, makes sure that only the given tokens arrive at the sink.
+   * @param excludeFromTokens If specified, makes sure that the given tokens are not used at the source.
+   * @param excludeToTokens If specified, makes sure that the given tokens are not used at the sink.
+   * @param maxTransfers The maximum number of transfers to include in the path (default: 300, ~12 MGas).
    * @returns The maximum amount that can be transferred.
    */
-  getMaxTransferableAmount = (to: Address, tokenId?: Address, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[]): Promise<number> =>
-    this.onlyIfInitialized(() => this._avatar!.getMaxTransferableAmount(to, tokenId, useWrappedBalances, fromTokens, toTokens));
+  getMaxTransferableAmount = (to: Address, tokenId?: Address, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[], excludeFromTokens?: Address[], excludeToTokens?: Address[], maxTransfers?: number): Promise<number> =>
+    this.onlyIfInitialized(() => {
+      // V2 avatars support all parameters
+      if (this._avatarInfo?.version === 2) {
+        return (<AvatarInterfaceV2>this._avatar!).getMaxTransferableAmount(to, tokenId, useWrappedBalances, fromTokens, toTokens, excludeFromTokens, excludeToTokens, maxTransfers);
+      }
+      // V1 avatars only support to and tokenId
+      return this._avatar!.getMaxTransferableAmount(to, tokenId);
+    });
 
   /**
    * Transfers Circles to another avatar.
@@ -228,23 +238,35 @@ export class Avatar implements AvatarInterfaceV2 {
    * @param useWrappedBalances If wrapped Circles should be considered in the transfers.
    * @param fromTokens If specified, makes sure that only the given tokens are used at the source.
    * @param toTokens If specified, makes sure that only the given tokens arrive at the sink.
+   * @param excludeFromTokens If specified, makes sure that the given tokens are not used at the source.
+   * @param excludeToTokens If specified, makes sure that the given tokens are not used at the sink.
+   * @param maxTransfers The maximum number of transfers to include in the path (default: 300, ~12 MGas).
    */
-  transfer(to: Address, amount: number, token?: Address, txData?: Uint8Array, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[]): Promise<TransactionReceipt>;
-  transfer(to: Address, amount: bigint, token?: Address, txData?: Uint8Array, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[]): Promise<TransactionReceipt>;
-  transfer(to: Address, amount: number | bigint, token?: Address, txData?: Uint8Array, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[]): Promise<TransactionReceipt> {
+  transfer(to: Address, amount: number, token?: Address, txData?: Uint8Array, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[], excludeFromTokens?: Address[], excludeToTokens?: Address[], maxTransfers?: number): Promise<TransactionReceipt>;
+  transfer(to: Address, amount: bigint, token?: Address, txData?: Uint8Array, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[], excludeFromTokens?: Address[], excludeToTokens?: Address[], maxTransfers?: number): Promise<TransactionReceipt>;
+  transfer(to: Address, amount: number | bigint, token?: Address, txData?: Uint8Array, useWrappedBalances?: boolean, fromTokens?: Address[], toTokens?: Address[], excludeFromTokens?: Address[], excludeToTokens?: Address[], maxTransfers?: number): Promise<TransactionReceipt> {
     if (typeof amount === 'number') {
       if (this.avatarInfo?.version === 1) {
         const sendAttoCircles = CirclesConverter.circlesToAttoCircles(amount);
         const sendAttoCrc = CirclesConverter.attoCirclesToAttoCrc(sendAttoCircles, BigInt(Math.floor(Date.now() / 1000)));
 
-        return this.onlyIfInitialized(() => this._avatar!.transfer(to, sendAttoCrc, token, txData, useWrappedBalances, fromTokens, toTokens));
+        // V1 avatars only support basic parameters
+        return this.onlyIfInitialized(() => this._avatar!.transfer(to, sendAttoCrc, token, txData));
       } else {
         const sendAttoCircles = CirclesConverter.circlesToAttoCircles(amount);
 
-        return this.onlyIfInitialized(() => this._avatar!.transfer(to, sendAttoCircles, token, txData, useWrappedBalances, fromTokens, toTokens));
+        // V2 avatars support all parameters
+        return this.onlyIfInitialized(() => (<AvatarInterfaceV2>this._avatar!).transfer(to, sendAttoCircles, token, txData, useWrappedBalances, fromTokens, toTokens, excludeFromTokens, excludeToTokens, maxTransfers));
       }
     }
-    return this.onlyIfInitialized(() => this._avatar!.transfer(to, amount, token, txData, useWrappedBalances, fromTokens, toTokens));
+    // For bigint amounts
+    if (this.avatarInfo?.version === 1) {
+      // V1 avatars only support basic parameters
+      return this.onlyIfInitialized(() => this._avatar!.transfer(to, amount, token, txData));
+    } else {
+      // V2 avatars support all parameters
+      return this.onlyIfInitialized(() => (<AvatarInterfaceV2>this._avatar!).transfer(to, amount, token, txData, useWrappedBalances, fromTokens, toTokens, excludeFromTokens, excludeToTokens, maxTransfers));
+    }
   }
 
   /**

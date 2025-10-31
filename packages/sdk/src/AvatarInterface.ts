@@ -38,6 +38,7 @@ export interface AvatarInterface {
    * @param toTokens If specified, makes sure that only the given tokens arrive at the sink.
    * @param excludeFromTokens If specified, makes sure that the given tokens are not used at the source.
    * @param excludeToTokens If specified, makes sure that the given tokens are not used at the sink.
+   * @param maxTransfers The maximum number of transfers to include in the path (default: 300, ~12 MGas). 
    * @returns The maximum amount that can be transferred.
    */
   getMaxTransferableAmount(
@@ -47,7 +48,8 @@ export interface AvatarInterface {
     fromTokens?: Address[],
     toTokens?: Address[],
     excludeFromTokens?: Address[],
-    excludeToTokens?: Address[]): Promise<number>;
+    excludeToTokens?: Address[],
+    maxTransfers?: number): Promise<number>;
 
   /**
    * Transfers Circles to another avatar.
@@ -63,7 +65,8 @@ export interface AvatarInterface {
    * @param toTokens If specified, makes sure that only the given tokens arrive at the sink.
    * @param excludeFromTokens If specified, makes sure that the given tokens are not used at the source.
    * @param excludeToTokens If specified, makes sure that the given tokens are not used at the sink.
-   */
+   * @param maxTransfers The maximum number of transfers to include in the path (default: 300, ~12 MGas).
+  */
   transfer(
     to: Address,
     amount: bigint,
@@ -73,7 +76,9 @@ export interface AvatarInterface {
     fromTokens?: Address[],
     toTokens?: Address[],
     excludeFromTokens?: Address[],
-    excludeToTokens?: Address[]): Promise<TransactionReceipt>;
+    excludeToTokens?: Address[],
+    maxTransfers?: number
+  ): Promise<TransactionReceipt>;
 
   /**
    * Trusts another avatar. Trusting an avatar means you're willing to accept Circles that have been issued by this avatar.
