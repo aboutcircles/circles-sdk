@@ -19,7 +19,8 @@ export class V2Pathfinder {
     fromTokens?: Address[],
     toTokens?: Address[],
     excludeFromTokens?: Address[],
-    excludeToTokens?: Address[]): Promise<bigint> {
+    excludeToTokens?: Address[],
+    maxTransfers?: number): Promise<bigint> {
     to = to.toLowerCase() as Address;
 
     const result = await findMaxFlow(
@@ -31,7 +32,8 @@ export class V2Pathfinder {
         fromTokens,
         toTokens,
         excludeFromTokens,
-        excludeToTokens
+        excludeToTokens,
+        maxTransfers
       });
 
     return CirclesConverter.truncateToSixDecimals(result);
@@ -45,7 +47,8 @@ export class V2Pathfinder {
     fromTokens?: Address[],
     toTokens?: Address[],
     excludeFromTokens?: Address[],
-    excludeToTokens?: Address[]): Promise<PathfindingResult> {
+    excludeToTokens?: Address[],
+    maxTransfers?: number): Promise<PathfindingResult> {
 
     return await findPath(
       this.rpcUrl,
@@ -57,7 +60,8 @@ export class V2Pathfinder {
         fromTokens,
         toTokens,
         excludeFromTokens,
-        excludeToTokens
+        excludeToTokens,
+        maxTransfers
       }
     );
   }
