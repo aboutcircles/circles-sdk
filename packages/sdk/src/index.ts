@@ -1,3 +1,10 @@
+// Deprecation warning - show once when module is first imported
+console.warn(
+  '\nDEPRECATION NOTICE:\n' +
+  'This package is deprecated. Please migrate to @aboutcircles/sdk.\n' +
+  'See migration guide: https://github.com/aboutcircles/sdk/blob/main/MIGRATION_GUIDE.md\n'
+);
+
 export { Avatar } from './avatar';
 export { Observable } from '@circles-sdk/data';
 export { Sdk } from './sdk';
